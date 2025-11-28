@@ -1,0 +1,30 @@
+{
+  "name": "yuimizunodiscordbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "module",
+  "license": "ISC",
+  "dependencies": {
+    "@discordjs/opus": "^0.9.0",
+    "@discordjs/voice": "^0.18.0",
+    "@elevenlabs/elevenlabs-js": "^2.25.0",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@napi-rs/canvas": "^0.1.83",
+    "axios": "^1.13.2",
+    "better-sqlite3": "^12.4.6",
+    "discord.js": "^14.17.3",
+    "dotenv": "^16.4.7",
+    "ffmpeg-static": "^5.2.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "lowdb": "^7.0.1",
+    "node_characterai": "^2.0.0-beta.7",
+    "ollama": "^0.6.3",
+    "prism-media": "^1.3.5"
+  }
+}

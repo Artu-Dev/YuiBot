@@ -1,0 +1,25 @@
+# Discord
+discord.py==2.3.2
+py-cord==2.5.0
+
+# Async HTTP
+aiohttp==3.9.1
+aiofiles==23.2.1
+
+# Processamento de Áudio
+PyNaCl==1.5.0
+pydub==0.25.1
+SpeechRecognition==3.10.1
+gtts==2.5.0
+pyttsx3==2.90
+
+# Análise de Áudio
+librosa==0.10.1
+soundfile==0.12.1
+numpy==1.26.2
+scipy==1.11.4
+
+# Utilitários
+python-dotenv==1.0.0
+requests==2.31.0
+Pillow==10.1.0
