@@ -10,9 +10,9 @@ const newsTemplates = [
   "🚨 BREAKING NEWS: {subject}",
 ];
 
-export async function generateFakeNews(guild = null) {
-  const recentContext = getRecentMessages(guild);
-  const membersContext = getGuildMembers(guild);
+export async function generateFakeNews(guildId, channelId) {
+  const recentContext = getRecentMessages(guildId, channelId);
+  const membersContext = getGuildMembers(guildId);
 
   const prompt = `Você é um gerador de manchetes de notícias FALSAS e ABSURDAS para um servidor de Discord.
 
@@ -50,7 +50,8 @@ Retorne APENAS a manchete, sem aspas ou formatação extra.`;
 }
 
 export async function generateFullArticle(headline) {
-  const prompt = `Expanda esta manchete em uma notícia fake completa (1-2 parágrafos curtos):
+  const prompt = `Você é um gerador de arrigos de notícias FALSAS e ABSURDAS para um servidor de Discord.
+  Expanda esta manchete em uma notícia fake completa (1-2 parágrafos curtos):
 
 ${headline}
 
@@ -59,7 +60,10 @@ A notícia deve:
 - Ter tom de jornal sensacionalista
 - Ser curto e resumido em cada paragrafo
 
-Mantenha curto e engraçado!`;
+Mantenha curto e engraçado!
+
+Retorne APENAS o artigo.
+`;
 
   const response = await axios.post("http://localhost:11434/api/generate", {
     prompt: prompt,

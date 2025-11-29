@@ -16,3 +16,29 @@ export function parseMessage(client, message) {
         isMentioned: message.mentions.has(client.user),
     };
 }
+
+export const replaceMentions = async (message, content) => {
+      if (!content) return content;
+
+      const mentionRegex = /<@!?(\d+)>/g;
+      let processedContent = content;
+
+      const mentions = content.match(mentionRegex);
+      if (mentions) {
+        for (const mention of mentions) {
+          const userId = mention.match(/\d+/)[0];
+          try {
+            const user = await message.guild.members.fetch(userId);
+            const displayName = user.displayName || user.user.username;
+            processedContent = processedContent.replace(
+              mention,
+              `@${displayName}`
+            );
+          } catch (error) {
+            console.log(`Não foi possível buscar usuário ${userId}`);
+          }
+        }
+      }
+
+      return processedContent;
+    };

@@ -5,11 +5,12 @@ const name = "voiceStateUpdate";
 
 const execute = (oldState, newState) => {
       const channel = oldState.channel || newState.channel;
-    
+      if (!channel) return;
+
       if (channel && channel.members.size === 1 && channel.members.has(newState.client.user.id)) {
-        console.log('Saindo porque estou sozinho...');
-        stopPlayingAudio();
-        const connection = getVoiceConnection(channel.guild.id);
+        const guildId = channel.guild.id;
+        stopPlayingAudio(guildId);
+        const connection = getVoiceConnection(guildId);
         connection.destroy();
       }
 };

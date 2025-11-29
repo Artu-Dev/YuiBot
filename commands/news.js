@@ -5,11 +5,11 @@ import { createNewsImage } from "../functions/newsImage.js";
 
 export async function run(client, message) {
   try {
-    const { guildId } = parseMessage(client, message);
+    const { guildId, channelId } = parseMessage(client, message);
 
     const loadingMsg = await message.channel.send('📰 *Gerando notícia exclusiva...*');
 
-    const newsHeadline = await generateFakeNews(guildId);
+    const newsHeadline = await generateFakeNews(channelId, guildId);
     const article = await generateFullArticle(newsHeadline);
 
 

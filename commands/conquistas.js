@@ -1,7 +1,7 @@
 import { EmbedBuilder } from "discord.js";
 import { achievements } from "../functions/achievements.js";
 
-export const name = "achievements";
+export const name = "conquistas";
 
 export async function run(client, message) {
   const achievementsList = Object.values(achievements)

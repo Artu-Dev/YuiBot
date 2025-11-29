@@ -1,30 +1,55 @@
 import { REST, Routes } from 'discord.js';
+import { config } from 'dotenv';
+config();
 
 const commands = [
   {
     name: 'entrar',
-    description: 'entra na call!',
+    description: 'Entra na call!',
   },
   {
     name: 'sair',
-    description: 'SAi da call',
+    description: 'Sai da call.',
   },
   {
-    name: 'charinfo',
-    description: 've quantos caracteres voce tem',
+    name: 'chars',
+    description: 'Mostra quantos caracteres você ainda tem.',
+  },
+  {
+    name: 'add-channel',
+    description: 'Adiciona o canal atual como canal autorizado.',
+  },
+  {
+    name: 'remove-channel',
+    description: 'Remove o canal atual da lista de canais autorizados.',
+  },
+  {
+    name: 'stats',
+    description: 'Mostra suas estatísticas completas.',
+  },
+  {
+    name: 'conquistas',
+    description: 'Mostra suas conquistas desbloqueadas.',
+  },
+  {
+    name: 'news',
+    description: 'Gera uma fake news completamente absurda.',
   },
 ];
 
-const rest = new REST({ version: '10' }).setToken("MTE2NzMwODMzNzc2ODAzODQ5MQ.Gf97LL.sepRGABhyaInJQxBT90SOAiRUsn401KVkUBdRo");
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
 (async () => {
   try {
-    console.log('Iniciando o registro de comandos...');
+    console.log('🔄 Registrando comandos globais...');
 
-    await rest.put(Routes.applicationCommands("1167308337768038491"), { body: commands });
+    await rest.put(
+      Routes.applicationCommands("1167308337768038491"),
+      { body: commands }
+    );
 
-    console.log('Comandos registrados com sucesso!');
+    console.log('✅ Comandos registrados com sucesso!');
   } catch (error) {
-    console.error(error);
+    console.error('❌ Erro ao registrar comandos:', error);
   }
 })();

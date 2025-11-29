@@ -1,26 +1,28 @@
-import { createCanvas, loadImage } from '@napi-rs/canvas';
-import https from 'https';
+import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
+import axios from 'axios';
 
-// Função para buscar imagem aleatória
+GlobalFonts.registerFromPath(
+  'C:/Windows/Fonts/seguiemj.ttf',
+  'Emoji'
+);
+
+GlobalFonts.registerFromPath(
+  'C:/Windows/Fonts/arial.ttf',
+  'Arial'
+);
+
 async function getRandomImage() {
-  const width = 1200;
-  const height = 400;
-  const imageUrl = `https://picsum.photos/${width}/${height}`;
-  
-  return new Promise((resolve, reject) => {
-    https.get(imageUrl, (response) => {
-      const chunks = [];
-      response.on('data', (chunk) => chunks.push(chunk));
-      response.on('end', () => {
-        const buffer = Buffer.concat(chunks);
-        resolve(loadImage(buffer));
-      });
-      response.on('error', reject);
-    }).on('error', reject);
-  });
-}
+  const url = "https://picsum.photos/1200/400";
 
-// Função auxiliar para quebrar texto em linhas
+  const response = await axios.get(url, {
+    responseType: "arraybuffer",
+    maxRedirects: 5  
+  });
+
+  const buffer = Buffer.from(response.data);
+
+  return await loadImage(buffer);
+}
 function wrapText(ctx, text, maxWidth) {
   const words = text.split(' ');
   const lines = [];
@@ -36,147 +38,141 @@ function wrapText(ctx, text, maxWidth) {
       currentLine = word;
     }
   }
+
   lines.push(currentLine);
   return lines;
 }
 
 export async function createNewsImage(headline, article) {
   const width = 1200;
-  const padding = 50;
-  const contentWidth = width - (padding * 2);
-  
-  // Criar canvas temporário para calcular altura do artigo
-  const tempCanvas = createCanvas(width, 100);
-  const tempCtx = tempCanvas.getContext('2d');
-  tempCtx.font = '18px Arial';
-  
-  const articleLines = wrapText(tempCtx, article, contentWidth);
-  const articleHeight = articleLines.length * 28; // 28px de altura por linha
-  
-  // Calcular altura total necessária
-  const headerHeight = 80;
-  const imageHeight = 400;
-  const titleAreaHeight = 200;
-  const articlePadding = 40;
-  const footerHeight = 60;
-  
-  const totalHeight = headerHeight + imageHeight + titleAreaHeight + articleHeight + articlePadding + footerHeight;
-  
-  // Criar canvas final
-  const canvas = createCanvas(width, totalHeight);
-  const ctx = canvas.getContext('2d');
+  const padding = 60;
+  const contentWidth = width - padding * 2;
 
-  // Fundo branco
-  ctx.fillStyle = '#FFFFFF';
+  const tempCanvas = createCanvas(width, 100);
+  const tempCtx = tempCanvas.getContext("2d");
+  tempCtx.font = "20px Arial";
+
+  const articleLines = wrapText(tempCtx, article, contentWidth);
+  const articleHeight = articleLines.length * 30;
+
+  const headerHeight = 90;
+  const imageHeight = 420;
+  const titleSpacing = 80; 
+  const footerHeight = 70;
+
+  const totalHeight =
+    headerHeight + imageHeight + titleSpacing +
+    200 + articleHeight + footerHeight;
+
+  const canvas = createCanvas(width, totalHeight);
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = "#FFFFFF";
   ctx.fillRect(0, 0, width, totalHeight);
 
-  // ===== HEADER (Barra vermelha G1) =====
-  ctx.fillStyle = '#C4170C';
+  // ===== HEADER =====
+  ctx.fillStyle = "#C4170C";
   ctx.fillRect(0, 0, width, headerHeight);
 
-  // Logo "G1"
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 50px Arial';
-  ctx.fillText('G1', padding, 55);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.font = "bold 55px Arial";
+  ctx.fillText("YMN", padding, 60);
 
-  // Texto "GLOBO"
-  ctx.font = 'bold 16px Arial';
-  ctx.fillText('GLOBO', 120, 55);
+  ctx.font = "bold 18px Arial";
+  ctx.fillText("Yui Mizuno News", 200, 60);
 
-  // Tag "ÚLTIMA HORA"
-  const tagX = width - 250;
-  const tagY = 20;
-  ctx.fillStyle = '#FFD700';
-  ctx.fillRect(tagX, tagY, 200, 40);
-  
-  ctx.fillStyle = '#C4170C';
-  ctx.font = 'bold 18px Arial';
-  ctx.fillText('🔴 ÚLTIMA HORA', tagX + 10, tagY + 27);
+  const tagX = width - 240;
+  ctx.fillStyle = "#FFD700";
+  ctx.fillRect(tagX, 25, 190, 40);
+  ctx.fillStyle = "#C4170C";
+  ctx.font = "bold 18px Arial, Emoji";
+  ctx.fillText("🔴 ÚLTIMA HORA", tagX + 12, 52);
 
-  // ===== IMAGEM ALEATÓRIA =====
-  let currentY = headerHeight;
+  let y = headerHeight;
+
+  // ===== IMAGEM =====
   try {
     const randomImg = await getRandomImage();
-    ctx.drawImage(randomImg, 0, currentY, width, imageHeight);
-    
-    // Overlay escuro na parte inferior para contraste
-    const overlayGradient = ctx.createLinearGradient(0, currentY + imageHeight - 100, 0, currentY + imageHeight);
-    overlayGradient.addColorStop(0, 'rgba(0,0,0,0)');
-    overlayGradient.addColorStop(1, 'rgba(0,0,0,0.6)');
-    ctx.fillStyle = overlayGradient;
-    ctx.fillRect(0, currentY + imageHeight - 100, width, 100);
-  } catch (error) {
-    console.error('Erro ao carregar imagem:', error);
-    // Fallback: gradiente vermelho
-    const gradient = ctx.createLinearGradient(0, currentY, 0, currentY + imageHeight);
-    gradient.addColorStop(0, '#C4170C');
-    gradient.addColorStop(1, '#8B0F06');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, currentY, width, imageHeight);
+    ctx.drawImage(randomImg, 0, y, width, imageHeight);
+
+    const grad = ctx.createLinearGradient(0, y + imageHeight - 120, 0, y + imageHeight);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(1, "rgba(0,0,0,0.6)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, y + imageHeight - 120, width, 120);
+  } catch {
+    ctx.fillStyle = "#8B0F06";
+    ctx.fillRect(0, y, width, imageHeight);
   }
-  currentY += imageHeight;
 
-  // ===== MANCHETE =====
-  ctx.fillStyle = '#1A1A1A';
-  ctx.font = 'bold 42px Arial';
-  
-  const titleLines = wrapText(ctx, headline, contentWidth);
-  const titleLineHeight = 55;
-  currentY += 50;
+  y += imageHeight + 60;
 
-  titleLines.forEach((line, index) => {
-    ctx.fillText(line, padding, currentY + (index * titleLineHeight));
-  });
-  currentY += (titleLines.length * titleLineHeight) + 30;
+  // ===== TÍTULO =====
+  ctx.fillStyle = "#1A1A1A";
+  ctx.font = "bold 48px Arial, Emoji";
 
-  // Linha divisória vermelha
-  ctx.strokeStyle = '#C4170C';
+  const titleLines = wrapText(ctx, headline, contentWidth * 0.92); // MAIS LARGO
+  const titleLH = 58;
+
+  for (let i = 0; i < titleLines.length; i++) {
+    ctx.fillText(titleLines[i], padding, y + i * titleLH);
+  }
+
+  y += titleLines.length * titleLH + 40;
+
+  // ===== DIVISÓRIA =====
+  ctx.strokeStyle = "#C4170C";
   ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(padding, currentY);
-  ctx.lineTo(width - padding, currentY);
+  ctx.moveTo(padding, y);
+  ctx.lineTo(width - padding, y);
   ctx.stroke();
-  currentY += 20;
 
-  // Data e hora
+  y += 25;
+
+  // ===== DATA + VERIFICADO =====
   const now = new Date();
-  const dateStr = now.toLocaleDateString('pt-BR', { 
-    day: '2-digit', 
-    month: 'long', 
-    year: 'numeric' 
+  const dateStr = now.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
   });
-  const timeStr = now.toLocaleTimeString('pt-BR', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  const timeStr = now.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
   });
 
-  ctx.fillStyle = '#666666';
-  ctx.font = '16px Arial';
-  ctx.fillText(`${dateStr} às ${timeStr}`, padding, currentY);
-  
-  // Badge "VERIFICADO"
-  ctx.fillStyle = '#C4170C';
-  ctx.font = 'bold 15px Arial';
-  ctx.fillText('✓ NOTÍCIA VERIFICADA', width - 250, currentY);
-  currentY += 40;
+  ctx.fillStyle = "#666";
+  ctx.font = "17px Arial";
+  ctx.fillText(`${dateStr} às ${timeStr}`, padding, y);
 
-  // ===== ARTIGO COMPLETO =====
-  ctx.fillStyle = '#333333';
-  ctx.font = '18px Arial';
-  
-  const articleLineHeight = 28;
-  articleLines.forEach((line, index) => {
-    ctx.fillText(line, padding, currentY + (index * articleLineHeight));
-  });
-  currentY += (articleLines.length * articleLineHeight) + 30;
+  ctx.fillStyle = "#C4170C";
+  ctx.font = "bold 16px Arial, Emoji";
+  ctx.fillText("✓ NOTÍCIA VERIFICADA", width - padding - 220, y);
+
+  y += 50;
+
+  // ===== ARTIGO =====
+  ctx.fillStyle = "#333";
+  ctx.font = "20px Arial, Emoji";
+
+  const lh = 30;
+  for (let i = 0; i < articleLines.length; i++) {
+    ctx.fillText(articleLines[i], padding, y + i * lh);
+  }
+
+  y += articleLines.length * lh + 40;
 
   // ===== RODAPÉ =====
-  ctx.fillStyle = '#F5F5F5';
-  ctx.fillRect(0, currentY, width, footerHeight);
-  
-  ctx.fillStyle = '#999999';
-  ctx.font = 'italic 14px Arial';
-  ctx.fillText('© G1 - Todos os direitos reservados | Esta notícia é fictícia', padding, currentY + 35);
+  ctx.fillStyle = "#F5F5F5";
+  ctx.fillRect(0, y, width, footerHeight);
 
-  return canvas.toBuffer('image/png');
+  ctx.fillStyle = "#999";
+  ctx.font = "italic 15px Arial";
+  ctx.fillText("© G1 - Todos os direitos reservados | Esta notícia é fictícia",
+    padding,
+    y + 45
+  );
+
+  return canvas.toBuffer("image/png");
 }

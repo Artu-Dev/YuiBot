@@ -1,5 +1,6 @@
 import axios from "axios";
 import { dbBot } from "../database.js";
+import { replaceMentions } from "./utils.js";
 
 const friends = `
 [AMIGO: Tropinha]
@@ -59,39 +60,15 @@ export const generateAiRes = async (message) => {
   try {
     const username = message.author.displayName;
 
-    const replaceMentions = async (content) => {
-      if (!content) return content;
-
-      const mentionRegex = /<@!?(\d+)>/g;
-      let processedContent = content;
-
-      const mentions = content.match(mentionRegex);
-      if (mentions) {
-        for (const mention of mentions) {
-          const userId = mention.match(/\d+/)[0];
-          try {
-            const user = await message.guild.members.fetch(userId);
-            const displayName = user.displayName || user.user.username;
-            processedContent = processedContent.replace(
-              mention,
-              `@${displayName}`
-            );
-          } catch (error) {
-            console.log(`Não foi possível buscar usuário ${userId}`);
-          }
-        }
-      }
-
-      return processedContent;
-    };
+    replaceMentions(message, message.content)
 
     const replyedMessage = message.reference
       ? await message.channel.messages.fetch(message.reference.messageId)
       : null;
 
-    const processedContent = await replaceMentions(message.content);
+    const processedContent = await replaceMentions(message, message.content);
     const processedReplyContent = replyedMessage
-      ? await replaceMentions(replyedMessage.content)
+      ? await replaceMentions(replyedMessage, replyedMessage.content)
       : null;
 
     const contextParts = [`Usuário: ${username} disse "${processedContent}"`];

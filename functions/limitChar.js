@@ -3,12 +3,13 @@ import { reduceChars } from "../database.js";
 export const limitChar = async (message) => {
   const text = message.content;
   const userId = message.author.id;
+  const guildId = message.guild.id
   
   const textSize = text.length;
-  const newValue = reduceChars(userId, textSize);
+  const newValue = reduceChars(userId, guildId, textSize);
 
   if (text.toLowerCase().includes("capeta")) {
-    reduceChars(userId, 500);
+    reduceChars(userId, guildId, 500);
     message.reply("❌Palavra proibida!!! Você perdeu 500 caracteres!!!❌");
   }
 

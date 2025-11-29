@@ -9,7 +9,7 @@ import { handleAchievements } from "../functions/achievements.js";
 import { generateAiRes } from "../functions/generateRes.js";
 import { limitChar } from "../functions/limitChar.js";
 import { sayInCall } from "../functions/sayInCall.js";
-import { parseMessage } from "../functions/utils.js";
+import { parseMessage, replaceMentions } from "../functions/utils.js";
 
 const name = "messageCreate";
 await intializeDbBot();
@@ -38,8 +38,7 @@ const execute = async (message, client) => {
   if (!channels.includes(channelId)) return;
 
   getOrCreateUser(userId, displayName, guildId);
-
-  saveMessageContext(channelId, guildId, displayName, text);
+  saveMessageContext(channelId, guildId, displayName, await replaceMentions(message, text));
 
 
   if ((typeof text === "string" && randomInt === 1) || isMentioned) {
