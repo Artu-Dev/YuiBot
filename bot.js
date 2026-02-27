@@ -42,4 +42,5 @@ client.once("ready", () => {
   log(`Online como ${client.user.tag}`);
 });
 
+
 client.login(process.env.DISCORD_TOKEN);

@@ -53,7 +53,7 @@ export async function run(client, message) {
 • **Mensagens enviadas às 03:33:** ${user.specific_time_messages ?? 0}
 • **Perguntas longas (+100 chars):** ${user.long_questions ?? 0}
 • **Mensagens com "kkkkkkkkkkk":** ${user.laught_messages ?? 0}
-• **Quantidade de "porra" dita:** ${user.porra_count ?? 0}
+• **Quantidade de palavroes dita:** ${user.swears_count ?? 0}
 • **Comandos do bot usados:** ${user.bot_commands_used ?? 0}
 • **Streak de CAPS atual:** ${user.caps_streak ?? 0}
 • **Reações recebidas:** ${user.reactions_received ?? 0}

@@ -6,9 +6,18 @@ import {
   dbBot,
   getLastMessageAuthor,
 } from "../database.js";
-
 import { gerar_conquista } from "./image.js";
 import { parseMessage } from "./utils.js";
+import {readFileSync} from "fs"
+
+const swearsFile = readFileSync("./data/negativas.txt", "utf-8");
+const swearsList = swearsFile
+  .split("\n")
+  .map(word => word.trim().toLowerCase())
+  .filter(word => word.length > 0);
+
+const setPalavroes = new Set(swearsList); 
+const regexPalavroes = new RegExp(`\\b(${swearsList.join("|")})\\b`, "gi");
 
 const isOnlyCaps = (text) => /^[A-Z\s]+$/.test(text);
 const isQuestionMessage = (text) => text.endsWith("?");
@@ -67,7 +76,10 @@ const handleMentions = async (message) => {
   const {guildId, userId, displayName, mentions} = parseMessage(message)
 
 
-  for (const [mentionedId, mentionedUser] of mentions.users) {
+  for (const mentionedId of mentions.users) {
+    const mentionedUser = message.mentions.users.get(mentionedId);
+    if (!mentionedUser) continue;
+
     const mentionedDisplayName =
       message.guild.members.cache.get(mentionedId)?.displayName ||
       mentionedUser.username;
@@ -108,9 +120,26 @@ const handleMentions = async (message) => {
   }
 };
 
+const checkSwears = (text) => {
+  if (text.length > 2) { 
+    const tokens = text.toLowerCase().split(/[\s,.;!?]+/);
+    
+    let swearsCount = 0;
+    
+    for (const token of tokens) {
+      if (setPalavroes.has(token)) {
+        swearsCount++;
+      }
+    }
+
+    return swearsCount;
+  }
+}
+
 export const handleAchievements = async (message) => {
   const now = Date.now();
   const {displayName, guildId, text, channelId, userId } = parseMessage(message)
+  const lastAuthor = getLastMessageAuthor(channelId, guildId);
 
   let stats = getOrCreateUser(userId, displayName, guildId);
   const updates = {};
@@ -124,18 +153,17 @@ export const handleAchievements = async (message) => {
   if (isQuestionMessage(text)) updates.question_marks = 1;
 
   // BOM DIA
-  if (/bom dia/i.test(text)) updates.morning_messages = 1;
+  if (/(bom dia|dia grupo)/i.test(text)) updates.morning_messages = 1;
 
   // MENSAGEM KKKKKKKKKKK
   if (/k{10,}/i.test(text)) updates.laught_messages = 1;
 
-  // "PORRA" CONTADOR
-  const porraCount = (text.match(/porra/gi) || []).length;
-  if (porraCount > 0) updates.porra_count = porraCount;
+  // palavroes CONTADOR
+  const swearsCount = checkSwears(text);
+  if (swearsCount > 0) updates.swears_count = swearsCount;
 
   // PERGUNTA LONGA
-  if (text.endsWith("?") && text.length >= 100)
-    updates.long_questions = 1;
+  if (text.endsWith("?") && text.length >= 100) updates.long_questions = 1;
 
   // CAPS STREAK (controle temporário)
   if (!stats._caps_temp) stats._caps_temp = 0;
@@ -148,17 +176,26 @@ export const handleAchievements = async (message) => {
   if (date.getHours() === 3 && date.getMinutes() === 33)
     updates.specific_time_messages = 1;
 
-  
-  const lastAuthor = getLastMessageAuthor(channelId, guildId);
-  if (message.reference) {
-    setUserProperty("messages_without_reply", userId, guildId, 0);
-  } 
-  else if (lastAuthor && lastAuthor != userId) {
-    setUserProperty("messages_without_reply", userId, guildId, 1);
-  } 
-  else {
-    updates.messages_without_reply = 1;
+  // E-GIRL / OTAKU
+  if (/(uwu|owo|nya+)/i.test(text)) updates.otaku_messages = 1;
+
+  // GRINGO FALSIFICADO
+  if (/\b(bro|wtf|lmao|fr|literally)\b/i.test(text)) updates.gringo_messages = 1;
+
+  // SUSPENSE (muitas reticências)
+  if ((text.match(/\.\.\./g) || []).length >= 2) updates.suspense_messages = 1;
+
+  // TEXTÃO DO ENEM
+  if (text.length >= 600) updates.textao_messages = 1;
+
+  // MONÓLOGO (falar sozinho)
+  if (lastAuthor === userId) {
+    if (!stats._monologo_temp) stats._monologo_temp = 1;
+    stats._monologo_temp++;
+  } else {
+    stats._monologo_temp = 1;
   }
+  setUserProperty("monologo_streak", userId, guildId, stats._monologo_temp);
 
   // Se for comando do bot
   if (message.content.startsWith(dbBot.data.configs.prefix))
@@ -189,38 +226,39 @@ export const handleAchievements = async (message) => {
   setUserProperty("last_message_time", userId, guildId, now);
 };
 
+
 export const achievements = {
   ghost: {
     id: 1,
     name: "Fantasma",
-    charPoints: 5000,
+    charPoints: 800,
     emoji: "👻",
-    description: "Ficou 30 dias sem mandar mensagem",
+    description: "Ficou 30 dias sem mandar mensagem e voltou",
     check: () => false,
   },
 
   caps_addict: {
     id: 3,
-    charPoints: 600,
+    charPoints: 400,
     name: "VICIADO EM CAPS LOCK",
     emoji: "📢",
-    description: "Mandou 50 mensagens em CAPS LOCK",
+    description: "Mandou 50 mensagens gritando",
     check: (stats) => stats.caps_lock_messages >= 50,
   },
 
   night_owl: {
     id: 5,
-    charPoints: 1500,
+    charPoints: 800,
     name: "Coruja Noturna",
     emoji: "🦉",
-    description: "Mandou 100 mensagens entre 2h e 6h da manhã",
+    description: "Mandou 100 mensagens na madrugada (2h-6h)",
     check: (stats) => stats.night_owl_messages >= 100,
   },
 
   popular: {
     id: 6,
-    charPoints: 2000,
-    name: "Popular",
+    charPoints: 1000,
+    name: "Popularzinho",
     emoji: "⭐",
     description: "Recebeu 200 menções",
     check: (stats) => stats.mentions_received >= 200,
@@ -228,34 +266,34 @@ export const achievements = {
 
   stalker: {
     id: 7,
-    charPoints: 1500,
+    charPoints: 600,
     name: "Stalker",
     emoji: "👀",
-    description: "Mencionou outras pessoas 300 vezes",
+    description: "Mencionou os outros 300 vezes",
     check: (stats) => stats.mentions_sent >= 300,
   },
 
   question_everything: {
     id: 8,
-    charPoints: 1500,
-    name: "Questiona Tudo",
+    charPoints: 500,
+    name: "O Curioso",
     emoji: "❓",
-    description: "Fez 150 perguntas",
+    description: "Fez 150 perguntas no chat",
     check: (stats) => stats.question_marks >= 150,
   },
 
   chatterbox: {
     id: 11,
-    charPoints: 2000,
+    charPoints: 1200,
     name: "Tagarela",
     emoji: "💬",
-    description: "Enviou 1000 mensagens",
+    description: "Enviou 1.000 mensagens",
     check: (stats) => stats.messages_sent >= 1000,
   },
 
   first_message: {
     id: 12,
-    charPoints: 300,
+    charPoints: 100,
     name: "Primeiro Passo",
     emoji: "👣",
     description: "Enviou sua primeira mensagem",
@@ -264,53 +302,53 @@ export const achievements = {
 
   good_morning: {
     id: 13,
-    charPoints: 700,
+    charPoints: 100,
     name: "Bom Dia Grupo",
     emoji: "☀️",
-    description: "Mandou uma mensagem com 'bom dia'",
+    description: "Mandou um 'bom dia' igual idoso no zap",
     check: (stats) => stats.morning_messages >= 1,
   },
 
-  ignored: {
+  monologo: {
     id: 14,
-    charPoints: 2000,
-    name: "ignorado",
-    emoji: "👁️",
-    description: "Mandou 10 mensagens sem respostas",
-    check: (stats) => stats.messages_without_reply >= 10,
+    charPoints: 250,
+    name: "Esquizofrenia",
+    emoji: "🗣️",
+    description: "Mandou 5 mensagens seguidas falando sozinho",
+    check: (stats) => stats.monologo_streak >= 5,
   },
 
   devil_message: {
     id: 15,
-    charPoints: 3000,
-    name: "DIABO",
+    charPoints: 1500,
+    name: "O Capiroto",
     emoji: "😈",
-    description: "Enviou uma mensagem exatamente às 03:33",
+    description: "Mandou mensagem exatamente às 03:33",
     check: (stats) => stats.specific_time_messages >= 1,
   },
 
   reincarnation: {
     id: 16,
-    charPoints: 15000,
+    charPoints: 5000,
     name: "Reencarnação",
-    emoji: "🔄",
-    description: "Voltou depois de 2 meses sem mandar mensagem",
-    check: () => false,
+    emoji: "🧟‍♂️",
+    description: "Voltou dos mortos depois de 1 ano offline",
+    check: () => false, 
   },
 
   chat_legend: {
     id: 17,
-    charPoints: 10000,
-    name: "Sai do discord",
-    emoji: "💎",
-    description: "Enviou 10.000 mensagens",
+    charPoints: 4000,
+    name: "Toca na Grama",
+    emoji: "🌱",
+    description: "Enviou 10.000 mensagens (vai viver a vida)",
     check: (stats) => stats.messages_sent >= 10000,
   },
 
   urgency: {
     id: 18,
-    charPoints: 800,
-    name: "URGENCIA",
+    charPoints: 100,
+    name: "Calma Calabreso",
     emoji: "🚨",
     description: "Mandou 3 mensagens seguidas em CAPS LOCK",
     check: (stats) => stats.caps_streak >= 3,
@@ -318,37 +356,73 @@ export const achievements = {
 
   philosopher: {
     id: 19,
-    charPoints: 1200,
-    name: "Filosofão",
+    charPoints: 150,
+    name: "Filósofo",
     emoji: "🧠",
-    description: "Fez uma pergunta com mais de 100 caracteres",
+    description: "Fez uma pergunta imensa (mais de 100 caracteres)",
     check: (stats) => stats.long_questions >= 1,
   },
 
   funny_today: {
     id: 20,
-    charPoints: 500,
-    name: "ta engrasado hj",
-    emoji: "😂",
-    description: "Digitou 'kkkkkkkkkkk'",
+    charPoints: 50,
+    name: "Tá Engrasado Hj",
+    emoji: "🤡",
+    description: "Deu uma risada muito longa (kkkkkk)",
     check: (stats) => stats.laught_messages >= 1,
   },
 
-  porra_mouth: {
+  dirty_mouth: {
     id: 21,
-    charPoints: 1500,
-    name: "Porra na boca",
-    emoji: "💢",
-    description: "Falou 'porra' 50 vezes",
-    check: (stats) => stats.porra_count >= 50,
+    charPoints: 300,
+    name: "Boca Suja",
+    emoji: "🧼",
+    description: "Falou palavrao 50 vezes",
+    check: (stats) => stats.swears_count >= 50,
   },
 
   bot_addicted: {
     id: 22,
-    charPoints: 3000,
-    name: "Viciado no Bot",
+    charPoints: 400,
+    name: "Escravo de Bot",
     emoji: "🤖",
-    description: "Usou 50 comandos do bot",
+    description: "Usou 50 comandos meus",
     check: (stats) => stats.bot_commands_used >= 50,
+  },
+
+  otaku_fedido: {
+    id: 23,
+    charPoints: 200,
+    name: "Otaku Fedido",
+    emoji: "🌸",
+    description: "Usou 'uwu', 'owo' ou 'nya' 10 vezes (tome banho)",
+    check: (stats) => stats.otaku_messages >= 10,
+  },
+
+  gringo_falsificado: {
+    id: 24,
+    charPoints: 200,
+    name: "Gringo do Paraguai",
+    emoji: "🇺🇸",
+    description: "Usou 20 gírias em inglês tipo 'bro', 'wtf' ou 'lmao'",
+    check: (stats) => stats.gringo_messages >= 20,
+  },
+
+  misterioso: {
+    id: 25,
+    charPoints: 150,
+    name: "Senhor Suspense",
+    emoji: "🌫️",
+    description: "Enviou 15 mensagens cheias de reticências...",
+    check: (stats) => stats.suspense_messages >= 15,
+  },
+
+  textao_enem: {
+    id: 26,
+    charPoints: 300,
+    name: "Redação do Enem",
+    emoji: "📝",
+    description: "Mandou um textão com mais de 600 caracteres",
+    check: (stats) => stats.textao_messages >= 1,
   },
 };

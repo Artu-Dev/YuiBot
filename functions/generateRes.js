@@ -1,6 +1,7 @@
-import axios from "axios";
 import { dbBot, getRecentMessages } from "../database.js";
 import { parseMessage, replaceMentions } from "./utils.js";
+import ollama from "./ollamaClient.js";
+
 
 const friends = `
 [AMIGO: Tropinha]
@@ -101,40 +102,66 @@ ${lastTenMessages}
 
     
     console.log(`Gerando resposta IA para ${displayName}`);
-    const res = await axios.post(
-      "http://localhost:11434/api/generate",
-      {
-        prompt: promptText,
-        model: dbBot.data.AiConfig.textModel,
-        stream: false,
-        system: systemPrompt,
-        options: {
-          temperature: 0.8,
-          top_p: 0.9,
-        },
-      }
-    );
+    const res = await ollama.generate({
+      model: dbBot.data.AiConfig.textModel,
+      prompt: promptText,
+      stream: false,
+      system: systemPrompt,
+      options: {
+        temperature: 0.8,
+        top_p: 0.9,
+      },
+    });
 
-    if (!res.data?.response) {
+    if (!res?.response) {
       throw new Error("Resposta vazia da IA");
     }
 
-    const aiResponse = res.data.response.trim();
-
+    const aiResponse = res.response.trim();
     return aiResponse;
   } catch (error) {
     console.error("Erro ao gerar resposta da IA:", error.message);
 
     if (error.code === "ECONNREFUSED") {
-      throw new Error(
-        "Não foi possível conectar ao Ollama. Verifique se está rodando."
-      );
+      console.warn("Conexão recusada ao Ollama");
+      return "[erro de IA]";
     }
 
     if (error.code === "ETIMEDOUT") {
-      throw new Error("Timeout ao gerar resposta. Tente novamente.");
+      console.warn("Timeout ao gerar resposta");
+      return "[erro de IA]";
     }
 
-    throw error;
+    return "[erro de IA]";
   }
 };
+
+export const invertMessage = async (text) => {
+  try {
+    const promptText = `Reescreva a mensagem abaixo mantendo estilo e tamanho aproximado, mas invertendo completamente seu significado.\nMensagem: "${text}"`;
+    let modelToUse = dbBot.data.AiConfig.textModel;
+    if (Array.isArray(dbBot.data.AiConfig.fastModels) && dbBot.data.AiConfig.fastModels.length > 0) {
+      const arr = dbBot.data.AiConfig.fastModels;
+      modelToUse = arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    const res = await ollama.generate({
+      model: modelToUse,
+      prompt: promptText,
+      stream: false,
+      system:
+        "Você é um assistente que recebe uma frase e devolve outra com o significado invertido.",
+    });
+
+    if (!res?.response) {
+      throw new Error("Resposta vazia da IA");
+    }
+
+    return res.response.trim();
+  } catch (error) {
+    console.error("Erro ao inverter mensagem:", error.message);
+    return text;
+  }
+};
+
+

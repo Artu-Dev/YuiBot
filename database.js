@@ -13,7 +13,10 @@ export const dbBot = new Low(new JSONFile("./data/dbBot.json"), {
   },
   AiConfig: {
     voiceId: "4tRn1lSkEn13EVTuqb0g",
-    textModel: "gpt-oss:120b-cloud",
+    // modelo leve/rápido para respostas aleatórias
+    textModel: "gpt-oss:3b-cloud",
+    // lista de modelos rápidos que podem ser escolhidos aleatoriamente
+    fastModels: ["gpt-oss:3b-cloud", "gpt-oss:1.3b-cloud", "gpt-oss:7b-cloud"],
     voiceModel: "eleven_flash_v2_5",
   },
 });
@@ -37,22 +40,26 @@ function updateUserDb() {
     specific_time_messages: "INTEGER DEFAULT 0",
     long_questions: "INTEGER DEFAULT 0",
     laught_messages: "INTEGER DEFAULT 0",
-    porra_count: "INTEGER DEFAULT 0",
+    swears_count: "INTEGER DEFAULT 0",
     bot_commands_used: "INTEGER DEFAULT 0",
     caps_streak: "INTEGER DEFAULT 0",
     achievements_unlocked: "TEXT DEFAULT '{}'",
     penalities: "TEXT DEFAULT '[]'",
     lastRoubo: "TEXT",
     penalityWord: "TEXT DEFAULT ''",
+    timesRoubou: "INTEGER DEFAULT 0",
+    otaku_messages: "INTEGER DEFAULT 0",
+    gringo_messages: "INTEGER DEFAULT 0",
+    suspense_messages: "INTEGER DEFAULT 0",
+    textao_messages: "INTEGER DEFAULT 0",
+    monologo_streak: "INTEGER DEFAULT 0",
   };
 
-  // Obtém as colunas atuais do BD
   const existingColumns = db
     .prepare("PRAGMA table_info(users)")
     .all()
     .map((col) => col.name);
 
-  // Adiciona colunas ausentes
   for (const [column, type] of Object.entries(requiredColumns)) {
     if (!existingColumns.includes(column)) {
       console.log(`➕ Adicionando coluna AUSENTE no BD: ${column}`);
@@ -88,13 +95,19 @@ export const intializeDbBot = async () => {
       specific_time_messages INTEGER DEFAULT 0,
       long_questions INTEGER DEFAULT 0,
       laught_messages INTEGER DEFAULT 0,
-      porra_count INTEGER DEFAULT 0,
+      swears_count INTEGER DEFAULT 0,
       bot_commands_used INTEGER DEFAULT 0,
       caps_streak INTEGER DEFAULT 0,
       achievements_unlocked TEXT DEFAULT '{}',
       penalities TEXT DEFAULT '[]',
       lastRoubo TEXT,
       penalityWord TEXT DEFAULT '',
+      timesRoubou INTEGER DEFAULT 0,
+      otaku_messages INTEGER DEFAULT 0,
+      gringo_messages INTEGER DEFAULT 0,
+      suspense_messages INTEGER DEFAULT 0,
+      textao_messages INTEGER DEFAULT 0,
+      monologo_streak INTEGER DEFAULT 0,
 
       PRIMARY KEY (id, guild_id)
   )
@@ -346,6 +359,12 @@ export function setUserProperty(prop, userId, guildId, value) {
   ).run(value, userId, guildId);
 }
 
+export function addUserPropertyByAmount(prop, userId, guildId, amount) {
+  db.prepare(
+    `UPDATE users SET ${prop} = ${prop} + ? WHERE id = ? AND guild_id = ?`
+  ).run(amount, userId, guildId);
+}
+
 export const reduceChars = (userId, guildId, amount) => {
   const user = getUser(userId, guildId);
   const date = new Date().toISOString();
@@ -369,4 +388,11 @@ export const getRandomUserId = (guildId, excludeUserId) => {
     .prepare("SELECT id FROM users WHERE guild_id = ? AND id != ? ORDER BY RANDOM() LIMIT 1")
     .get(guildId, excludeUserId);
   return row ? row.id : null;
+}
+
+export const getGuildUsers = (guildId) => {
+  const rows = db
+    .prepare("SELECT * FROM users WHERE guild_id = ?")
+    .all(guildId); 
+  return rows;
 }

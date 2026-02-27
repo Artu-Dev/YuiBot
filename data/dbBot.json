@@ -1,15 +1,23 @@
 {
   "configs": {
     "limitChar": 2000,
-    "speakMessage": true,
+    "speakMessage": false,
     "charLimitEnabled": true,
     "generateMessage": true,
     "maxSavedAudios": 50,
-    "prefix": "$"
+    "prefix": "$",
+    "dailyWord": "merdas",
+    "dailyWordDate": "2026-02-27"
   },
   "AiConfig": {
     "voiceId": "4tRn1lSkEn13EVTuqb0g",
-    "textModel": "glm-4.6:cloud",
+    "textModel": "gglm-4.6:cloud",
+    "fastModels": [
+      "minimax-m2.5",
+      "gemini-3-flash-preview",
+      "deepseek-v3.2"
+    ],
     "voiceModel": "eleven_flash_v2_5"
-  }
+  },
+  "lastReset": "2/2026"
 }

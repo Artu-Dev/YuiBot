@@ -1,5 +1,5 @@
-import axios from "axios";
 import { dbBot, getRecentMessages, getGuildMembers } from "../database.js";
+import ollama from "./ollamaClient.js";
 
 const newsTemplates = [
   "URGENTE: {subject}",
@@ -35,9 +35,14 @@ Exemplos do estilo:
 
 Retorne APENAS a manchete, sem aspas ou formatação extra.`;
 
-  const response = await axios.post("http://localhost:11434/api/generate", {
+  let modelToUse = dbBot.data.AiConfig.textModel;
+  if (Array.isArray(dbBot.data.AiConfig.fastModels) && dbBot.data.AiConfig.fastModels.length > 0) {
+    const arr = dbBot.data.AiConfig.fastModels;
+    modelToUse = arr[Math.floor(Math.random() * arr.length)];
+  }
+  const response = await ollama.generate({
     prompt: prompt,
-    model: dbBot.data.AiConfig.textModel,
+    model: modelToUse,
     stream: false,
     options: {
       temperature: 0.8,
@@ -45,7 +50,7 @@ Retorne APENAS a manchete, sem aspas ou formatação extra.`;
     },
   });
 
-  const headline = response.data.response.trim();
+  const headline = response.response.trim();
   const template =
     newsTemplates[Math.floor(Math.random() * newsTemplates.length)];
   return template.replace("{subject}", headline);
@@ -67,9 +72,14 @@ Mantenha curto e engraçado!
 Retorne APENAS o artigo.
 `;
 
-  const response = await axios.post("http://localhost:11434/api/generate", {
+  let modelToUse = dbBot.data.AiConfig.textModel;
+  if (Array.isArray(dbBot.data.AiConfig.fastModels) && dbBot.data.AiConfig.fastModels.length > 0) {
+    const arr = dbBot.data.AiConfig.fastModels;
+    modelToUse = arr[Math.floor(Math.random() * arr.length)];
+  }
+  const response = await ollama.generate({
     prompt: prompt,
-    model: dbBot.data.AiConfig.textModel,
+    model: modelToUse,
     stream: false,
     options: {
       temperature: 0.8,
@@ -77,5 +87,5 @@ Retorne APENAS o artigo.
     },
   });
 
-  return response.data.response.trim();
+  return response.response.trim();
 }

@@ -52,7 +52,7 @@ export function parseMessage(message, client = null) {
             here: cleaned.includes("@here"),
             isMentioningClient:
                 client && client.user
-                    ? mentions.has(client.user)
+                    ? mentions.users.has(client.user.id)
                     : false
         },
 
@@ -98,3 +98,27 @@ export const replaceMentions = async (message, content) => {
 
       return processedContent;
     };
+
+// retorna um webhook existente do autor ou cria um; se atingir limite, reutiliza o primeiro
+export async function getOrCreateWebhook(channel, author) {
+    const webhooks = await channel.fetchWebhooks();
+    let hook = webhooks.find((wh) => wh.owner?.id === author.id);
+    if (hook) return hook;
+
+    // se já temos 15 webhooks (limite discord), utilize o primeiro disponível
+    if (webhooks.size >= 15) {
+        console.warn("Limite de webhooks atingido, reutilizando existente");
+        return webhooks.first();
+    }
+
+    try {
+        hook = await channel.createWebhook({
+            name: "Sistema de Penalidade",
+            avatar: author.displayAvatarURL(),
+        });
+        return hook;
+    } catch (err) {
+        console.error("Erro ao criar webhook:", err.message);
+        return webhooks.first();
+    }
+};

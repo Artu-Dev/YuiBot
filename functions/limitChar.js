@@ -1,30 +1,55 @@
-import axios from "axios";
 import { dbBot, reduceChars, setUserProperty } from "../database.js";
-import { parseMessage } from "./utils.js";
-import { user } from "@elevenlabs/elevenlabs-js/api/index.js";
+import { parseMessage, getOrCreateWebhook } from "./utils.js";
+import { readFileSync } from "fs";
+import path from "path";
+import { invertMessage } from "./generateRes.js"; // used for realidade invertida quando punido ou evento aleatório
+
 
 const penalities = [
-  {nome: "mudo", description: "Voce agora nao pode usar espaços nas mensagens"},
-  {nome: "estrangeiro", description: "Voce agora nao pode usar vogais nas mensagens"},
-  {nome: "palavra_obrigatoria", description: "Voce agora precisa terminar suas mensagens com: "},
-  {nome: "eco", description: "suas mensagens serao apagadas em 5 segundos"},
-  {nome: "screamer", description: "Voce agora só pode enviar mensagens em letras maiúsculas"},
-  {nome: "poeta_binario", description: "Voce agora só pode enviar mensagens com uma única palavra"},
-  {nome: "gago_digital", description: "Voce agora precisa repetir cada palavra duas vezes"}
-]
+  { nome: "mudo", description: "Voce agora nao pode usar espaços nas mensagens" },
+  { nome: "estrangeiro", description: "Voce agora nao pode usar vogais nas mensagens" },
+  { nome: "palavra_obrigatoria", description: "Voce agora precisa terminar suas mensagens com: " },
+  { nome: "eco", description: "suas mensagens serao apagadas em 5 segundos" },
+  { nome: "screamer", description: "Voce agora só pode enviar mensagens em letras maiúsculas" },
+  { nome: "poeta_binario", description: "Voce agora só pode enviar mensagens com uma única palavra" },
+  { nome: "gago_digital", description: "Voce agora precisa repetir cada palavra duas vezes" },
+  { nome: "spoiler_maniac", description: "Todas suas mensagens agora sao spoilers!!" },
+  { nome: "sentido_invertido", description: "Suas mensagens serão reescritas com o sentido invertido" },
+];
 
 const randomWords = [
-  "labubu", "papai", "xibiu", "amor", "porra", "?", "pneumoultramicroscopicosilicovulcanoconiose", "capeta", "merda", "bosta", "caralho", "puta",
-]
+  "labubu", "papai", "xibiu", "amor", "porra", "?",
+  "pneumoultramicroscopicosilicovulcanoconiose", "capeta",
+  "merda", "bosta", "caralho", "puta",
+];
+
+const palavrasPath = path.join("data", "negativas.txt");
+const listaPalavras = readFileSync(palavrasPath, "utf-8")
+  .split("\n")
+  .filter((p) => p.trim() !== "");
 
 
 export const limitChar = async (message, userData) => {
-  const {text, guildId, userId, displayName } = parseMessage(message)
-  if (!dbBot.data.configs.charLimitEnabled) return true;
+  const { text, guildId, userId, displayName } = parseMessage(message);
+  if (!dbBot.data.configs.charLimitEnabled) return;
 
-  handlePenalities(message, userData);
+  const hoje = new Date().toISOString().split("T")[0];
+  let randomWordBanned = dbBot.data.configs.dailyWord;
+  let lastUpdate = dbBot.data.configs.dailyWordDate;
 
-  const randomWordBanned = axios.get("https://api.dicionario-aberto.net/random").then(res => res.data[0].word) || "capeta";
+  if (!randomWordBanned || lastUpdate !== hoje) {
+    randomWordBanned =
+      listaPalavras[Math.floor(Math.random() * listaPalavras.length)] || "capeta";
+
+    dbBot.data.configs.dailyWord = randomWordBanned;
+    dbBot.data.configs.dailyWordDate = hoje;
+    await dbBot.write();
+
+    console.log(`Nova palavra proibida do dia definida: ${randomWordBanned}`);
+  }
+
+  const wasPunished = await handlePenalities(message, userData);
+  if (wasPunished) return;
 
   let textSize = text.length;
 
@@ -38,103 +63,141 @@ export const limitChar = async (message, userData) => {
     textSize += links.length * 10;
   }
 
-  const newValue = reduceChars(userId, guildId, textSize);
-
-
-  if (newValue <= 0) {
-    const randomPenality = penalities[Math.floor(Math.random() * penalities.length)];
-    let randomWord = "";
-
-    setUserProperty(userId, guildId, "penalities", [...userData.penalities, randomPenality.nome]);
-    if(randomPenality.nome === "palavra_obrigatoria") {
-      randomWord = randomWords[Math.floor(Math.random() * randomWords.length)];
-      setUserProperty(userId, guildId, "penalityWord", randomWord);
-    }
-
-    await message.reply(`!${displayName} seus caracteres acabaram e voce receu a penalidade: ${randomPenality.description}!!!`);
-    await message.channel.send(`${randomPenality.description}${randomWord}`);
-
-    setTimeout(() => {
-      message.delete();
-    }, 5000);
-
-    return false;
-  }
-
   if (text.toLowerCase().includes(randomWordBanned.toLowerCase())) {
     reduceChars(userId, guildId, 500);
-    message.reply("❌Palavra proibida!!! Você perdeu 500 caracteres!!!❌");
+    await message.reply("❌Palavra proibida!!! Você perdeu 500 caracteres!!!❌");
   }
 
+  const newValue = reduceChars(userId, guildId, textSize);
 
-  // const ROLE_GREEN  = "1443792452506091642";
-  // const ROLE_YELLOW = "1443792779900751883"; 
-  // const ROLE_RED    = "1443792854207041546";
+  if (newValue <= 0 ) {
+    const penalitiesList = JSON.parse(userData.penalities);
+   
+    if (penalitiesList.length === 0) {
+      const randomPenality =
+        penalities[Math.floor(Math.random() * penalities.length)];
+      let randomWord = "";
 
-  // const member = message.member;
+      setUserProperty("penalities", userId, guildId, JSON.stringify([randomPenality.nome]));
 
-  // await member.roles.remove([ROLE_GREEN, ROLE_YELLOW, ROLE_RED]).catch(() => {});
+      if (randomPenality.nome === "palavra_obrigatoria") {
+        randomWord = randomWords[Math.floor(Math.random() * randomWords.length)];
+        setUserProperty("penalityWord", userId, guildId, randomWord);
+      }
 
-  // if (newValue > 1000) {
-  //   await member.roles.add(ROLE_GREEN);
-  // } 
-  // else if (newValue > 500) {
-  //   await member.roles.add(ROLE_YELLOW);
-  // } 
-  // else {
-  //   await member.roles.add(ROLE_RED);
-  // }
+      await message.reply(
+        `!${displayName} seus caracteres acabaram e voce recebeu a penalidade: ${randomPenality.description}${randomWord}`,
+      );
 
-  if (newValue > 1000) message.react("🟢");
-  else if (newValue > 500) message.react("🟡");
-  else message.react("🔴");
+      setTimeout(() => {
+        message.delete().catch(() => {});
+      }, 5000);
+    }
+  } else {
+    const penalitiesList = JSON.parse(userData.penalities);
+    if (penalitiesList.length > 0) {
+      setUserProperty("penalities", userId, guildId, JSON.stringify([]));
+      setUserProperty("penalityWord", userId, guildId, "");
+      await message.reply(`${displayName} seus caracteres voltaram ao positivo! como seu nome saiu do Serasa, Suas penalidades foram removidas.`);
+    }
+  }
 
-  return true;
+  // if (newValue > 1000) message.react("🟢");
+  // else if (newValue > 500) message.react("🟡");
+  // else message.react("🔴");
 };
 
 
-function handlePenalities(message, userData) {
-  if (!userData.penalities || userData.penalities.length === 0) return;
+async function handlePenalities(message, userData) {
+  const penalitiesList = JSON.parse(userData.penalities);
+  if (!penalitiesList || penalitiesList.length === 0) return false;
 
-  if (userData.penalities.includes("mudo") && message.content.includes(' ')) {
-    message.delete();
-    message.reply("Você está penalizado com 'Mudo', não pode usar espaços!");
-  }
+  const content = message.content;
+  let isPunished = false;
+  let warning = "";
 
-  if (userData.penalities.includes("estrangeiro") && /[aeiou]/i.test(message.content)) {
-    message.delete();
-    message.reply("Você está penalizado com 'Estrangeiro', não pode usar vogais!");
-  }
+  const hasEco = penalitiesList.includes("eco");
 
-  if (userData.penalities.includes("palavra_obrigatoria")  && !message.content.endsWith(userData.penalityWord)) {
-    message.delete();
-    message.reply(`Você está penalizado com "Palavra Obrigatória", suas mensagens precisam terminar com ${userData.penalityWord}!`);
-  }
-
-  if (userData.penalities.includes("eco")) {
-    setTimeout(() => {
-      message.delete();
-    }, 5000); 
-  }
-
-  if (userData.penalities.includes("screamer") && message.content !== message.content.toUpperCase()) {
-    message.delete();
-    message.reply("Você está penalizado com 'Screamer', só pode usar letras maiúsculas!");
-  }
-
-  if (userData.penalities.includes("poeta_binario") && message.content.trim().includes(' ')) {
-    message.delete();
-    message.reply("Você está penalizado com 'Poeta Binário', só pode enviar mensagens de uma palavra!");
-  } 
-
-  if (userData.penalities.includes("gago_digital")) {
-    const words = message.content.trim().split(/\s+/);
+  if (penalitiesList.includes("mudo") && content.includes(" ")) {
+    isPunished = true;
+    warning = "Você não pode usar espaços!";
+  } else if (penalitiesList.includes("estrangeiro") && /[aeiou]/i.test(content)) {
+    isPunished = true;
+    warning = "Você não pode usar vogais!";
+  } else if (penalitiesList.includes("palavra_obrigatoria")) {
+      const required = userData.penalityWord || "";
+      if (!content.endsWith(required)) {
+        isPunished = true;
+        warning = `Sua mensagem precisa terminar com: ${required}`;
+      }
+  } else if (penalitiesList.includes("screamer") && content !== content.toUpperCase()) {
+      isPunished = true;
+      warning = "Você só pode usar letras maiúsculas!";
+  } else if (penalitiesList.includes("poeta_binario")) {
+    const palavras = content.trim().split(/\s+/);
+    if (palavras.length > 1) {
+      isPunished = true;
+      warning = "Você só pode enviar uma única palavra!";
+    }
+  } else if (penalitiesList.includes("gago_digital")) {
+    const words = content.trim().split(/\s+/);
+    let erroGago = false;
     for (let i = 0; i < words.length; i += 2) {
-      if (words[i] !== words[i + 1]) {
-        message.delete();
-        message.reply("Você está penalizado com 'Gago Digital', precisa repetir cada palavra duas vezes!");
+      if (!words[i + 1] || words[i] !== words[i + 1]) {
+        erroGago = true;
         break;
       }
     }
+    if (erroGago) {
+      isPunished = true;
+      warning = "Você precisa repetir cada palavra duas vezes!";
+    }
+  } else if (penalitiesList.includes("spoiler_maniac")) {
+      const myWebHook = await getOrCreateWebhook(message.channel, message.author);
+
+      const textPunished =
+        (message.content || "")
+          .split("")
+          .map((char) => (char === " " ? " " : `||${char}||`))
+          .join("") || "...";
+
+      await message.delete().catch(() => {});
+
+      await myWebHook.send({
+        content: textPunished,
+        username: message.member?.displayName || message.author.username,
+        avatarURL: message.author.displayAvatarURL(),
+      });
+      return false;
+  } else if (penalitiesList.includes("sentido_invertido")) {
+      const myWebHook = await getOrCreateWebhook(message.channel, message.author);
+
+      let invertedText = message.content || "";
+      try {
+        invertedText = await invertMessage(invertedText);
+      } catch (e) {
+        console.error("Falha ao inverter mensagem:", e.message);
+      }
+
+      await message.delete().catch(() => {});
+
+      await myWebHook.send({
+        content: invertedText,
+        username: message.member?.displayName || message.author.username,
+        avatarURL: message.author.displayAvatarURL(),
+      });
+      return false;
+  } else if (hasEco) {
+    setTimeout(() => {
+      message.delete().catch(() => {});
+    }, 5000);
   }
+
+  if (isPunished) {
+    await message.delete().catch(() => {});
+    await message.channel.send(`<@${message.author.id}> ${warning}`);
+    return true;
+  }
+
+  return false;
 }
