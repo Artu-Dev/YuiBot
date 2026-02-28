@@ -11,7 +11,7 @@
   },
   "AiConfig": {
     "voiceId": "4tRn1lSkEn13EVTuqb0g",
-    "textModel": "gglm-4.6:cloud",
+    "textModel": "glm-4.6:cloud",
     "fastModels": [
       "minimax-m2.5",
       "gemini-3-flash-preview",
