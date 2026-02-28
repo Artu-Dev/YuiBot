@@ -35,6 +35,10 @@ const commands = [
     name: 'news',
     description: 'Gera uma fake news completamente absurda.',
   },
+  {
+    name: 'palavra',
+    description: 'Mostra a palavra proibida do dia.',
+  },
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

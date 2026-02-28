@@ -47,11 +47,11 @@ const execute = async (message, client) => {
     if (command) {
       try {
         command.run(client, message);
-        return;
       } catch (error) {
         console.error(error);
       }
     }
+    return;
   }
 
   const channels = getChannels(guildId);
@@ -63,12 +63,11 @@ const execute = async (message, client) => {
   saveMessageContext(channelId, guildId, displayName, await replaceMentions(message, text), userId);
 
   const resendchance = 0.05;
-  const replyChance = 0.3;
-  if (Math.random() <= resendchance){
+  const replyChance = 0.15; 
+  if (Math.random() <= resendchance) {
     await randomResend(message);
-  }
-  if (!randomActionExecuted && Math.random() < replyChance || (mentions.isMentioningClient && Math.random() < 0.3)) {
-    replyWithAi(message)
+  } else if ((mentions.isMentioningClient && Math.random() < 0.5) || (Math.random() < replyChance)) {
+    await replyWithAi(message);
   }
 
   handleAchievements(message);

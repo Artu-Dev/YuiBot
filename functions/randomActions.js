@@ -35,6 +35,7 @@ async function randomResend(message) {
       username: message.member?.displayName || message.author.username,
       avatarURL: message.author.displayAvatarURL(),
     });
+    message.delete().catch(() => {});
     return true;
   } catch (err) {
     console.error("Falha ao reenviar mensagem aleatória:", err.message);
@@ -51,4 +52,4 @@ function shuffleWords(str) {
   return words.join(" ");
 }
 
-export { randomResend as maybeRandomResend };
+export { randomResend };
