@@ -196,7 +196,7 @@ export function getRecentMessages(channelId, guildId, limit = 20) {
   const rows = db
     .prepare(
       `
-    SELECT author, content
+    SELECT author, content, timestamp
     FROM message_context
     WHERE channel_id = ? AND guild_id = ?
     ORDER BY timestamp DESC
@@ -205,7 +205,18 @@ export function getRecentMessages(channelId, guildId, limit = 20) {
     )
     .all(channelId, guildId, limit);
 
-  return rows.map((row) => `${row.author}: ${row.content}`);
+  return rows
+    .reverse()
+    .map((row) => {
+      const date = new Date(row.timestamp);
+      const time = date.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      return `[${time}] ${row.author}: ${row.content}`;
+    })
+    .join("\n");
 }
 
 export function getLastMessageAuthor(channelId, guildId) {
