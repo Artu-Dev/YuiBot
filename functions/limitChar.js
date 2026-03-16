@@ -2,11 +2,10 @@ import { dbBot, reduceChars, setUserProperty } from "../database.js";
 import { parseMessage, getOrCreateWebhook } from "./utils.js";
 import { readFileSync } from "fs";
 import path from "path";
-import { invertMessage } from "./generateRes.js"; // used for realidade invertida quando punido ou evento aleatório
+import { invertMessage } from "./generateRes.js";
 
 
 const penalities = [
-  { nome: "mudo", description: "Voce agora nao pode usar espaços nas mensagens" },
   { nome: "estrangeiro", description: "Voce agora nao pode usar vogais nas mensagens" },
   { nome: "palavra_obrigatoria", description: "Voce agora precisa terminar suas mensagens com: " },
   { nome: "eco", description: "suas mensagens serao apagadas em 5 segundos" },
@@ -118,10 +117,7 @@ async function handlePenalities(message, userData) {
 
   const hasEco = penalitiesList.includes("eco");
 
-  if (penalitiesList.includes("mudo") && content.includes(" ")) {
-    isPunished = true;
-    warning = "Você não pode usar espaços!";
-  } else if (penalitiesList.includes("estrangeiro") && /[aeiou]/i.test(content)) {
+  if (penalitiesList.includes("estrangeiro") && /[aeiou]/i.test(content)) {
     isPunished = true;
     warning = "Você não pode usar vogais!";
   } else if (penalitiesList.includes("palavra_obrigatoria")) {
@@ -133,7 +129,7 @@ async function handlePenalities(message, userData) {
   } else if (penalitiesList.includes("screamer") && content !== content.toUpperCase()) {
       isPunished = true;
       warning = "Você só pode usar letras maiúsculas!";
-  } else if (penalitiesList.includes("poeta_binario")) {
+  } else if (penalitiesList.includes("poeta_binario") || penalitiesList.includes("mudo")) {
     const palavras = content.trim().split(/\s+/);
     if (palavras.length > 1) {
       isPunished = true;
