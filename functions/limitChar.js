@@ -47,9 +47,6 @@ export const limitChar = async (message, userData) => {
     console.log(`Nova palavra proibida do dia definida: ${randomWordBanned}`);
   }
 
-  const wasPunished = await handlePenalities(message, userData);
-  if (wasPunished) return;
-
   let textSize = text.length;
 
   if (message.attachments.size > 0) {
@@ -69,6 +66,9 @@ export const limitChar = async (message, userData) => {
 
   const newValue = reduceChars(userId, guildId, textSize);
 
+  const wasPunished = await handlePenalities(message, userData);
+  if (wasPunished) return;
+
   if (newValue <= 0 ) {
     const penalitiesList = JSON.parse(userData.penalities);
    
@@ -85,7 +85,10 @@ export const limitChar = async (message, userData) => {
       }
 
       await message.reply(
-        `!${displayName} seus caracteres acabaram e voce recebeu a penalidade: ${randomPenality.description}${randomWord}`,
+        `!${displayName} seus caracteres acabaram e voce recebeu a penalidade: ${randomPenality.nome}`,
+      );
+      await message.reply(
+        `${randomPenality.description}${randomWord}`,
       );
 
       setTimeout(() => {
