@@ -194,7 +194,11 @@ async function handlePenalities(message, userData) {
 
   if (isPunished) {
     await message.delete().catch(() => {});
-    await message.channel.send(`<@${message.author.id}> ${warning}`);
+    const warningMessage = await message.channel.send(`<@${message.author.id}> ${warning}`);
+    
+    setTimeout(() => {
+      warningMessage.delete().catch(() => {});
+    }, 30000);
     return true;
   }
 

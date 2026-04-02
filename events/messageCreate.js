@@ -16,11 +16,10 @@ import { randomResend } from "../functions/randomActions.js";
 
 const name = "messageCreate";
 await intializeDbBot();
-const prefix = dbBot.data.configs.prefix;
-
 const execute = async (message, client) => {
-  if (message.author.bot) return;
+  if (message.author.bot || message.author.id != "974297735559806986") return;
   const { guildId, userId, channelId, displayName, text, mentions } = parseMessage(message, client);
+  const prefix = dbBot.data.configs.prefix || "$";
 
   const now = new Date();
   const monthYearNow = `${now.getMonth() + 1}/${now.getFullYear()}`;
@@ -39,8 +38,12 @@ const execute = async (message, client) => {
       console.log(`--- RESET CONCLUÍDO PARA O MÊS ${monthYearNow} ---`);
   }
 
-  if (text.startsWith(prefix)) {
-    const args = text.slice(prefix.length).trim().split(/ +/);
+  const isSlashCommand = text.startsWith("/");
+  const isPrefixCommand = text.startsWith(prefix);
+
+  if (isSlashCommand || isPrefixCommand) {
+    const raw = isSlashCommand ? text.slice(1).trim() : text.slice(prefix.length).trim();
+    const args = raw.split(/ +/);
     const cmdName = args.shift().toLowerCase();
     const command = client.commands.get(cmdName);
 

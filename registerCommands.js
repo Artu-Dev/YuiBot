@@ -39,6 +39,22 @@ const commands = [
     name: 'palavra',
     description: 'Mostra a palavra proibida do dia.',
   },
+  {
+    name: 'penality',
+    description: 'Verifica suas penalidades ou de um usuário mencionado.',
+  },
+  {
+    name: 'set-penality',
+    description: 'Aplica uma penalidade existente em um usuário.',
+  },
+  {
+    name: 'remove-penality',
+    description: 'Remove penalidade de um usuário (ou all).',
+  },
+  {
+    name: 'config',
+    description: 'Mostra/ajusta configurações do bot.',
+  },
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

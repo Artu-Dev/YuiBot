@@ -144,10 +144,56 @@ export const intializeDbBot = async () => {
 /// USUÁRIOS
 /// ==============================================
 
-const getUser = (userId, guildId) => {
+export const getUser = (userId, guildId) => {
   return db
     .prepare("SELECT * FROM users WHERE id = ? AND guild_id = ?")
     .get(userId, guildId);
+};
+
+export const getUserPenalities = (userId, guildId) => {
+  const user = getUser(userId, guildId);
+  if (!user || !user.penalities) return [];
+
+  try {
+    const list = JSON.parse(user.penalities);
+    return Array.isArray(list) ? list : [];
+  } catch (error) {
+    return [];
+  }
+};
+
+export const setUserPenalities = (userId, guildId, penalities) => {
+  let normalized = penalities;
+  if (!Array.isArray(normalized)) normalized = [];
+  db.prepare("UPDATE users SET penalities = ? WHERE id = ? AND guild_id = ?").run(
+    JSON.stringify(normalized),
+    userId,
+    guildId
+  );
+};
+
+export const addUserPenality = (userId, guildId, penality) => {
+  const current = getUserPenalities(userId, guildId);
+  const normalized = penality.trim().toLowerCase();
+  if (!normalized) return false;
+  if (!current.includes(normalized)) {
+    current.push(normalized);
+    setUserPenalities(userId, guildId, current);
+    return true;
+  }
+  return false;
+};
+
+export const removeUserPenality = (userId, guildId, penality) => {
+  const current = getUserPenalities(userId, guildId);
+  const normalized = penality.trim().toLowerCase();
+  const filtered = current.filter((p) => p !== normalized);
+  setUserPenalities(userId, guildId, filtered);
+  return current.length !== filtered.length;
+};
+
+export const clearUserPenalities = (userId, guildId) => {
+  setUserPenalities(userId, guildId, []);
 };
 
 export const getOrCreateUser = (userId, displayName, guildId) => {
