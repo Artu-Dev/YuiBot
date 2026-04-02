@@ -3,14 +3,15 @@ import { getOrCreateWebhook } from "./utils.js";
 import { invertMessage } from "./generateRes.js";
 
 export const penalities = [
-  { nome: "estrangeiro", description: "Voce agora nao pode usar vogais nas mensagens" },
+  { nome: "estrangeiro",       description: "Voce agora nao pode usar vogais nas mensagens" },
   { nome: "palavra_obrigatoria", description: "Voce agora precisa terminar suas mensagens com: " },
-  { nome: "eco", description: "suas mensagens serao apagadas em 5 segundos" },
-  { nome: "screamer", description: "Voce agora só pode enviar mensagens em letras maiúsculas" },
-  { nome: "poeta_binario", description: "Voce agora só pode enviar mensagens com uma única palavra" },
-  { nome: "gago_digital", description: "Voce agora precisa repetir cada palavra duas vezes" },
-  { nome: "redigido", description: "Todas as letras de suas mensagens agora sao spoilers!!" },
+  { nome: "eco",               description: "suas mensagens serao apagadas em 5 segundos" },
+  { nome: "screamer",          description: "Voce agora só pode enviar mensagens em letras maiúsculas" },
+  { nome: "poeta_binario",     description: "Voce agora só pode enviar mensagens com uma única palavra" },
+  { nome: "gago_digital",      description: "Voce agora precisa repetir cada palavra duas vezes" },
+  { nome: "redigido",          description: "Todas as letras de suas mensagens agora sao spoilers!!" },
   { nome: "sentido_invertido", description: "Suas mensagens serão reescritas com o sentido invertido" },
+  { nome: "minusculo",         description: "Suas mensagens viram tudo junto e minúsculo semespaco" },
 ];
 
 export async function handlePenalities(message, userData) {
@@ -26,21 +27,31 @@ export async function handlePenalities(message, userData) {
   if (penalitiesList.includes("estrangeiro") && /[aeiou]/i.test(content)) {
     isPunished = true;
     warning = "Você não pode usar vogais!";
+
   } else if (penalitiesList.includes("palavra_obrigatoria")) {
     const required = userData.penalityWord || "";
     if (!content.endsWith(required)) {
       isPunished = true;
       warning = `Sua mensagem precisa terminar com: ${required}`;
     }
-  } else if (penalitiesList.includes("screamer") && content !== content.toUpperCase()) {
+
+  } else if (
+    penalitiesList.includes("screamer") &&
+    content !== content.toUpperCase()
+  ) {
     isPunished = true;
     warning = "Você só pode usar letras maiúsculas!";
-  } else if (penalitiesList.includes("poeta_binario") || penalitiesList.includes("mudo")) {
+
+  } else if (
+    penalitiesList.includes("poeta_binario") ||
+    penalitiesList.includes("mudo")
+  ) {
     const palavras = content.trim().split(/\s+/);
     if (palavras.length > 1) {
       isPunished = true;
       warning = "Você só pode enviar uma única palavra!";
     }
+
   } else if (penalitiesList.includes("gago_digital")) {
     const words = content.trim().split(/\s+/);
     let erroGago = false;
@@ -54,7 +65,11 @@ export async function handlePenalities(message, userData) {
       isPunished = true;
       warning = "Você precisa repetir cada palavra duas vezes!";
     }
-  } else if (penalitiesList.includes("redigido")) {
+
+  } else if (
+    penalitiesList.includes("spoiler_maniac") ||
+    penalitiesList.includes("redigido")
+  ) {
     const myWebHook = await getOrCreateWebhook(message.channel, message.author);
 
     const textPunished =
@@ -64,31 +79,54 @@ export async function handlePenalities(message, userData) {
         .join("") || "...";
 
     await message.delete().catch(() => {});
-
     await myWebHook.send({
       content: textPunished,
       username: message.member?.displayName || message.author.username,
       avatarURL: message.author.displayAvatarURL(),
     });
     return false;
+
   } else if (penalitiesList.includes("sentido_invertido")) {
     const myWebHook = await getOrCreateWebhook(message.channel, message.author);
 
     let invertedText = message.content || "";
-    try {
-      invertedText = await invertMessage(invertedText);
+    try {      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), 5000)
+      );
+      invertedText = await Promise.race([
+        invertMessage(invertedText),
+        timeoutPromise,
+      ]);
     } catch (e) {
-      console.error("Falha ao inverter mensagem:", e.message);
+      invertedText = invertedText.split(" ").reverse().join(" ");
+      if (e.message !== "timeout") {
+        console.error("Falha ao inverter mensagem:", e.message);
+      }
     }
 
     await message.delete().catch(() => {});
-
     await myWebHook.send({
       content: invertedText,
       username: message.member?.displayName || message.author.username,
       avatarURL: message.author.displayAvatarURL(),
     });
     return false;
+
+  } else if (penalitiesList.includes("minusculo")) {
+    const myWebHook = await getOrCreateWebhook(message.channel, message.author);
+
+    const result = (message.content || "")
+      .toLowerCase()
+      .replace(/\s+/g, "") || "...";
+
+    await message.delete().catch(() => {});
+    await myWebHook.send({
+      content: result,
+      username: message.member?.displayName || message.author.username,
+      avatarURL: message.author.displayAvatarURL(),
+    });
+    return false;
+
   } else if (hasEco) {
     setTimeout(() => {
       message.delete().catch(() => {});
@@ -97,8 +135,9 @@ export async function handlePenalities(message, userData) {
 
   if (isPunished) {
     await message.delete().catch(() => {});
-    const warningMessage = await message.channel.send(`<@${message.author.id}> ${warning}`);
-
+    const warningMessage = await message.channel.send(
+      `<@${message.author.id}> ${warning}`
+    );
     setTimeout(() => {
       warningMessage.delete().catch(() => {});
     }, 30000);

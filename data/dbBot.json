@@ -12,10 +12,10 @@
   "AiConfig": {
     "voiceId": "4tRn1lSkEn13EVTuqb0g",
     "textModel": "glm-4.6:cloud",
+    "visionModel": "qwen3.5:cloud",
     "fastModels": [
       "minimax-m2.5",
-      "gemini-3-flash-preview",
-      "deepseek-v3.2"
+      "gemini-3-flash-preview"
     ],
     "voiceModel": "eleven_flash_v2_5"
   },

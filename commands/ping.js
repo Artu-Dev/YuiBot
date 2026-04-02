@@ -13,3 +13,17 @@ export async function run(client, message) {
     `Latência de resposta: **${messageLatency}ms**`
   );
 }
+
+export async function runInteraction(client, interaction) {
+  const apiLatency = Math.round(client.ws.ping);
+  
+  await interaction.reply("Calculando ping...");
+  
+  const fetchedMessage = await interaction.fetchReply();
+  const messageLatency = fetchedMessage.createdTimestamp - interaction.createdTimestamp;
+  
+  await interaction.editReply(
+    `Latência da API: **${apiLatency}ms**\n` +
+    `Latência de resposta: **${messageLatency}ms**`
+  );
+}

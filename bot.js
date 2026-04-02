@@ -3,6 +3,7 @@ import { readdirSync } from "fs";
 import dotenv from "dotenv";
 import path from "path";
 import Config from "./config.js";
+import { intializeDbBot, dbBot, getGuildUsers, addChars } from "./database.js";
 
 dotenv.config();
 Config.setupDirectories();
@@ -38,9 +39,34 @@ for (const file of readdirSync(eventsPath)) {
 
 log(`Eventos ativos: ${readdirSync(eventsPath).length}`);
 
-client.once("ready", () => {
-  log(`Online como ${client.user.tag}`);
-});
+await intializeDbBot();
 
+// === RESET MENSAL ===
+function checkMonthlyReset() {
+  const now = new Date();
+  const monthYearNow = `${now.getMonth() + 1}/${now.getFullYear()}`;
+
+  if (dbBot.data.lastReset === monthYearNow) return;
+
+  log("--- NOVO MÊS DETECTADO: INICIANDO RESET GERAL ---");
+
+  for (const [guildId] of client.guilds.cache) {
+    const users = getGuildUsers(guildId);
+    for (const u of users) {
+      addChars(u.id, guildId, 2000);
+    }
+  }
+
+  dbBot.data.lastReset = monthYearNow;
+  dbBot.write();
+
+  log(`--- RESET MENSAL CONCLUÍDO PARA ${monthYearNow} ---`);
+}
+
+client.once("clientReady", () => {
+  log(`Online como ${client.user.tag}`);
+  checkMonthlyReset();
+  setInterval(checkMonthlyReset, 6 * 60 * 60 * 1000);
+});
 
 client.login(process.env.DISCORD_TOKEN);

@@ -13,9 +13,8 @@ export const dbBot = new Low(new JSONFile("./data/dbBot.json"), {
   },
   AiConfig: {
     voiceId: "4tRn1lSkEn13EVTuqb0g",
-    // modelo leve/rápido para respostas aleatórias
     textModel: "gpt-oss:3b-cloud",
-    // lista de modelos rápidos que podem ser escolhidos aleatoriamente
+    visionModel: "qwen3.5:cloud",
     fastModels: ["gpt-oss:3b-cloud", "gpt-oss:1.3b-cloud", "gpt-oss:7b-cloud"],
     voiceModel: "eleven_flash_v2_5",
   },
@@ -26,7 +25,6 @@ const charLimit = dbBot.data.configs.limitChar;
 function updateUserDb() {
   const requiredColumns = {
     display_name: "TEXT",
-
     charLeft: `INTEGER DEFAULT ${charLimit}`,
     messages_sent: "INTEGER DEFAULT 0",
     mentions_received: "INTEGER DEFAULT 0",
@@ -53,6 +51,9 @@ function updateUserDb() {
     suspense_messages: "INTEGER DEFAULT 0",
     textao_messages: "INTEGER DEFAULT 0",
     monologo_streak: "INTEGER DEFAULT 0",
+    escudo_expiry: "TEXT DEFAULT ''",
+    consecutive_robbery_losses: "INTEGER DEFAULT 0",
+    total_robberies: "INTEGER DEFAULT 0",
   };
 
   const existingColumns = db
@@ -78,11 +79,7 @@ export const intializeDbBot = async () => {
       id TEXT,
       guild_id TEXT,
       display_name TEXT,
-
-      -- Sistema de caracteres
       charLeft INTEGER DEFAULT ${charLimit},
-
-      -- Estatísticas gerais
       messages_sent INTEGER DEFAULT 0,
       mentions_received INTEGER DEFAULT 0,
       mentions_sent INTEGER DEFAULT 0,
@@ -108,7 +105,9 @@ export const intializeDbBot = async () => {
       suspense_messages INTEGER DEFAULT 0,
       textao_messages INTEGER DEFAULT 0,
       monologo_streak INTEGER DEFAULT 0,
-
+      escudo_expiry TEXT DEFAULT '',
+      consecutive_robbery_losses INTEGER DEFAULT 0,
+      total_robberies INTEGER DEFAULT 0,
       PRIMARY KEY (id, guild_id)
   )
   `
@@ -134,10 +133,28 @@ export const intializeDbBot = async () => {
       guild_id TEXT,
       author TEXT,
       content TEXT,
-      timestamp TEXT
+      timestamp TEXT,
+      message_id TEXT,
+      image_url TEXT,
+      image_analysis TEXT
     )
   `
   ).run();
+
+  const existingMsgContextColumns = db
+    .prepare("PRAGMA table_info(message_context)")
+    .all()
+    .map((col) => col.name);
+
+  if (!existingMsgContextColumns.includes("message_id")) {
+    db.prepare("ALTER TABLE message_context ADD COLUMN message_id TEXT").run();
+  }
+  if (!existingMsgContextColumns.includes("image_url")) {
+    db.prepare("ALTER TABLE message_context ADD COLUMN image_url TEXT").run();
+  }
+  if (!existingMsgContextColumns.includes("image_analysis")) {
+    db.prepare("ALTER TABLE message_context ADD COLUMN image_analysis TEXT").run();
+  }
 };
 
 /// ==============================================
@@ -153,7 +170,6 @@ export const getUser = (userId, guildId) => {
 export const getUserPenalities = (userId, guildId) => {
   const user = getUser(userId, guildId);
   if (!user || !user.penalities) return [];
-
   try {
     const list = JSON.parse(user.penalities);
     return Array.isArray(list) ? list : [];
@@ -212,17 +228,41 @@ export const getOrCreateUser = (userId, displayName, guildId) => {
 };
 
 /// ==============================================
+/// ESCUDO
+/// ==============================================
+
+export const hasEscudo = (userId, guildId) => {
+  const user = getUser(userId, guildId);
+  if (!user || !user.escudo_expiry) return false;
+  return new Date(user.escudo_expiry) > new Date();
+};
+
+export const setEscudo = (userId, guildId, hours = 24) => {
+  const expiry = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+  db.prepare("UPDATE users SET escudo_expiry = ? WHERE id = ? AND guild_id = ?")
+    .run(expiry, userId, guildId);
+  return expiry;
+};
+
+export const getEscudoExpiry = (userId, guildId) => {
+  const user = getUser(userId, guildId);
+  if (!user || !user.escudo_expiry) return null;
+  const d = new Date(user.escudo_expiry);
+  return d > new Date() ? d : null;
+};
+
+/// ==============================================
 /// CONTEXTO DE MENSAGENS
 /// ==============================================
 
-export function saveMessageContext(channelId, guildId, author, content, userId) {
-  if (!content) return;
+export function saveMessageContext(channelId, guildId, author, content, userId, messageId = null, imageUrl = null) {
+  if (!content && !imageUrl) return;
   db.prepare(
     `
-    INSERT INTO message_context (channel_id, guild_id, author, content, timestamp, userId)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO message_context (channel_id, guild_id, author, content, timestamp, userId, message_id, image_url)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `
-  ).run(channelId, guildId, author, content, new Date().toISOString(), userId);
+  ).run(channelId, guildId, author, content, new Date().toISOString(), userId, messageId, imageUrl);
 
   db.prepare(
     `
@@ -242,7 +282,7 @@ export function getRecentMessages(channelId, guildId, limit = 20) {
   const rows = db
     .prepare(
       `
-    SELECT author, content, timestamp
+    SELECT author, content, timestamp, message_id, image_url, image_analysis
     FROM message_context
     WHERE channel_id = ? AND guild_id = ?
     ORDER BY timestamp DESC
@@ -259,10 +299,28 @@ export function getRecentMessages(channelId, guildId, limit = 20) {
         hour: "2-digit",
         minute: "2-digit",
       });
-
-      return `[${time}] ${row.author}: ${row.content}`;
+      
+      let messageLine = `[${time}] ${row.author}: ${row.content}`;
+      
+      if (row.image_analysis) {
+        messageLine += ` [IMAGEM DESCRITA: ${row.image_analysis}]`;
+      }
+      
+      return messageLine;
     })
     .join("\n");
+}
+
+export function getMessageContextByMessageId(messageId, guildId) {
+  return db
+    .prepare(`SELECT * FROM message_context WHERE message_id = ? AND guild_id = ? LIMIT 1`)
+    .get(messageId, guildId);
+}
+
+export function setMessageImageAnalysis(messageId, guildId, analysis) {
+  db.prepare(
+    `UPDATE message_context SET image_analysis = ? WHERE message_id = ? AND guild_id = ?`
+  ).run(analysis, messageId, guildId);
 }
 
 export function getLastMessageAuthor(channelId, guildId) {
@@ -273,7 +331,6 @@ export function getLastMessageAuthor(channelId, guildId) {
     ORDER BY timestamp DESC
     LIMIT 1
   `).get(channelId, guildId);
-
   return row ? row.userId : null;
 }
 
@@ -288,7 +345,6 @@ export function getGuildMembers(guildId, limit = 10) {
   `
     )
     .all(guildId, limit);
-
   return rows.map((row) => row.display_name);
 }
 
@@ -300,24 +356,18 @@ export function getAchievements(userId, guildId) {
   const row = db
     .prepare("SELECT achievements_unlocked FROM users WHERE id = ? AND guild_id = ?")
     .get(userId, guildId);
-
   if (!row) return {};
-
   let parsed;
-
   try {
     parsed = JSON.parse(row.achievements_unlocked);
   } catch (err) {
     parsed = {};
   }
-
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     parsed = {};
   }
-
   return parsed;
 }
-
 
 export function unlockAchievement(userId, guildId, achievementKey) {
   const result = db.transaction(() => {
@@ -336,16 +386,12 @@ export function unlockAchievement(userId, guildId, achievementKey) {
     }
 
     if (current[achievementKey]) return false;
-
     current[achievementKey] = true;
-
     db.prepare(
       "UPDATE users SET achievements_unlocked = ? WHERE id = ? AND guild_id = ?"
     ).run(JSON.stringify(current), userId, guildId);
-
     return true;
   })();
-
   return result;
 }
 
@@ -362,17 +408,12 @@ export const getChannels = (guildId) => {
 
 export const addChannel = (guildId, channelId) => {
   let channels = getChannels(guildId);
-
   if (!channels.length) {
     db.prepare(
       "INSERT OR IGNORE INTO bot_channels (guild_id, channel_id) VALUES (?, ?)"
     ).run(guildId, "[]");
   }
-
-  if (!channels.includes(channelId)) {
-    channels.push(channelId);
-  }
-
+  if (!channels.includes(channelId)) channels.push(channelId);
   db.prepare("UPDATE bot_channels SET channel_id = ? WHERE guild_id = ?").run(
     JSON.stringify(channels),
     guildId
@@ -381,9 +422,7 @@ export const addChannel = (guildId, channelId) => {
 
 export const removeChannel = (guildId, channelId) => {
   const currentChannels = getChannels(guildId);
-
   const updated = currentChannels.filter((id) => id !== channelId);
-
   db.prepare("UPDATE bot_channels SET channel_id = ? WHERE guild_id = ?").run(
     JSON.stringify(updated),
     guildId
@@ -394,25 +433,21 @@ export const removeChannel = (guildId, channelId) => {
 /// PROPRIEDADES USUARIO
 /// ==============================================
 
-export const addUserProperty = (property, userId, guildId) => {
+export const addUserProperty = (property, userId, guildId) => {  
   db.prepare(
     `UPDATE users SET ${property} = ${property} + 1 WHERE id = ? AND guild_id = ?`
   ).run(userId, guildId);
 };
 
 export function resetUserProperty(prop, userId, guildId) {
-  db.prepare(
-    `
-        UPDATE users SET ${prop} = 0 WHERE id = ? AND guild_id = ?
-    `
+    db.prepare(
+    `UPDATE users SET ${prop} = 0 WHERE id = ? AND guild_id = ?`
   ).run(userId, guildId);
 }
 
 export function setUserProperty(prop, userId, guildId, value) {
   db.prepare(
-    `
-        UPDATE users SET ${prop} = ? WHERE id = ? AND guild_id = ?
-    `
+    `UPDATE users SET ${prop} = ? WHERE id = ? AND guild_id = ?`
   ).run(value, userId, guildId);
 }
 
@@ -426,11 +461,9 @@ export const reduceChars = (userId, guildId, amount) => {
   const user = getUser(userId, guildId);
   const date = new Date().toISOString();
   const newValue = Math.max(0, user.charLeft - amount);
-
   db.prepare(
     "UPDATE users SET charLeft = ?, last_message_time = ? WHERE id = ? AND guild_id = ?"
   ).run(newValue, date, userId, guildId);
-
   return newValue;
 };
 
@@ -438,18 +471,15 @@ export const addChars = (userId, guildId, amount) => {
   db.prepare(
     `UPDATE users SET charLeft = charLeft + ? WHERE id = ? AND guild_id = ?`
   ).run(amount, userId, guildId);
-}
+};
 
 export const getRandomUserId = (guildId, excludeUserId) => {
   const row = db
     .prepare("SELECT id FROM users WHERE guild_id = ? AND id != ? ORDER BY RANDOM() LIMIT 1")
     .get(guildId, excludeUserId);
   return row ? row.id : null;
-}
+};
 
 export const getGuildUsers = (guildId) => {
-  const rows = db
-    .prepare("SELECT * FROM users WHERE guild_id = ?")
-    .all(guildId); 
-  return rows;
-}
+  return db.prepare("SELECT * FROM users WHERE guild_id = ?").all(guildId);
+};

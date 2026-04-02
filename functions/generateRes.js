@@ -1,4 +1,4 @@
-import { dbBot, getRecentMessages } from "../database.js";
+import { dbBot, getRecentMessages, getMessageContextByMessageId, setMessageImageAnalysis } from "../database.js";
 import { parseMessage, replaceMentions } from "./utils.js";
 import ollama from "./ollamaClient.js";
 
@@ -41,11 +41,15 @@ Detalhes: bizarro
 Aliases: ׵׵׵׵׵׵׵׵, manoml
 `;
 
-const buildPromptText = async (message, text) => {
+const buildPromptText = async (message, text, imageSummary = null) => {
   const { displayName } = parseMessage(message);
   const processedContent = await replaceMentions(message, text);
 
   const parts = [`Usuário: ${displayName} disse "${processedContent}"`];
+
+  if (imageSummary) {
+    parts.push(`A mensagem contém uma imagem que foi descrita assim: ${imageSummary}`);
+  }
 
   if (message.reference) {
     const replied = await message.channel.messages.fetch(message.reference.messageId);
@@ -91,14 +95,32 @@ export const generateAiRes = async (message) => {
   try {
     const { text, channelId, guildId, displayName } = parseMessage(message);
 
+    let imageSummary = null;
+    if (message.attachments?.size > 0) {
+      const imageAttachment = message.attachments.find((attachment) => {
+        const isImageType = attachment.contentType?.startsWith("image/");
+        const name = attachment.name || "";
+        const isImageExt = /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name);
+        return isImageType || isImageExt;
+      });
+
+      if (imageAttachment) {
+        const existingContext = getMessageContextByMessageId(message.id, guildId);
+        imageSummary = existingContext?.image_analysis || null;
+
+        if (!imageSummary) {
+          imageSummary = await analyzeImage(imageAttachment.url);
+          setMessageImageAnalysis(message.id, guildId, imageSummary);
+        }
+      }
+    }
+
     const [promptText, lastMessages] = await Promise.all([
-      buildPromptText(message, text),
+      buildPromptText(message, text, imageSummary),
       getRecentMessages(channelId, guildId, 20),
     ]);
 
     const systemPrompt = buildSystemPrompt(lastMessages);
-
-    console.log(`Gerando resposta IA para ${displayName}`);
 
     const res = await ollama.generate({
       model: dbBot.data.AiConfig.textModel,
@@ -117,6 +139,40 @@ export const generateAiRes = async (message) => {
     return res.response.trim();
   } catch (error) {
     return handleOllamaError(error);
+  }
+};
+
+const analyzeImage = async (imageUrl) => {
+  try {
+    const model = dbBot.data.AiConfig.visionModel || "llama-2-vision";
+  
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Falha ao baixar imagem: ${response.statusText}`);
+    }
+    
+    const buffer = await response.arrayBuffer();
+    const base64Image = Buffer.from(buffer).toString("base64");
+    
+    const prompt = `Descreva esta imagem em uma ou duas frases em português, de forma concisa e direta.`;
+
+    const res = await ollama.generate({
+      model,
+      prompt,
+      stream: false,
+      images: [base64Image],
+      options: {
+        temperature: 0.6,
+        top_p: 0.9,
+      },
+    });
+
+    if (!res?.response) throw new Error("Resposta vazia da IA");
+
+    return res.response.trim();
+  } catch (error) {
+    console.error("Erro ao analisar imagem:", error.message || error);
+    return "Não consegui analisar a imagem no momento.";
   }
 };
 
