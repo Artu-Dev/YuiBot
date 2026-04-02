@@ -26,3 +26,19 @@ export async function run(client, message) {
     `Penalidades de ${displayName}:\n${formatPenaltyList(penalities)}`
   );
 }
+
+export async function runInteraction(client, interaction) {
+  const guildId = interaction.guildId;
+  const targetUser = interaction.options.getUser("usuário") || interaction.options.getUser("usuario") || interaction.user;
+
+  const displayName = targetUser.username;
+  getOrCreateUser(targetUser.id, displayName, guildId);
+
+  const penalities = getUserPenalities(targetUser.id, guildId);
+
+  if (penalities.length === 0) {
+    return interaction.reply({ content: `${displayName} não tem penalidades.`, ephemeral: true });
+  }
+
+  return interaction.reply({ content: `Penalidades de ${displayName}:\n${formatPenaltyList(penalities)}`, ephemeral: true });
+}

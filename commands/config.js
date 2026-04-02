@@ -59,3 +59,58 @@ export async function run(client, message) {
     "Campo inválido. Use prefix, random/generate ou speak/speakMessage."
   );
 }
+
+export async function runInteraction(client, interaction) {
+  const field = interaction.options.getString("campo");
+  const value = interaction.options.getString("valor");
+
+  if (!field) {
+    const c = dbBot.data.configs;
+    return interaction.reply({
+      content: `Config atual:\n- prefix: ${c.prefix}\n- generateMessage: ${c.generateMessage}\n- speakMessage: ${c.speakMessage}`,
+      ephemeral: true,
+    });
+  }
+
+  if (!value && field !== "prefix") {
+    return interaction.reply({
+      content: "Para esse campo, você deve informar um valor. Ex: /config campo random valor on",
+      ephemeral: true,
+    });
+  }
+
+  const normalizedField = field.toLowerCase();
+  const normalizedValue = value?.trim();
+
+  if (normalizedField === "prefix") {
+    if (!normalizedValue) {
+      return interaction.reply({ content: "Forneça um prefixo válido.", ephemeral: true });
+    }
+    dbBot.data.configs.prefix = normalizedValue;
+    await dbBot.write();
+    return interaction.reply({ content: `Prefix atualizado para: ${normalizedValue}`, ephemeral: true });
+  }
+
+  if (normalizedField === "random" || normalizedField === "generate") {
+    const bool = boolize(normalizedValue);
+    if (bool === null) {
+      return interaction.reply({ content: "Valor inválido. Use on/off ou true/false.", ephemeral: true });
+    }
+    dbBot.data.configs.generateMessage = bool;
+    await dbBot.write();
+    return interaction.reply({ content: `generateMessage definido para ${bool}`, ephemeral: true });
+  }
+
+  if (normalizedField === "speak" || normalizedField === "speakmessage") {
+    const bool = boolize(normalizedValue);
+    if (bool === null) {
+      return interaction.reply({ content: "Valor inválido. Use on/off ou true/false.", ephemeral: true });
+    }
+    dbBot.data.configs.speakMessage = bool;
+    await dbBot.write();
+    return interaction.reply({ content: `speakMessage definido para ${bool}`, ephemeral: true });
+  }
+
+  return interaction.reply({ content: "Campo inválido. Use prefix, random/generate ou speak/speakMessage.", ephemeral: true });
+}
+

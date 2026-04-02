@@ -46,10 +46,7 @@ export async function run(client, message) {
 • **Menções recebidas:** ${user.mentions_received ?? 0}
 • **Menções enviadas:** ${user.mentions_sent ?? 0}
 • **Mensagens entre 2h e 6h (Coruja Noturna):** ${user.night_owl_messages ?? 0}
-• **Mensagens com "bom dia":** ${user.morning_messages ?? 0}
-• **Mensagens ignoradas (ninguém respondeu):** ${
-          user.messages_without_reply ?? 0
-        }
+• **Mensagens com "bom dia" de dia:** ${user.morning_messages ?? 0}
 • **Mensagens enviadas às 03:33:** ${user.specific_time_messages ?? 0}
 • **Perguntas longas (+100 chars):** ${user.long_questions ?? 0}
 • **Mensagens com "kkkkkkkkkkk":** ${user.laught_messages ?? 0}

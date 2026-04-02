@@ -9,6 +9,7 @@ Aliases: trp, trepinha, Joao miguel
 
 [AMIGO: Enzo]
 Aliases: enzopog_09982
+Detalhes: afeminado e meio gay
 
 [AMIGO: Erivan]
 Aliases: eremito, erv, eriva9
@@ -22,19 +23,22 @@ Aliases: Watanuki, Ry
 
 [AMIGO: Artu]
 Aliases: cadrado, cadra
+Detalhes: criador do bot
 
 [AMIGO: Josu]
 Aliases: josuu9, jose
 Detalhes: some quando arruma crush
 
+[AMIGO: Julia]
+Aliases: Jujulia, mrtnsh668_
+Detalhes: cristã mas do mundão, ex-funkeira, fumante, bebe, ja ficou gravida
+
 [AMIGO: Wack]
 Aliases: pato, robert, roberto, wack, lyn, wack3448
+Detalhes: bizarro
 
-[AMIGO: Bizarro]
-Aliases: ׵׵׵׵׵׵׵׵, manomlk
-
-[AMIGO: Maneiro]
-Aliases: ManeiroBN, joel, joel234057
+[AMIGO: Alan]
+Aliases: ׵׵׵׵׵׵׵׵, manoml
 `;
 
 const buildPromptText = async (message, text) => {

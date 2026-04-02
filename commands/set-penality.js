@@ -1,8 +1,9 @@
 import { addUserPenality, getOrCreateUser } from "../database.js";
+import { penalities } from "../functions/penalities.js";
 
 export const name = "set-penality";
 
-const EXISTING = ["mute", "silêncio", "suspensão", "advertência", "sleep"];
+const EXISTING = penalities.map((p) => p.nome);
 
 export async function run(client, message) {
   const guildId = message.guild.id;
@@ -39,4 +40,34 @@ export async function run(client, message) {
   }
 
   return message.reply(`Penalidade '${penalty}' adicionada a ${targetUser.username}!`);
+}
+
+export async function runInteraction(client, interaction) {
+  const guildId = interaction.guildId;
+  const targetUser = interaction.options.getUser("usuário") || interaction.options.getUser("usuario");
+  const penalty = interaction.options.getString("penalidade");
+
+  if (!targetUser || !penalty) {
+    return interaction.reply({
+      content: `Uso: /set-penality @user <penalidade>\nPenalidades válidas: ${EXISTING.join(", ")}`,
+      ephemeral: true,
+    });
+  }
+
+  const normalizedPenalty = penalty.trim().toLowerCase();
+  if (!EXISTING.includes(normalizedPenalty)) {
+    return interaction.reply({
+      content: `Penalidade inválida. Valores possíveis: ${EXISTING.join(", ")}`,
+      ephemeral: true,
+    });
+  }
+
+  getOrCreateUser(targetUser.id, targetUser.username, guildId);
+
+  const added = addUserPenality(targetUser.id, guildId, normalizedPenalty);
+  if (!added) {
+    return interaction.reply({ content: `${targetUser.username} já tem a penalidade: ${normalizedPenalty}.`, ephemeral: true });
+  }
+
+  return interaction.reply({ content: `Penalidade '${normalizedPenalty}' adicionada a ${targetUser.username}!`, ephemeral: true });
 }
