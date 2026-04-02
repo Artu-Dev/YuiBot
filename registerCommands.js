@@ -14,6 +14,14 @@ const commands = [
   {
     name: 'chars',
     description: 'Mostra quantos caracteres você ainda tem.',
+    options: [
+      {
+        name: 'usuário',
+        description: 'Mencionar o usuário a ver o saldo',
+        type: 6,
+        required: false,
+      },
+    ],
   },
   {
     name: 'add-channel',
@@ -30,6 +38,14 @@ const commands = [
   {
     name: 'conquistas',
     description: 'Mostra suas conquistas desbloqueadas.',
+    options: [
+      {
+        name: 'usuário',
+        description: 'Mencione outro usuário (opcional)',
+        type: 6,
+        required: false,
+      },
+    ],
   },
   {
     name: 'news',
@@ -40,20 +56,82 @@ const commands = [
     description: 'Mostra a palavra proibida do dia.',
   },
   {
+    name: 'roubar',
+    description: 'Rouba chars de outra pessoa (ou aleatório).',
+    options: [
+      {
+        name: 'usuário',
+        description: 'Usuário alvo (opcional)',
+        type: 6,
+        required: false,
+      },
+    ],
+  },
+  {
     name: 'penality',
     description: 'Verifica suas penalidades ou de um usuário mencionado.',
+    options: [
+      {
+        name: 'usuário',
+        description: 'Usuário a verificar as penalidades',
+        type: 6,
+        required: false,
+      },
+    ],
   },
   {
     name: 'set-penality',
     description: 'Aplica uma penalidade existente em um usuário.',
+    options: [
+      {
+        name: 'usuário',
+        description: 'Usuário a punir',
+        type: 6,
+        required: true,
+      },
+      {
+        name: 'penalidade',
+        description: 'mute, olho, sleep etc',
+        type: 3,
+        required: true,
+      },
+    ],
   },
   {
     name: 'remove-penality',
     description: 'Remove penalidade de um usuário (ou all).',
+    options: [
+      {
+        name: 'usuário',
+        description: 'Usuário a remover penalidades',
+        type: 6,
+        required: false,
+      },
+      {
+        name: 'penalidade',
+        description: 'Nome da penalidade ou all',
+        type: 3,
+        required: false,
+      },
+    ],
   },
   {
     name: 'config',
     description: 'Mostra/ajusta configurações do bot.',
+    options: [
+      {
+        name: 'campo',
+        description: 'prefix, random/generate ou speak',
+        type: 3,
+        required: false,
+      },
+      {
+        name: 'valor',
+        description: 'on/off/true/false ou prefixo',
+        type: 3,
+        required: false,
+      },
+    ],
   },
 ];
 

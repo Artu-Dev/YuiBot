@@ -5,6 +5,104 @@ export function getRandomTime(minSeconds, maxSeconds) {
 }
   
 
+export function getMessageFromInteraction(interaction) {
+    const commandName = interaction.commandName || "";
+    let content = `/${commandName}`;
+
+    const userMentions = [];
+    const optionArgs = [];
+
+    const options = interaction.options?.data || [];
+    for (const opt of options) {
+        const user = opt.user || (opt.type === 6 ? interaction.options.getUser(opt.name) : null);
+        if (user) {
+            userMentions.push(user);
+            optionArgs.push(`<@${user.id}>`);
+            continue;
+        }
+
+        const value = opt.value ?? "";
+        optionArgs.push(value);
+    }
+
+    if (optionArgs.length > 0) {
+        content += " " + optionArgs.join(" ");
+    }
+
+    const userMap = new Map(userMentions.map((u) => [u.id, u]));
+
+    const fakeMentions = {
+        users: {
+            first: () => userMentions[0],
+            has: (id) => userMap.has(id),
+            map: (fn) => userMentions.map(fn),
+            forEach: (fn) => userMentions.forEach(fn),
+            size: userMentions.length,
+            entries: () => userMap.entries(),
+            keys: () => userMap.keys(),
+            values: () => userMap.values(),
+        },
+        roles: {
+            first: () => undefined,
+            has: () => false,
+            size: 0,
+            forEach: () => {},
+        },
+        channels: {
+            first: () => undefined,
+            has: () => false,
+            size: 0,
+            forEach: () => {},
+        },
+        everyone: false,
+        here: false,
+    };
+
+    const channel = interaction.channel || null;
+    const channelWithSend = channel
+        ? {
+            ...channel,
+            send: async (payload) => {
+                if (interaction.replied) {
+                    return interaction.followUp(typeof payload === 'string' ? { content: payload } : payload);
+                }
+
+                if (interaction.deferred) {
+                    return interaction.editReply(typeof payload === 'string' ? { content: payload } : payload);
+                }
+
+                return interaction.reply(typeof payload === 'string' ? { content: payload } : payload);
+            },
+        }
+        : null;
+
+    return {
+        id: interaction.id,
+        createdTimestamp: interaction.createdTimestamp || Date.now(),
+        guild: interaction.guild || null,
+        guildId: interaction.guildId || (interaction.guild?.id ?? null),
+        member: interaction.member || null,
+        channel: channelWithSend,
+        author: interaction.user || null,
+        user: interaction.user || null,
+        mentions: fakeMentions,
+        content,
+        reply: async (response) => {
+            if (interaction.replied) {
+                return interaction.followUp(typeof response === 'string' ? { content: response } : response);
+            }
+
+            if (interaction.deferred) {
+                return interaction.editReply(typeof response === 'string' ? { content: response } : response);
+            }
+
+            return interaction.reply(typeof response === 'string' ? { content: response } : response);
+        },
+        memberPermissions: interaction.member?.permissions,
+        options: interaction.options,
+    };
+}
+
 export function parseMessage(message, client = null) {
     const {
         guild,
@@ -99,13 +197,11 @@ export const replaceMentions = async (message, content) => {
       return processedContent;
     };
 
-// retorna um webhook existente do autor ou cria um; se atingir limite, reutiliza o primeiro
 export async function getOrCreateWebhook(channel, author) {
     const webhooks = await channel.fetchWebhooks();
     let hook = webhooks.find((wh) => wh.owner?.id === author.id);
     if (hook) return hook;
 
-    // se já temos 15 webhooks (limite discord), utilize o primeiro disponível
     if (webhooks.size >= 15) {
         console.warn("Limite de webhooks atingido, reutilizando existente");
         return webhooks.first();

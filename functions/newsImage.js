@@ -2,12 +2,12 @@ import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
 import axios from 'axios';
 
 GlobalFonts.registerFromPath(
-  'C:/Windows/Fonts/seguiemj.ttf',
+  './fonts/twemoji.ttf',
   'Emoji'
 );
 
 GlobalFonts.registerFromPath(
-  'C:/Windows/Fonts/arial.ttf',
+  './fonts/NoticiaText-Regular.ttf',
   'Arial'
 );
 

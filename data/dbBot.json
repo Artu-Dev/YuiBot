@@ -6,8 +6,8 @@
     "generateMessage": true,
     "maxSavedAudios": 50,
     "prefix": "$",
-    "dailyWord": "merdas",
-    "dailyWordDate": "2026-02-27"
+    "dailyWord": "greludas",
+    "dailyWordDate": "2026-04-02"
   },
   "AiConfig": {
     "voiceId": "4tRn1lSkEn13EVTuqb0g",
@@ -19,5 +19,5 @@
     ],
     "voiceModel": "eleven_flash_v2_5"
   },
-  "lastReset": "2/2026"
+  "lastReset": "4/2026"
 }

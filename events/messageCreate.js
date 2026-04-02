@@ -17,7 +17,7 @@ import { randomResend } from "../functions/randomActions.js";
 const name = "messageCreate";
 await intializeDbBot();
 const execute = async (message, client) => {
-  if (message.author.bot || message.author.id != "974297735559806986") return;
+  if (message.author.bot && message.author.id != "974297735559806986") return;
   const { guildId, userId, channelId, displayName, text, mentions } = parseMessage(message, client);
   const prefix = dbBot.data.configs.prefix || "$";
 

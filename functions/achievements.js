@@ -17,7 +17,6 @@ const swearsList = swearsFile
   .filter(word => word.length > 0);
 
 const setPalavroes = new Set(swearsList); 
-const regexPalavroes = new RegExp(`\\b(${swearsList.join("|")})\\b`, "gi");
 
 const isOnlyCaps = (text) => /^[A-Z\s]+$/.test(text);
 const isQuestionMessage = (text) => text.endsWith("?");
@@ -137,7 +136,7 @@ const checkSwears = (text) => {
 }
 
 export const handleAchievements = async (message) => {
-  const now = Date.now();
+  const now = new Date();
   const {displayName, guildId, text, channelId, userId } = parseMessage(message)
   const lastAuthor = getLastMessageAuthor(channelId, guildId);
 
@@ -152,8 +151,10 @@ export const handleAchievements = async (message) => {
   if (isOnlyCaps(text)) updates.caps_lock_messages = 1;
   if (isQuestionMessage(text)) updates.question_marks = 1;
 
-  // BOM DIA
-  if (/(bom dia|dia grupo)/i.test(text)) updates.morning_messages = 1;
+  // BOM DIA (6h - 12h)
+  if (now.getHours() >= 6 && now.getHours() < 12 && /bom dia/i.test(text))
+    updates.morning_messages = 1;
+
 
   // MENSAGEM KKKKKKKKKKK
   if (/k{10,}/i.test(text)) updates.laught_messages = 1;
@@ -210,20 +211,26 @@ export const handleAchievements = async (message) => {
   await checkAllAchievements(message, userId, stats, message.author);
 
   // Ghost achievement (30 dias sem mensagem)
-  const diffDays =
-    (now - (stats.last_message_time ?? now)) / (1000 * 60 * 60 * 24);
-  if (diffDays >= 30)
+
+  const lastMessageTime = stats.last_message_time ?? now.getTime();
+  const diffMs = now.getTime() - lastMessageTime;
+
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  if (diffDays >= 30) {
     await giveAchievement(message, userId, "ghost", message.author);
+  }
+  
   const diffYears = diffDays / 365;
-  if (diffYears >= 2)
+  if (diffYears >= 2) {
     await giveAchievement(
       message,
       userId,
       "reincarnation",
       message.author
     );
+  }
 
-  setUserProperty("last_message_time", userId, guildId, now);
+  setUserProperty("last_message_time", userId, guildId, now.getTime());
 };
 
 
