@@ -41,9 +41,10 @@ Detalhes: bizarro
 Aliases: ׵׵׵׵׵׵׵׵, manoml
 `;
 
-const buildPromptText = async (message, text, imageSummary = null) => {
+const buildPromptText = async (message, text, imageSummary = null, guildId = null) => {
   const { displayName } = parseMessage(message);
   const processedContent = await replaceMentions(message, text);
+  const guild = guildId || message.guildId || message.guild?.id;
 
   const parts = [`Usuário: ${displayName} disse "${processedContent}"`];
 
@@ -55,6 +56,34 @@ const buildPromptText = async (message, text, imageSummary = null) => {
     const replied = await message.channel.messages.fetch(message.reference.messageId);
     const processedReply = await replaceMentions(replied, replied.content);
     parts.push(`Respondendo a ${replied.author.displayName}: "${processedReply}"`);
+
+    if (replied.attachments?.size > 0) {
+      const imageAttachment = replied.attachments.find((attachment) => {
+        const isImageType = attachment.contentType?.startsWith("image/");
+        const name = attachment.name || "";
+        const isImageExt = /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name);
+        return isImageType || isImageExt;
+      });
+
+      if (imageAttachment) {
+        try {
+          const { getMessageContextByMessageId, setMessageImageAnalysis } = await import("../database.js");
+          const existingContext = getMessageContextByMessageId(replied.id, guild);
+          let referencedImageAnalysis = existingContext?.image_analysis || null;
+
+          if (!referencedImageAnalysis) {
+            referencedImageAnalysis = await analyzeImage(imageAttachment.url);
+            setMessageImageAnalysis(replied.id, guild, referencedImageAnalysis);
+          }
+
+          if (referencedImageAnalysis) {
+            parts.push(`A mensagem que ele respondeu continha uma imagem descrita assim: ${referencedImageAnalysis}`);
+          }
+        } catch (error) {
+          console.error("Erro ao processar imagem da mensagem referenciada:", error.message);
+        }
+      }
+    }
   }
 
   return parts.join("\n");
@@ -116,7 +145,7 @@ export const generateAiRes = async (message) => {
     }
 
     const [promptText, lastMessages] = await Promise.all([
-      buildPromptText(message, text, imageSummary),
+      buildPromptText(message, text, imageSummary, guildId),
       getRecentMessages(channelId, guildId, 20),
     ]);
 
