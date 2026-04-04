@@ -1,65 +1,82 @@
-import { removeUserPenality, clearUserPenalities, getUserPenalities, getOrCreateUser } from "../database.js";
+import { SlashCommandBuilder } from "discord.js";
+import {
+  removeUserPenality,
+  clearUserPenalities,
+  getUserPenalities,
+  getOrCreateUser,
+  getBotPrefix,
+} from "../database.js";
 
 export const name = "remove-penality";
 
-export async function run(client, message) {
-  const guildId = message.guild.id;
-  const rawText = message.content.trim();
-  const prefix = rawText.startsWith("/") ? "/" : "";
-  const withoutPrefix = prefix ? rawText.slice(1).trim() : rawText;
-  const parts = withoutPrefix.split(/\s+/).slice(1);
+export const data = new SlashCommandBuilder()
+  .setName("remove-penality")
+  .setDescription("Remove uma penalidade de um usuário.")
+  .addUserOption(option =>
+    option.setName("usuário")
+      .setDescription("O usuário para remover a penalidade (opcional, padrão é você mesmo)")
+      .setRequired(false)
+  )
+  .addStringOption(option =>
+    option.setName("penalidade")
+      .setDescription("A penalidade a remover (ou 'all' para remover todas)")
+      .setRequired(false)
+  );
 
-  const targetUser = message.mentions.users.first() || message.author;
-  getOrCreateUser(targetUser.id, targetUser.username, guildId);
+function parseArgs(data) {
+  if (data.fromInteraction) {
+    return {
+      targetUser: data.getUser("usuário"),
+      penaltyArg: data.getString("penalidade"),
+    };
+  }
 
-  const existing = getUserPenalities(targetUser.id, guildId);
+  const args = data.args ?? [];
+  const textArgs = args.filter((p) => !/^<@!?\d+>$/.test(String(p)));
+  const penaltyArg = textArgs.length ? textArgs.join(" ").trim() : null;
+
+  return {
+    targetUser: data.mentionedUser,
+    penaltyArg: penaltyArg || null,
+  };
+}
+
+export async function execute(client, data) {
+  const { userId, username, guildId } = data;
+  const { targetUser, penaltyArg } = parseArgs(data);
+
+  const finalTargetUser = targetUser || { id: userId, username };
+  const finalPenaltyArg = penaltyArg;
+
+  getOrCreateUser(finalTargetUser.id, finalTargetUser.username, guildId);
+
+  const existing = getUserPenalities(finalTargetUser.id, guildId);
   if (existing.length === 0) {
-    return message.reply(`${targetUser.username} não possui penalidades.`);
+    return data.reply(`${finalTargetUser.username} não possui penalidades.`);
   }
 
-  const penaltyArg = parts.filter((p) => !targetUser.id.includes(p) && !p.startsWith("<@") && !p.startsWith("@"))[0];
-
-  if (!penaltyArg || penaltyArg.toLowerCase() === "all") {
-    clearUserPenalities(targetUser.id, guildId);
-    return message.reply(`Todas as penalidades de ${targetUser.username} foram removidas.`);
-  }
-
-  const removed = removeUserPenality(targetUser.id, guildId, penaltyArg);
-  if (!removed) {
-    return message.reply(
-      `${targetUser.username} não possuía a penalidade '${penaltyArg}'.` 
+  if (!finalPenaltyArg) {
+    const p = getBotPrefix();
+    return data.reply(
+      `Informe a penalidade a remover ou **all** para limpar todas.\nEx.: \`${p}remove-penality @user spam\` ou \`${p}remove-penality @user all\`.`
     );
   }
 
-  return message.reply(
-    `Penalidade '${penaltyArg}' removida de ${targetUser.username}.` 
-  );
-}
-
-export async function runInteraction(client, interaction) {
-  const guildId = interaction.guildId;
-  const targetUser = interaction.options.getUser("usuário") || interaction.options.getUser("usuario") || interaction.user;
-  const penaltyArg = interaction.options.getString("penalidade");
-
-  getOrCreateUser(targetUser.id, targetUser.username, guildId);
-
-  const existing = getUserPenalities(targetUser.id, guildId);
-  if (existing.length === 0) {
-    return interaction.reply({ content: `${targetUser.username} não possui penalidades.`, ephemeral: true });
+  if (finalPenaltyArg.toLowerCase() === "all") {
+    clearUserPenalities(finalTargetUser.id, guildId);
+    return data.reply(`Todas as penalidades de ${finalTargetUser.username} foram removidas.`);
   }
 
-  if (!penaltyArg || penaltyArg.toLowerCase() === "all") {
-    clearUserPenalities(targetUser.id, guildId);
-    return interaction.reply({ content: `Todas as penalidades de ${targetUser.username} foram removidas.`, ephemeral: true });
-  }
-
-  const normalizedPenalty = penaltyArg.trim().toLowerCase();
-  const removed = removeUserPenality(targetUser.id, guildId, normalizedPenalty);
+  const normalizedPenalty = finalPenaltyArg.trim().toLowerCase();
+  const removed = removeUserPenality(finalTargetUser.id, guildId, normalizedPenalty);
 
   if (!removed) {
-    return interaction.reply({ content: `${targetUser.username} não possuía a penalidade '${normalizedPenalty}'.`, ephemeral: true });
+    return data.reply(
+      `${finalTargetUser.username} não possuía a penalidade '${normalizedPenalty}'.`
+    );
   }
 
-  return interaction.reply({ content: `Penalidade '${normalizedPenalty}' removida de ${targetUser.username}.`, ephemeral: true });
+  return data.reply(
+    `Penalidade '${normalizedPenalty}' removida de ${finalTargetUser.username}.`
+  );
 }
-

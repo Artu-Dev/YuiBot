@@ -1,29 +1,38 @@
 
+import { SlashCommandBuilder } from "discord.js";
+
 export const name = "ping";
 
-export async function run(client, message) {
-  const apiLatency = Math.round(client.ws.ping);
-  
-  const sent = await message.reply("Calculando ping...");
-  
-  const messageLatency = sent.createdTimestamp - message.createdTimestamp;
-  
-  await sent.edit(
-    `Latência da API: **${apiLatency}ms**\n` +
-    `Latência de resposta: **${messageLatency}ms**`
-  );
+export const data = new SlashCommandBuilder()
+  .setName("ping")
+  .setDescription("Verifica a latência do bot.");
+
+function parseArgs(data) {
+  // No args for ping
+  return {};
 }
 
-export async function runInteraction(client, interaction) {
+export async function execute(client, data) {
   const apiLatency = Math.round(client.ws.ping);
-  
-  await interaction.reply("Calculando ping...");
-  
-  const fetchedMessage = await interaction.fetchReply();
-  const messageLatency = fetchedMessage.createdTimestamp - interaction.createdTimestamp;
-  
-  await interaction.editReply(
+
+  let sent;
+  if (data.fromInteraction) {
+    const replyOpts = {
+      content: "Calculando ping...",
+      fetchReply: true,
+    };
+    if (data.isEphemeral) replyOpts.ephemeral = true;
+    sent = await data.reply(replyOpts);
+  } else {
+    sent = await data.reply("Calculando ping...");
+  }
+
+  const messageLatency = Date.now() - sent.createdTimestamp;
+
+  const content =
     `Latência da API: **${apiLatency}ms**\n` +
-    `Latência de resposta: **${messageLatency}ms**`
-  );
+    `Latência de resposta: **${messageLatency}ms**`;
+
+  await sent.edit(content);
 }
+

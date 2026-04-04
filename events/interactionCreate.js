@@ -1,29 +1,24 @@
-import { getMessageFromInteraction } from "../functions/utils.js";
+import { contextFromInteraction } from "../functions/utils.js";
 
-const name = "interactionCreate";
+export const name = "interactionCreate";
 
-const execute = async (interaction, client) => {
-  if (!interaction.isChatInputCommand()) return;
+export const execute = async (interaction, client) => {
+  if (!interaction.isChatInputCommand?.()) return;
 
   const command = client.commands.get(interaction.commandName);
   if (!command) return;
 
+  if (typeof command.execute !== "function") {
+    console.warn(`⚠️ Comando "${interaction.commandName}" não tem função execute definida.`);
+    return;
+  }
+
   try {
-    if (typeof command.runInteraction === "function") {
-      await command.runInteraction(client, interaction);
-      return;
-    }
-
-    const fakeMessage = getMessageFromInteraction(interaction);
-    await command.run(client, fakeMessage);
+    await command.execute(client, contextFromInteraction(interaction));
   } catch (error) {
-    console.error(`Erro ao executar comando ${interaction.commandName}:`, error);
+    console.error(`❌ Erro ao executar comando "${interaction.commandName}":`, error);
 
-    const replyData = {
-      content: "Ocorreu um erro ao processar o comando.",
-      ephemeral: true,
-    };
-
+    const replyData = { content: "Ocorreu um erro ao processar o comando.", flags: 64 };
     if (interaction.replied || interaction.deferred) {
       await interaction.followUp(replyData).catch(console.error);
     } else {
@@ -31,5 +26,3 @@ const execute = async (interaction, client) => {
     }
   }
 };
-
-export { name, execute };

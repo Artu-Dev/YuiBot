@@ -1,25 +1,24 @@
+import { SlashCommandBuilder } from "discord.js";
 import { getVoiceConnection } from "@discordjs/voice";
 
 export const name = "sair";
 
-export async function run(client, message) {
-  const connection = getVoiceConnection(message.guild.id);
+export const data = new SlashCommandBuilder()
+  .setName("sair")
+  .setDescription("Faz o bot sair do canal de voz.");
 
-  if (!connection) {
-    return message.reply("Não estou em nenhum canal de voz.");
-  }
-
-  connection.destroy();
-  return message.reply("Saí da call! Tchau! 👋");
+function parseArgs(data) {
+  // No args for sair
+  return {};
 }
 
-export async function runInteraction(client, interaction) {
-  const connection = getVoiceConnection(interaction.guildId);
+export async function execute(client, data) {
+  const connection = getVoiceConnection(data.guildId);
 
   if (!connection) {
-    return interaction.reply({ content: "Não estou em nenhum canal de voz.", ephemeral: true });
+    return data.reply("Não estou em nenhum canal de voz.");
   }
 
   connection.destroy();
-  return interaction.reply({ content: "Saí da call! Tchau! 👋", ephemeral: true });
+  return data.reply("Saí da call! Tchau! 👋");
 }

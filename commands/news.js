@@ -1,38 +1,57 @@
-import { AttachmentBuilder, EmbedBuilder } from "discord.js";
+import { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } from "discord.js";
 import { generateFakeNews, generateFullArticle } from "../functions/generateNews.js";
-import { parseMessage } from "../functions/utils.js";
 import { createNewsImage } from "../functions/newsImage.js";
 
-export async function run(client, message) {
-  try {
-    const { guildId, channelId } = parseMessage(message, client);
+export const name = "news";
 
-    const loadingMsg = await message.channel.send('📰 *Gerando notícia exclusiva...*');
+export const data = new SlashCommandBuilder()
+  .setName("news")
+  .setDescription("Gera uma notícia falsa aleatória.");
+
+function parseArgs(data) {
+  // No args for news
+  return {};
+}
+
+export async function execute(client, data) {
+  try {
+    const guildId = data.guildId;
+    const channelId = data.channelId;
+
+    const loadingMsg = data.fromInteraction
+      ? await data.reply({
+          content: "📰 *Gerando notícia exclusiva...*",
+          fetchReply: true,
+        })
+      : await data.reply("📰 *Gerando notícia exclusiva...*");
 
     const newsHeadline = await generateFakeNews(channelId, guildId);
     const article = await generateFullArticle(newsHeadline);
 
-
     const imageBuffer = await createNewsImage(newsHeadline, article);
-    const attachment = new AttachmentBuilder(imageBuffer, { name: 'noticia.png' });
+    const attachment = new AttachmentBuilder(imageBuffer, { name: "noticia.png" });
 
     const embed = new EmbedBuilder()
-      .setTitle('📰 ÚLTIMA HORA!')
+      .setTitle("📰 ÚLTIMA HORA!")
       .setDescription(`**${newsHeadline}**`)
-      .setColor('#C4170C') 
-      .setImage('attachment://noticia.png')
+      .setColor("#C4170C")
+      .setImage("attachment://noticia.png")
       .setTimestamp()
-      .setFooter({ 
-        text: '⚠️ Esta notícia é 100% REAL PORRA!!!!' 
+      .setFooter({
+        text: "⚠️ Esta notícia é 100% REAL PORRA!!!!",
       });
 
-    await loadingMsg.delete();
-    await message.channel.send({ embeds: [embed], files: [attachment] })
-
+    if (loadingMsg && typeof loadingMsg.edit === "function") {
+      await loadingMsg.edit({
+        content: null,
+        embeds: [embed],
+        files: [attachment],
+      });
+    } else {
+      await data.followUp({ embeds: [embed], files: [attachment] });
+    }
   } catch (error) {
     console.error('Erro ao gerar fake news:', error);
-    await message.reply('vai da pra gerar samerda nao, deu erro aqui boy');
+    await data.reply('vai da pra gerar samerda nao, deu erro aqui boy');
   }
 }
-
-export const name = "news";

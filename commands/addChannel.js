@@ -1,14 +1,26 @@
+import { SlashCommandBuilder } from "discord.js";
 import { addChannel, getChannels } from "../database.js";
 
 export const name = "add-channel";
 
-export async function run(client, message) {
-  const guild_id = message.guild.id
-  const channel_id = message.channel.id
-  const channels = getChannels(guild_id)
+export const data = new SlashCommandBuilder()
+  .setName("add-channel")
+  .setDescription("Adiciona o canal atual à lista de canais permitidos.");
+
+function parseArgs(data) {
+  // No args for add-channel
+  return {};
+}
+
+export async function execute(client, data) {
+  const guild_id = data.guildId;
+  const channel_id = data.channelId;
+  const channels = getChannels(guild_id);
 
   if (!channels.includes(channel_id)) {
     addChannel(guild_id, channel_id);
-    message.reply("Canal adicionado!");
+    data.reply("Canal adicionado!");
+  } else {
+    data.reply("Este canal já está na lista!");
   }
 }

@@ -1,6 +1,45 @@
-import { dbBot } from "../database.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import { dbBot, getBotPrefix } from "../database.js";
 
 export const name = "config";
+
+export const data = new SlashCommandBuilder()
+  .setName("config")
+  .setDescription("Ver ou alterar configurações do bot (admin).")
+  .addSubcommand((sc) =>
+    sc.setName("ver").setDescription("Mostra todas as opções e os valores atuais")
+  )
+  .addSubcommand((sc) =>
+    sc
+      .setName("definir")
+      .setDescription("Altera uma opção")
+      .addStringOption((opt) =>
+        opt
+          .setName("campo")
+          .setDescription("O que você quer mudar")
+          .setRequired(true)
+          .addChoices(
+            {
+              name: "Prefixo dos comandos por mensagem",
+              value: "prefix",
+            },
+            {
+              name: "Respostas aleatórias com IA no chat",
+              value: "random",
+            },
+            {
+              name: "Bot falar no voice (TTS) quando responder",
+              value: "speak",
+            }
+          )
+      )
+      .addStringOption((opt) =>
+        opt
+          .setName("valor")
+          .setDescription("Novo valor (texto para prefixo; on/off para as outras)")
+          .setRequired(true)
+      )
+  );
 
 const boolize = (raw) => {
   if (!raw) return null;
@@ -10,73 +49,113 @@ const boolize = (raw) => {
   return null;
 };
 
-export async function run(client, message) {
-  const guildId = message.guild.id;
-  const rawText = message.content.trim();
-  const prefix = rawText.startsWith("/") ? "/" : "";
-  const withoutPrefix = prefix ? rawText.slice(1).trim() : rawText;
-  const parts = withoutPrefix.split(/\s+/).slice(1);
-
-  if (parts.length === 0) {
-    const c = dbBot.data.configs;
-    return message.reply(
-      `Config atual:\n- prefix: ${c.prefix}\n- generateMessage: ${c.generateMessage}\n- speakMessage: ${c.speakMessage}`
-    );
+function parseArgs(data) {
+  if (data.fromInteraction) {
+    const sub = data.getSubcommand(false);
+    if (sub === "definir") {
+      return {
+        mode: "definir",
+        field: data.getString("campo"),
+        value: data.getString("valor"),
+      };
+    }
+    return { mode: "ver" };
   }
 
-  const field = parts[0].toLowerCase();
-  const value = parts[1];
+  const args = data.args ?? [];
+  if (args.length === 0) return { mode: "ver" };
 
-  if (!value) {
-    return message.reply(
-      "Uso: /config <prefix|random|speak> <valor>. Ex: /config prefix $ | /config random on | /config speak off"
-    );
+  const head = args[0]?.toLowerCase();
+  if (head === "ver" || head === "ajuda" || head === "help" || head === "lista") {
+    return { mode: "ver" };
   }
 
-  if (field === "prefix") {
-    dbBot.data.configs.prefix = value;
-    await dbBot.write();
-    return message.reply(`Prefix atualizado para: ${value}`);
+  if (args[0]?.toLowerCase() === "definir") {
+    const [, field, ...valueParts] = args;
+    return {
+      mode: "definir",
+      field: field ?? null,
+      value: valueParts.join(" ").trim() || null,
+    };
   }
 
-  if (field === "random" || field === "generate") {
-    const bool = boolize(value);
-    if (bool === null) return message.reply("Valor inválido. Use on/off ou true/false.");
-    dbBot.data.configs.generateMessage = bool;
-    await dbBot.write();
-    return message.reply(`generateMessage definido para ${bool}`);
-  }
-
-  if (field === "speak" || field === "speakmessage") {
-    const bool = boolize(value);
-    if (bool === null) return message.reply("Valor inválido. Use on/off ou true/false.");
-    dbBot.data.configs.speakMessage = bool;
-    await dbBot.write();
-    return message.reply(`speakMessage definido para ${bool}`);
-  }
-
-  return message.reply(
-    "Campo inválido. Use prefix, random/generate ou speak/speakMessage."
-  );
+  const [field, ...valueParts] = args;
+  return {
+    mode: "definir",
+    field: field ?? null,
+    value: valueParts.join(" ").trim() || null,
+  };
 }
 
-export async function runInteraction(client, interaction) {
-  const field = interaction.options.getString("campo");
-  const value = interaction.options.getString("valor");
+function buildConfigEmbed() {
+  const c = dbBot.data.configs;
+  const p = getBotPrefix();
 
-  if (!field) {
-    const c = dbBot.data.configs;
-    return interaction.reply({
-      content: `Config atual:\n- prefix: ${c.prefix}\n- generateMessage: ${c.generateMessage}\n- speakMessage: ${c.speakMessage}`,
-      ephemeral: true,
-    });
+  return new EmbedBuilder()
+    .setColor("#5865F2")
+    .setTitle("⚙️ Configuração do bot")
+    .setDescription(
+      "Use **slash** `/config definir` ou no **chat** com prefixo. " +
+        `Prefixo atual: \`${p}\``
+    )
+    .addFields(
+      {
+        name: "`prefix` — Prefixo",
+        value:
+          `**Atual:** \`${c.prefix}\`\n` +
+          "Comandos no canal começam com esse caractere (ex.: `$stats`).",
+        inline: false,
+      },
+      {
+        name: "`random` / `generate` — IA no chat",
+        value:
+          `**Atual:** **${c.generateMessage ? "ligado" : "desligado"}**\n` +
+          "Se ligado, o bot pode responder mensagens aleatórias com IA em canais permitidos.",
+        inline: false,
+      },
+      {
+        name: "`speak` — Voz (TTS)",
+        value:
+          `**Atual:** **${c.speakMessage ? "ligado" : "desligado"}**\n` +
+          "Se ligado, respostas da IA podem ser lidas em call (quando configurado).",
+        inline: false,
+      },
+      {
+        name: "`limitChar` — Limite de caracteres (mês)",
+        value:
+          `**Atual:** **${c.limitChar ?? 2000}**\n` +
+          "Altere em `data/dbBot.json` se precisar mudar o teto inicial de chars.",
+        inline: false,
+      },
+      {
+        name: "Exemplos (prefixo)",
+        value:
+          `\`${p}config\` — abre este resumo\n` +
+          `\`${p}config prefix !\` — prefixo vira \`!\`\n` +
+          `\`${p}config random off\` — desliga respostas IA\n` +
+          `\`${p}config speak on\` — liga TTS`,
+        inline: false,
+      }
+    );
+}
+
+export async function execute(client, data) {
+  const parsed = parseArgs(data);
+
+  if (parsed.mode === "ver") {
+    return data.reply({ embeds: [buildConfigEmbed()] });
   }
 
-  if (!value && field !== "prefix") {
-    return interaction.reply({
-      content: "Para esse campo, você deve informar um valor. Ex: /config campo random valor on",
-      ephemeral: true,
-    });
+  const { field, value } = parsed;
+
+  if (!field) {
+    return data.reply({ embeds: [buildConfigEmbed()] });
+  }
+
+  if (!value && field.toLowerCase() !== "prefix") {
+    return data.reply(
+      `Informe o valor. Ex.: \`${getBotPrefix()}config random on\` ou \`/config definir\`.`
+    );
   }
 
   const normalizedField = field.toLowerCase();
@@ -84,33 +163,39 @@ export async function runInteraction(client, interaction) {
 
   if (normalizedField === "prefix") {
     if (!normalizedValue) {
-      return interaction.reply({ content: "Forneça um prefixo válido.", ephemeral: true });
+      return data.reply("Forneça o novo prefixo. Ex.: `$config prefix !`");
     }
     dbBot.data.configs.prefix = normalizedValue;
     await dbBot.write();
-    return interaction.reply({ content: `Prefix atualizado para: ${normalizedValue}`, ephemeral: true });
+    return data.reply(`Prefixo atualizado para: \`${normalizedValue}\``);
   }
 
   if (normalizedField === "random" || normalizedField === "generate") {
     const bool = boolize(normalizedValue);
     if (bool === null) {
-      return interaction.reply({ content: "Valor inválido. Use on/off ou true/false.", ephemeral: true });
+      return data.reply("Valor inválido para **random**. Use **on**, **off**, **sim**, **não**.");
     }
     dbBot.data.configs.generateMessage = bool;
     await dbBot.write();
-    return interaction.reply({ content: `generateMessage definido para ${bool}`, ephemeral: true });
+    return data.reply(
+      `Respostas aleatórias com IA (**generateMessage**): **${bool ? "ligado" : "desligado"}**.`
+    );
   }
 
   if (normalizedField === "speak" || normalizedField === "speakmessage") {
     const bool = boolize(normalizedValue);
     if (bool === null) {
-      return interaction.reply({ content: "Valor inválido. Use on/off ou true/false.", ephemeral: true });
+      return data.reply("Valor inválido para **speak**. Use **on** ou **off**.");
     }
     dbBot.data.configs.speakMessage = bool;
     await dbBot.write();
-    return interaction.reply({ content: `speakMessage definido para ${bool}`, ephemeral: true });
+    return data.reply(
+      `Fala no voice (**speakMessage**): **${bool ? "ligado" : "desligado"}**.`
+    );
   }
 
-  return interaction.reply({ content: "Campo inválido. Use prefix, random/generate ou speak/speakMessage.", ephemeral: true });
+  return data.reply({
+    embeds: [buildConfigEmbed()],
+    content: "❌ Campo não reconhecido. Veja a lista acima.",
+  });
 }
-

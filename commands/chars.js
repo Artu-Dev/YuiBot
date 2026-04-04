@@ -1,37 +1,57 @@
+import { SlashCommandBuilder } from "discord.js";
 import { getOrCreateUser } from "../database.js";
 
-export async function run(client, message) {
-  const mentionedUser = message.mentions.users.first();
-  const guildId = message.guild.id;
-  const displayName = mentionedUser
-    ? message.guild.members.cache.get(mentionedUser.id)?.displayName ||
-      mentionedUser.username
-    : message.member?.displayName || message.author.username;
-  const targetUserId = mentionedUser ? mentionedUser.id : message.author.id;
+export const name = "chars";
 
-  const userData = getOrCreateUser(targetUserId, displayName, guildId);
+export const data = new SlashCommandBuilder()
+  .setName("chars")
+  .setDescription("Verifica os caracteres restantes de um usuário.")
+  .addUserOption(option =>
+    option.setName("usuário")
+      .setDescription("O usuário para verificar (opcional, padrão é você mesmo)")
+      .setRequired(false)
+  );
+
+function parseArgs(data) {
+  if (data.fromInteraction) {
+    return {
+      mentionedUser: data.getUser("usuário"),
+    };
+  }
+
+  return {
+    mentionedUser: data.mentionedUser,
+  };
+}
+
+export async function execute(client, data) {
+  const { userId, guildId, displayName } = data;
+  const { mentionedUser } = parseArgs(data);
+
+  const targetDisplayName = mentionedUser?.username || displayName;
+  const targetUserId = mentionedUser ? mentionedUser.id : userId;
+
+  const userData = getOrCreateUser(targetUserId, targetDisplayName, guildId);
 
   if (!mentionedUser) {
     if (userData) {
-      return await message.reply(
+      return await data.reply(
         `Você tem ${userData.charLeft} caracteres restantes!`
       );
     } else {
-      return await message.reply(
+      return await data.reply(
         "Ainda não te registrei mano, manda uma mensagem aí (mas sem ser comando burro)."
       );
     }
   }
 
   if (userData) {
-    return await message.reply(
-      `O usuário **${displayName}** tem ${userData.charLeft} caracteres restantes.`
+    return await data.reply(
+      `O usuário **${targetDisplayName}** tem ${userData.charLeft} caracteres restantes.`
     );
   } else {
-    return await message.reply(
-      `O usuário **${displayName}** ainda não está registrado.`
+    return await data.reply(
+      `O usuário **${targetDisplayName}** ainda não está registrado.`
     );
   }
 }
-
-export const name = "chars";

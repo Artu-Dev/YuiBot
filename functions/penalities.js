@@ -12,6 +12,7 @@ export const penalities = [
   { nome: "redigido",          description: "Todas as letras de suas mensagens agora sao spoilers!!" },
   { nome: "sentido_invertido", description: "Suas mensagens serão reescritas com o sentido invertido" },
   { nome: "minusculo",         description: "Suas mensagens viram tudo junto e minúsculo semespaco" },
+  { nome: "palavra_proibida",  description: "Você falou a palavra proibida do dia! (-150 chars)" },
 ];
 
 export async function handlePenalities(message, userData) {

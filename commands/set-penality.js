@@ -1,73 +1,74 @@
-import { addUserPenality, getOrCreateUser } from "../database.js";
+import { SlashCommandBuilder } from "discord.js";
+import { addUserPenality, getOrCreateUser, getBotPrefix } from "../database.js";
 import { penalities } from "../functions/penalities.js";
 
 export const name = "set-penality";
 
 const EXISTING = penalities.map((p) => p.nome);
 
-export async function run(client, message) {
-  const guildId = message.guild.id;
-  const author = message.author;
+export const data = new SlashCommandBuilder()
+  .setName("set-penality")
+  .setDescription("Adiciona uma penalidade a um usuário.")
+  .addUserOption(option =>
+    option.setName("usuário")
+      .setDescription("O usuário para aplicar a penalidade")
+      .setRequired(true)
+  )
+  .addStringOption(option =>
+    option.setName("penalidade")
+      .setDescription("A penalidade a aplicar")
+      .addChoices(
+        ...EXISTING.map(p => ({ name: p, value: p }))
+      )
+      .setRequired(true)
+  );
 
-  const rawText = message.content.trim();
-  const prefix = rawText.startsWith("/") ? "/" : "";
-  const withoutPrefix = prefix ? rawText.slice(1).trim() : rawText;
-  const parts = withoutPrefix.split(/\s+/).slice(1);
-
-  const targetUser = message.mentions.users.first();
-  if (!targetUser) {
-    return message.reply("Uso: /set-penality @user <penality>\nPenalidades válidas: " + EXISTING.join(", "));
+function parseArgs(data) {
+  if (data.fromInteraction) {
+    return {
+      targetUser: data.getUser("usuário"),
+      penalty: data.getString("penalidade"),
+    };
   }
 
-  const hint = parts.filter((p) => !p.includes(targetUser.id));
-  const penalty = hint.join(" ").trim().toLowerCase();
+  const args = data.args ?? [];
+  const textArgs = args.filter((p) => !/^<@!?\d+>$/.test(String(p)));
+  const penalty = textArgs.join(" ").trim().toLowerCase() || null;
 
-  if (!penalty) {
-    return message.reply("Diga qual penalidade aplicar. Exemplo: /set-penality @user mute");
+  return {
+    targetUser: data.mentionedUser,
+    penalty,
+  };
+}
+
+export async function execute(client, data) {
+  const { guildId } = data;
+  const { targetUser, penalty } = parseArgs(data);
+
+  const finalPenalty = penalty;
+
+  if (!targetUser || !finalPenalty) {
+    const p = getBotPrefix();
+    return data.reply(
+      `**Slash:** \`/set-penality\` com opções\n**Prefixo:** \`${p}set-penality @usuário <penalidade>\`\nPenalidades válidas: ${EXISTING.join(", ")}`
+    );
   }
 
-  if (!EXISTING.includes(penalty)) {
-    return message.reply(
+  const normalizedPenalty = finalPenalty.trim().toLowerCase();
+  if (!EXISTING.includes(normalizedPenalty)) {
+    return data.reply(
       `Penalidade inválida. Valores possíveis: ${EXISTING.join(", ")}`
     );
   }
 
   getOrCreateUser(targetUser.id, targetUser.username, guildId);
 
-  const added = addUserPenality(targetUser.id, guildId, penalty);
-  if (!added) {
-    return message.reply(`${targetUser.username} já tem a penalidade: ${penalty}.`);
-  }
-
-  return message.reply(`Penalidade '${penalty}' adicionada a ${targetUser.username}!`);
-}
-
-export async function runInteraction(client, interaction) {
-  const guildId = interaction.guildId;
-  const targetUser = interaction.options.getUser("usuário") || interaction.options.getUser("usuario");
-  const penalty = interaction.options.getString("penalidade");
-
-  if (!targetUser || !penalty) {
-    return interaction.reply({
-      content: `Uso: /set-penality @user <penalidade>\nPenalidades válidas: ${EXISTING.join(", ")}`,
-      ephemeral: true,
-    });
-  }
-
-  const normalizedPenalty = penalty.trim().toLowerCase();
-  if (!EXISTING.includes(normalizedPenalty)) {
-    return interaction.reply({
-      content: `Penalidade inválida. Valores possíveis: ${EXISTING.join(", ")}`,
-      ephemeral: true,
-    });
-  }
-
-  getOrCreateUser(targetUser.id, targetUser.username, guildId);
-
   const added = addUserPenality(targetUser.id, guildId, normalizedPenalty);
   if (!added) {
-    return interaction.reply({ content: `${targetUser.username} já tem a penalidade: ${normalizedPenalty}.`, ephemeral: true });
+    return data.reply(`${targetUser.username} já tem a penalidade: ${normalizedPenalty}.`);
   }
 
-  return interaction.reply({ content: `Penalidade '${normalizedPenalty}' adicionada a ${targetUser.username}!`, ephemeral: true });
+  return data.reply(`Penalidade '${normalizedPenalty}' adicionada a ${targetUser.username}!`);
 }
+
+

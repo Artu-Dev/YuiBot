@@ -1,107 +1,98 @@
-import { getOrCreateUser, getUser, addChars, reduceChars } from "../database.js";
-import { parseMessage } from "../functions/utils.js";
+import { SlashCommandBuilder } from "discord.js";
+import { getOrCreateUser, getUser, addChars, reduceChars, getBotPrefix } from "../database.js";
 
 export const name = "doar";
 
-export async function runInteraction(client, interaction) {
-  const targetUser = interaction.options.getUser("usuário");
-  const amount = interaction.options.getInteger("quantidade");
-  const guildId = interaction.guild.id;
-  const userId = interaction.user.id;
-  const displayName =
-    interaction.member?.displayName || interaction.user.username;
+export const data = new SlashCommandBuilder()
+  .setName("doar")
+  .setDescription("Doa caracteres para outro usuário.")
+  .addUserOption(option =>
+    option.setName("usuário")
+      .setDescription("O usuário que vai receber os caracteres")
+      .setRequired(true)
+  )
+  .addIntegerOption(option =>
+    option.setName("quantidade")
+      .setDescription("A quantidade de caracteres a doar")
+      .setRequired(true)
+      .setMinValue(1)
+  );
 
-  if (targetUser.id === userId) {
-    return interaction.reply({ content: "Você não pode se doar chars.", ephemeral: true });
-  }
-  if (targetUser.bot) {
-    return interaction.reply({ content: "Bot não precisa de chars.", ephemeral: true });
-  }
-  if (amount <= 0) {
-    return interaction.reply({ content: "Precisa ser pelo menos 1 char.", ephemeral: true });
-  }
-
-  const { getOrCreateUser, reduceChars, addChars } = await import("../database.js");
-  const giver = getOrCreateUser(userId, displayName, guildId);
-  if ((giver.charLeft || 0) < amount) {
-    return interaction.reply({
-      content: `Você não tem ${amount} chars. Seu saldo é **${giver.charLeft ?? 0}**.`,
-      ephemeral: true,
-    });
+function parseArgs(data) {
+  if (data.fromInteraction) {
+    return {
+      targetUser: data.getUser("usuário"),
+      amount: data.getInteger("quantidade"),
+    };
   }
 
-  const receiverName =
-    interaction.guild.members.cache.get(targetUser.id)?.displayName ||
-    targetUser.username;
-  getOrCreateUser(targetUser.id, receiverName, guildId);
-  reduceChars(userId, guildId, amount);
-  addChars(targetUser.id, guildId, amount);
-
-  const donateReplies = [
-    `${displayName} doou **${amount}** chars para ${receiverName}. Que alma bondosa.`,
-    `${receiverName} ganhou **${amount}** chars de ${displayName}. Deve ter feito muita coisa boa.`,
-    `${displayName} abriu o coração e jogou **${amount}** chars no colo de ${receiverName}.`,
-  ];
-  return interaction.reply(donateReplies[Math.floor(Math.random() * donateReplies.length)]);
+  const args = data.args ?? [];
+  let amount = null;
+  for (let i = args.length - 1; i >= 0; i--) {
+    const t = String(args[i]).trim();
+    if (/^\d+$/.test(t)) {
+      amount = parseInt(t, 10);
+      break;
+    }
+  }
+  return {
+    targetUser: data.mentionedUser,
+    amount,
+  };
 }
 
-export async function run(client, message) {
-  const { userId, guildId, displayName, text } = parseMessage(message, client);
+export async function execute(client, data) {
+  const { userId, displayName, guildId, content } = data;
+  const { targetUser, amount } = parseArgs(data);
 
-  const targetUser = message.mentions.users.first();
+  let finalAmount = amount;
+
+  if (finalAmount == null && content) {
+    const nums = content.match(/\d+/g);
+    if (nums?.length) finalAmount = parseInt(nums[nums.length - 1], 10);
+  }
+
   if (!targetUser) {
-    await message.reply("Você precisa mencionar quem vai receber. Uso: `$doar @usuário <quantidade>`");
-    return;
+    const p = getBotPrefix();
+    return await data.reply(
+      `Você precisa mencionar quem vai receber.\n**Slash:** \`/doar\` (usuário + quantidade)\n**Prefixo:** \`${p}doar @usuário <quantidade>\``
+    );
   }
 
   if (targetUser.id === userId) {
-    await message.reply("Você não pode se doar chars. Isso não faz sentido.");
-    return;
+    return await data.reply("Você não pode se doar chars.");
   }
 
   if (targetUser.bot) {
-    await message.reply("Bot não precisa de chars pra nada, para.");
-    return;
+    return await data.reply("Bot não precisa de chars.");
   }
 
-  // Extrai a quantidade do texto — pega o primeiro número após a menção
-  const amountMatch = text.replace(/<@!?\d+>/g, "").trim().match(/^\d+/);
-  if (!amountMatch) {
-    await message.reply("Quantidade inválida. Uso: `$doar @usuário <quantidade>`");
-    return;
-  }
-
-  const amount = parseInt(amountMatch[0], 10);
-  if (amount <= 0) {
-    await message.reply("Precisa ser pelo menos 1 char.");
-    return;
+  if (!finalAmount || finalAmount <= 0) {
+    return await data.reply("Quantidade inválida. Precisa ser pelo menos 1 char.");
   }
 
   const giver = getOrCreateUser(userId, displayName, guildId);
-  if ((giver.charLeft || 0) < amount) {
-    await message.reply(
-      `Você não tem ${amount} chars. Seu saldo é **${giver.charLeft ?? 0}**.`
+  if ((giver.charLeft || 0) < finalAmount) {
+    return await data.reply(
+      `Você não tem ${finalAmount} chars. Seu saldo é **${giver.charLeft ?? 0}**.`
     );
-    return;
   }
 
   // Garante que o receptor existe no banco
-  const receiverName =
-    message.guild.members.cache.get(targetUser.id)?.displayName ||
-    targetUser.username;
+  const receiverName = targetUser.username; // Simplificado para evitar cache issues
   getOrCreateUser(targetUser.id, receiverName, guildId);
 
-  reduceChars(userId, guildId, amount);
-  addChars(targetUser.id, guildId, amount);
+  reduceChars(userId, guildId, finalAmount);
+  addChars(targetUser.id, guildId, finalAmount);
 
   const donateReplies = [
-    `${displayName} doou **${amount}** chars para ${receiverName}. Que alma bondosa.`,
-    `${receiverName} ganhou **${amount}** chars de ${displayName}. Deve ter feito muita coisa boa.`,
-    `${displayName} abriu o coração e jogou **${amount}** chars no colo de ${receiverName}.`,
-    `Transferência concluída: **${amount}** chars de ${displayName} → ${receiverName}.`,
+    `${displayName} doou **${finalAmount}** chars para ${receiverName}. Que alma bondosa.`,
+    `${receiverName} ganhou **${finalAmount}** chars de ${displayName}. Deve ter feito muita coisa boa.`,
+    `${displayName} abriu o coração e jogou **${finalAmount}** chars no colo de ${receiverName}.`,
+    `Transferência concluída: **${finalAmount}** chars de ${displayName} → ${receiverName}.`,
   ];
 
-  await message.reply(
+  return await data.reply(
     donateReplies[Math.floor(Math.random() * donateReplies.length)]
   );
 }

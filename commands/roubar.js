@@ -1,10 +1,34 @@
+import { SlashCommandBuilder } from "discord.js";
 import { addChars, addUserPropertyByAmount, getOrCreateUser, getRandomUserId, getUser, reduceChars, setUserProperty } from "../database.js";
+import { applyClassModifier, getClassModifier, ESCUDO_BLOCK_BASE } from "../functions/classes.js";
 import { parseMessage } from "../functions/utils.js";
 
 export const name = "roubar";
 
-export async function run(client, message) {
-  const { userId, guildId, displayName } = parseMessage(message, client);
+export const data = new SlashCommandBuilder()
+  .setName("roubar")
+  .setDescription("Rouba caracteres de outro usuário (ou aleatório se não especificar).")
+  .addUserOption(option =>
+    option.setName("usuário")
+      .setDescription("O usuário para roubar (opcional, aleatório se não especificar)")
+      .setRequired(false)
+  );
+
+function parseArgs(data) {
+  if (data.fromInteraction) {
+    return {
+      mentionedUser: data.getUser("usuário"),
+    };
+  }
+
+  return {
+    mentionedUser: data.mentionedUser,
+  };
+}
+
+export async function execute(client, data) {
+  const { userId, guildId, displayName } = data;
+  const { mentionedUser } = parseArgs(data);
 
   const now = new Date();
   const today = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
@@ -21,15 +45,14 @@ export async function run(client, message) {
     addUserPropertyByAmount("timesRoubou", userId, guildId, 1);
     timesRoubou += 1;
   } else {
-    await message.reply("Tu já roubou alguém 3x nas últimas 24 horas seu maldito!");
+    await data.reply("Tu já roubou alguém 3x nas últimas 24 horas seu maldito!");
     return;
   }
 
-  const mentionedUser = message.mentions.users.first();
   const isTargeted = !!mentionedUser;
 
   if (isTargeted && mentionedUser.id === userId) {
-    await message.reply("Você não pode roubar a si mesmo.");
+    await data.reply("Você não pode roubar a si mesmo.");
     return;
   }
 
@@ -38,7 +61,7 @@ export async function run(client, message) {
   if (isTargeted) {
     const existingVictim = getUser(mentionedUser.id, guildId);
     if (!existingVictim) {
-      await message.reply("Esse usuário ainda não está no banco de dados. Ele precisa enviar mensagens antes de ser roubado.");
+      await data.reply("Esse usuário ainda não está no banco de dados. Ele precisa enviar mensagens antes de ser roubado.");
       return;
     }
 
@@ -47,13 +70,13 @@ export async function run(client, message) {
   } else {
     victimId = getRandomUserId(guildId, userId);
     if (!victimId) {
-      await message.reply("Não há usuários disponíveis para roubar no momento.");
+      await data.reply("Não há usuários disponíveis para roubar no momento.");
       return;
     }
 
     victimData = getUser(victimId, guildId);
     if (!victimData) {
-      await message.reply("Erro interno: não foi possível encontrar a vítima.");
+      await data.reply("Erro interno: não foi possível encontrar a vítima.");
       return;
     }
   }
@@ -61,20 +84,38 @@ export async function run(client, message) {
   const victimChars = Number(victimData.charLeft) || 0;
   const victimName = victimData.display_name || mentionedUser?.username || "um usuário desconhecido";
 
+  const { hasEscudo } = await import("../database.js");
+
+  const userClass = user.user_class || 'none';
+  const victimClass = victimData.user_class || 'none';
+
+  let successChance = applyClassModifier(isTargeted ? 0.22 : 0.38, isTargeted ? 'singleRobSuccess' : 'robSuccess', userClass);
+  const penalty = applyClassModifier(isTargeted ? 150 : 100, 'robCost', userClass);
+  const victimDefense = getClassModifier(victimClass, 'robDefense');
+
+  if (hasEscudo(victimId, guildId)) {
+    const escudoBonus = getClassModifier(victimClass, 'escudoBonus');
+    const blockChance = Math.min(1, Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus));
+
+    if (Math.random() < blockChance) {
+      await data.reply(`${victimName} está protegido com escudo! Você não consegue roubar dele agora.`);
+      return;
+    }
+  }
+
   if (victimChars <= 0) {
-    await message.reply(`${displayName} tentou roubar ${victimName}, mas ele não tem caracteres para roubar.`);
+    await data.reply(`${displayName} tentou roubar ${victimName}, mas ele não tem caracteres para roubar.`);
     return;
   }
 
-  const successChance = isTargeted ? 0.22 : 0.38;
-  const penalty = isTargeted ? 150 : 100;
-  const stolenAmount = isTargeted
+  const baseStolen = isTargeted
     ? Math.max(1, Math.floor(victimChars * (Math.random() * 0.20 + 0.10)))
     : Math.max(1, Math.floor(victimChars * (Math.random() * 0.15 + 0.05)));
+  const stolenAmount = Math.max(1, Math.floor(baseStolen * (1 + getClassModifier(userClass, 'robDamage') - victimDefense)));
 
   const noCharsReplies = [
-    `${displayName} tentou roubar ${victimName}, mas ele não tem caracteres suficientes e voltou de mãos vazias.`,
-    `${displayName} passou reto de ${victimName}, porque lá não tinha nada para roubar.`,
+    `${displayName} tentou roubar ${victimName}, mas ele é um pobre que nao tem um centavo furado na merda do bolso.`,
+    `${displayName} nao conseguiu roubar ${victimName}, porque nem o mais passa fome tem coragem dde roubar alguem tao mizeravel.`,
     `${displayName} quase conseguiu roubar, mas ${victimName} não tinha nem onde cair morto.`
   ];
 
@@ -85,21 +126,21 @@ export async function run(client, message) {
   ];
 
   const successRandomReplies = [
-    `${displayName} roubou ${stolenAmount} caracteres de ${victimName}!`,
-    `${victimName} não viu ${displayName} chegando e acordou com ${stolenAmount} chars a menos.`,
-    `${displayName} deu um migué esperto e levou ${stolenAmount} caracteres de ${victimName}.`
+    `${displayName} roubou ${stolenAmount} caracteres de ${victimName} na covardia!`,
+    `${victimName} moscou feiao e ${displayName} sem piedade alguma levou ${stolenAmount} chars de seu patrimonio.`,
+    `${displayName} foi safado e roubou ${stolenAmount} caracteres de ${victimName}. (sem ele perceber rsrs)`
   ];
 
   const failTargetedReplies = [
-    `${displayName} tentou roubar ${victimName} na surdina... ${victimName} pegou com a mao na jaca. ${displayName} perdeu ${penalty} caracteres igual um betinha.`,
-    `${victimName} estava ligado e virou o jogo: ${displayName} perdeu ${penalty} caracteres no sufoco.`,
-    `Plano falhou! ${displayName} foi pego ao tentar roubar ${victimName} e caiu ${penalty} chars na conta deles.`
+    `${displayName} tentou roubar ${victimName} na surdina... mas ${victimName} pegou com a mao na jaca. ${displayName} perdeu pra ele ${penalty} caracteres igual um betinha.`,
+    `${victimName} estava paranoico com os cara no teto, viu ${displayName} pegou a makita e te levou ${penalty} caracteres.`,
+    `deu ruim menó! ${displayName} foi pego ao tentar roubar ${victimName} e teve que fazer um pix ${penalty} chars pra ele.`
   ];
 
   const failRandomReplies = [
-    `${displayName} foi roubar e se fodeu, foi pego na covardia e perdeu ${penalty} caracteres para ${victimName}!`,
-    `${displayName} se deu mal na ação e acabou doando ${penalty} caracteres para ${victimName}.`,
-    `Tentativa falhou: ${displayName} levou ${penalty} chars na cara e ${victimName} saiu rindo.`
+    `${displayName} foi roubar e se fodeu, foi pego no flagra e perdeu ${penalty} caracteres para ${victimName}!`,
+    `${displayName} se deu mal na ação e acabou doando contra sua vontade ${penalty} caracteres para ${victimName}.`,
+    `${displayName} foi burrao e acabou doando ${penalty} chars pra ${victimName} viva a benevolencia.`
   ];
 
   const replies = {
@@ -113,7 +154,7 @@ export async function run(client, message) {
   const getRandom = (list) => list[Math.floor(Math.random() * list.length)];
 
   if (victimChars <= 0) {
-    await message.reply(getRandom(replies.noChars));
+    await data.reply(getRandom(replies.noChars));
     return;
   }
 
@@ -124,18 +165,18 @@ export async function run(client, message) {
     reduceChars(victimId, guildId, stolenAmount);
 
     if (isTargeted) {
-      await message.reply(getRandom(replies.successTargeted));
+      await data.reply(getRandom(replies.successTargeted));
     } else {
-      await message.reply(getRandom(replies.successRandom));
+      await data.reply(getRandom(replies.successRandom));
     }
   } else {
     reduceChars(userId, guildId, penalty);
     addChars(victimId, guildId, penalty);
 
     if (isTargeted) {
-      await message.reply(getRandom(replies.failTargeted));
+      await data.reply(getRandom(replies.failTargeted));
     } else {
-      await message.reply(getRandom(replies.failRandom));
+      await data.reply(getRandom(replies.failRandom));
     }
   }
 }

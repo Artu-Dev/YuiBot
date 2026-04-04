@@ -1,9 +1,8 @@
-import { dbBot, reduceChars, setUserProperty } from "../database.js";
+import { dbBot, db, reduceChars, setUserProperty, getOrCreateUser, addUserPenality, addChars } from "../database.js";
 import { parseMessage } from "./utils.js";
 import { readFileSync } from "fs";
 import path from "path";
 import { penalities, handlePenalities } from "./penalities.js";
-
 
 const randomWords = [
   "meu labubu", "papai", "meu xibiu", "amor", "porra", "?",
@@ -15,7 +14,6 @@ const palavrasPath = path.join("data", "negativas.txt");
 const listaPalavras = readFileSync(palavrasPath, "utf-8")
   .split("\n")
   .filter((p) => p.trim() !== "");
-
 
 export const limitChar = async (message, userData) => {
   const { text, guildId, userId, displayName } = parseMessage(message);
@@ -36,6 +34,47 @@ export const limitChar = async (message, userData) => {
     console.log(`Nova palavra proibida do dia definida: ${randomWordBanned}`);
   }
 
+  if (randomWordBanned && text.toLowerCase().includes(randomWordBanned.toLowerCase())) {
+    const user = getOrCreateUser(userId, displayName, guildId);
+    const today = new Date().toISOString().split("T")[0];
+    const palavraPenaltyDate = user.palavra_penalty_date || "";
+    
+    if (palavraPenaltyDate !== today) {
+      addUserPenality(userId, guildId, "palavra_proibida");
+      setUserProperty("palavra_penalty_date", userId, guildId, today);
+      
+      const poorestUsers = db.prepare(`
+        SELECT id, charLeft, display_name 
+        FROM users 
+        WHERE guild_id = ? AND id != ? AND charLeft > 0 
+        ORDER BY charLeft ASC 
+        LIMIT 10
+      `).all(guildId, userId);
+      
+      const totalPenalty = 500;
+      let totalDistributed = 0;
+      
+      if (poorestUsers.length > 0) {
+        const shareAmount = Math.floor(totalPenalty / poorestUsers.length);
+        
+        for (const poorUser of poorestUsers) {
+          addChars(poorUser.id, guildId, shareAmount);
+          totalDistributed += shareAmount;
+        }
+        
+        reduceChars(userId, guildId, totalDistributed);
+        
+        await message.reply(`⚠️ **PALAVRA PROIBIDA!** Você disse: **${randomWordBanned}**\nVocê perdeu **${totalDistributed} caracteres**, que foram distribuídos como doação para os usuários mais pobres do servidor!`);
+      } else {
+        reduceChars(userId, guildId, totalPenalty);
+        await message.reply(`⚠️ **PALAVRA PROIBIDA!** Você disse: **${randomWordBanned}**\nVocê perdeu **${totalPenalty} caracteres**!`);
+      }
+      
+      console.log(`[Palavra] ${displayName} foi punido. ${totalDistributed} chars foram distribuídos por usar: "${randomWordBanned}"`);
+      return;
+    }
+  }
+
   let textSize = text.length;
 
   if (message.attachments.size > 0) {
@@ -48,13 +87,7 @@ export const limitChar = async (message, userData) => {
     textSize += links.length * 10;
   }
 
-  if (text.toLowerCase().includes(randomWordBanned.toLowerCase())) {
-    reduceChars(userId, guildId, 500);
-    await message.reply("❌Palavra proibida!!! Você perdeu 500 caracteres!!!❌");
-  }
-
   const oldValue = Number(userData.charLeft) || 0;
-
   const newValue = reduceChars(userId, guildId, textSize);
 
   const getTier = (value) => {
@@ -124,8 +157,4 @@ export const limitChar = async (message, userData) => {
       await message.reply(`${displayName} seus caracteres voltaram ao positivo! como seu nome saiu do Serasa, Suas penalidades foram removidas.`);
     }
   }
-
-  // if (newValue > 1000) message.react("🟢");
-  // else if (newValue > 500) message.react("🟡");
-  // else message.react("🔴");
 };

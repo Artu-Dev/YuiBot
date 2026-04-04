@@ -1,6 +1,12 @@
 import Database from "better-sqlite3";
 import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
+import { isValidUserId, isValidGuildId } from "./functions/validation.js";
+
+/** Prefixo configurável (lowdb já carregado pelo bot antes dos comandos). */
+export function getBotPrefix() {
+  return dbBot.data?.configs?.prefix ?? "$";
+}
 
 export const dbBot = new Low(new JSONFile("./data/dbBot.json"), {
   channels: [],
@@ -22,39 +28,50 @@ export const dbBot = new Low(new JSONFile("./data/dbBot.json"), {
 export const db = new Database("./data/data.db");
 const charLimit = dbBot.data.configs.limitChar;
 
+// === SCHEMA DEFINITION (Single Source of Truth) ===
+const USERS_SCHEMA = {
+  display_name: "TEXT",
+  charLeft: `INTEGER DEFAULT ${charLimit}`,
+  messages_sent: "INTEGER DEFAULT 0",
+  mentions_received: "INTEGER DEFAULT 0",
+  mentions_sent: "INTEGER DEFAULT 0",
+  caps_lock_messages: "INTEGER DEFAULT 0",
+  question_marks: "INTEGER DEFAULT 0",
+  night_owl_messages: "INTEGER DEFAULT 0",
+  last_message_time: "TEXT",
+  morning_messages: "INTEGER DEFAULT 0",
+  messages_without_reply: "INTEGER DEFAULT 0",
+  specific_time_messages: "INTEGER DEFAULT 0",
+  long_questions: "INTEGER DEFAULT 0",
+  laught_messages: "INTEGER DEFAULT 0",
+  swears_count: "INTEGER DEFAULT 0",
+  bot_commands_used: "INTEGER DEFAULT 0",
+  caps_streak: "INTEGER DEFAULT 0",
+  achievements_unlocked: "TEXT DEFAULT '{}'",
+  penalities: "TEXT DEFAULT '[]'",
+  lastRoubo: "TEXT",
+  penalityWord: "TEXT DEFAULT ''",
+  timesRoubou: "INTEGER DEFAULT 0",
+  otaku_messages: "INTEGER DEFAULT 0",
+  gringo_messages: "INTEGER DEFAULT 0",
+  suspense_messages: "INTEGER DEFAULT 0",
+  textao_messages: "INTEGER DEFAULT 0",
+  monologo_streak: "INTEGER DEFAULT 0",
+  escudo_expiry: "TEXT DEFAULT ''",
+  consecutive_robbery_losses: "INTEGER DEFAULT 0",
+  total_robberies: "INTEGER DEFAULT 0",
+  palavra_penalty_date: "TEXT DEFAULT ''",
+  luck_stat: "INTEGER DEFAULT 0",
+  last_spin_time: "INTEGER DEFAULT 0",
+  tiger_spin_date: "TEXT DEFAULT ''",
+  tiger_spins_count: "INTEGER DEFAULT 0",
+  last_escudo_shown: "TEXT DEFAULT ''",
+  user_class: "TEXT DEFAULT 'none'",
+  image_analysis: "TEXT DEFAULT ''",
+};
+
 function updateUserDb() {
-  const requiredColumns = {
-    display_name: "TEXT",
-    charLeft: `INTEGER DEFAULT ${charLimit}`,
-    messages_sent: "INTEGER DEFAULT 0",
-    mentions_received: "INTEGER DEFAULT 0",
-    mentions_sent: "INTEGER DEFAULT 0",
-    caps_lock_messages: "INTEGER DEFAULT 0",
-    question_marks: "INTEGER DEFAULT 0",
-    night_owl_messages: "INTEGER DEFAULT 0",
-    last_message_time: "TEXT",
-    morning_messages: "INTEGER DEFAULT 0",
-    messages_without_reply: "INTEGER DEFAULT 0",
-    specific_time_messages: "INTEGER DEFAULT 0",
-    long_questions: "INTEGER DEFAULT 0",
-    laught_messages: "INTEGER DEFAULT 0",
-    swears_count: "INTEGER DEFAULT 0",
-    bot_commands_used: "INTEGER DEFAULT 0",
-    caps_streak: "INTEGER DEFAULT 0",
-    achievements_unlocked: "TEXT DEFAULT '{}'",
-    penalities: "TEXT DEFAULT '[]'",
-    lastRoubo: "TEXT",
-    penalityWord: "TEXT DEFAULT ''",
-    timesRoubou: "INTEGER DEFAULT 0",
-    otaku_messages: "INTEGER DEFAULT 0",
-    gringo_messages: "INTEGER DEFAULT 0",
-    suspense_messages: "INTEGER DEFAULT 0",
-    textao_messages: "INTEGER DEFAULT 0",
-    monologo_streak: "INTEGER DEFAULT 0",
-    escudo_expiry: "TEXT DEFAULT ''",
-    consecutive_robbery_losses: "INTEGER DEFAULT 0",
-    total_robberies: "INTEGER DEFAULT 0",
-  };
+  const requiredColumns = USERS_SCHEMA;
 
   const existingColumns = db
     .prepare("PRAGMA table_info(users)")
@@ -73,41 +90,17 @@ export const intializeDbBot = async () => {
   await dbBot.read();
   await dbBot.write();
 
+  // Build column definitions from schema
+  const columnsSQL = Object.entries(USERS_SCHEMA)
+    .map(([col, type]) => `${col} ${type}`)
+    .join(",\n      ");
+
   db.prepare(
     `
   CREATE TABLE IF NOT EXISTS users (
       id TEXT,
       guild_id TEXT,
-      display_name TEXT,
-      charLeft INTEGER DEFAULT ${charLimit},
-      messages_sent INTEGER DEFAULT 0,
-      mentions_received INTEGER DEFAULT 0,
-      mentions_sent INTEGER DEFAULT 0,
-      caps_lock_messages INTEGER DEFAULT 0,
-      question_marks INTEGER DEFAULT 0,
-      night_owl_messages INTEGER DEFAULT 0,
-      last_message_time TEXT,
-      morning_messages INTEGER DEFAULT 0,
-      messages_without_reply INTEGER DEFAULT 0,
-      specific_time_messages INTEGER DEFAULT 0,
-      long_questions INTEGER DEFAULT 0,
-      laught_messages INTEGER DEFAULT 0,
-      swears_count INTEGER DEFAULT 0,
-      bot_commands_used INTEGER DEFAULT 0,
-      caps_streak INTEGER DEFAULT 0,
-      achievements_unlocked TEXT DEFAULT '{}',
-      penalities TEXT DEFAULT '[]',
-      lastRoubo TEXT,
-      penalityWord TEXT DEFAULT '',
-      timesRoubou INTEGER DEFAULT 0,
-      otaku_messages INTEGER DEFAULT 0,
-      gringo_messages INTEGER DEFAULT 0,
-      suspense_messages INTEGER DEFAULT 0,
-      textao_messages INTEGER DEFAULT 0,
-      monologo_streak INTEGER DEFAULT 0,
-      escudo_expiry TEXT DEFAULT '',
-      consecutive_robbery_losses INTEGER DEFAULT 0,
-      total_robberies INTEGER DEFAULT 0,
+      ${columnsSQL},
       PRIMARY KEY (id, guild_id)
   )
   `
@@ -155,6 +148,23 @@ export const intializeDbBot = async () => {
   if (!existingMsgContextColumns.includes("image_analysis")) {
     db.prepare("ALTER TABLE message_context ADD COLUMN image_analysis TEXT").run();
   }
+
+  // Prepared statements for frequently used queries
+  db.queries = {
+    getUserById: db.prepare("SELECT * FROM users WHERE id = ? AND guild_id = ?"),
+    addUserPenalty: db.prepare("UPDATE users SET penalities = ? WHERE id = ? AND guild_id = ?"),
+    getEscudoExpiry: db.prepare("SELECT escudo_expiry FROM users WHERE id = ? AND guild_id = ?"),
+    getGuildRandomUser: db.prepare("SELECT id FROM users WHERE guild_id = ? AND id != ? ORDER BY RANDOM() LIMIT 1"),
+    getGuildAllUsers: db.prepare("SELECT * FROM users WHERE guild_id = ?"),
+    getAchievements: db.prepare("SELECT achievements_unlocked FROM users WHERE id = ? AND guild_id = ?"),
+    getChannels: db.prepare("SELECT channel_id FROM bot_channels WHERE guild_id = ?"),
+    saveMessageContext: db.prepare(
+      "INSERT INTO message_context (channel_id, guild_id, author, content, timestamp, userId, message_id, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    ),
+    getRecentMessages: db.prepare(
+      "SELECT author, content, timestamp, message_id, image_url, image_analysis FROM message_context WHERE channel_id = ? AND guild_id = ? ORDER BY timestamp DESC LIMIT ?"
+    ),
+  };
 };
 
 /// ==============================================
@@ -162,30 +172,38 @@ export const intializeDbBot = async () => {
 /// ==============================================
 
 export const getUser = (userId, guildId) => {
-  return db
-    .prepare("SELECT * FROM users WHERE id = ? AND guild_id = ?")
-    .get(userId, guildId);
+  if (!userId || !guildId || !isValidUserId(userId) || !isValidGuildId(guildId)) {
+    console.warn(`⚠️  Invalid IDs provided to getUser: userId=${userId}, guildId=${guildId}`);
+    return null;
+  }
+  return db.queries.getUserById.get(userId, guildId);
 };
 
 export const getUserPenalities = (userId, guildId) => {
   const user = getUser(userId, guildId);
-  if (!user || !user.penalities) return [];
+  if (!user?.penalities) return [];
   try {
     const list = JSON.parse(user.penalities);
     return Array.isArray(list) ? list : [];
   } catch (error) {
+    console.error(`❌ Erro ao parsear penalidades para ${userId}:`, error);
     return [];
   }
 };
 
 export const setUserPenalities = (userId, guildId, penalities) => {
-  let normalized = penalities;
-  if (!Array.isArray(normalized)) normalized = [];
-  db.prepare("UPDATE users SET penalities = ? WHERE id = ? AND guild_id = ?").run(
-    JSON.stringify(normalized),
-    userId,
-    guildId
-  );
+  if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
+    console.warn(`⚠️  Invalid IDs in setUserPenalities`);
+    return false;
+  }
+  const normalized = Array.isArray(penalities) ? penalities : [];
+  try {
+    db.queries.addUserPenalty.run(JSON.stringify(normalized), userId, guildId);
+    return true;
+  } catch (error) {
+    console.error(`❌ Erro ao atualizar penalidades:`, error);
+    return false;
+  }
 };
 
 export const addUserPenality = (userId, guildId, penality) => {
@@ -213,16 +231,22 @@ export const clearUserPenalities = (userId, guildId) => {
 };
 
 export const getOrCreateUser = (userId, displayName, guildId) => {
-  let user = db
-    .prepare("SELECT * FROM users WHERE id = ? AND guild_id = ?")
-    .get(userId, guildId);
+  if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
+    console.error(`❌ Invalid IDs in getOrCreateUser: userId=${userId}, guildId=${guildId}`);
+    return null;
+  }
+
+  let user = getUser(userId, guildId);
   if (!user) {
-    db.prepare(
-      `INSERT INTO users (id, display_name, guild_id) VALUES (?, ?, ?)`
-    ).run(userId, displayName, guildId);
-    user = db
-      .prepare("SELECT * FROM users WHERE id = ? AND guild_id = ?")
-      .get(userId, guildId);
+    try {
+      db.prepare(
+        `INSERT INTO users (id, display_name, guild_id) VALUES (?, ?, ?)`
+      ).run(userId, displayName || "Unknown", guildId);
+      user = getUser(userId, guildId);
+    } catch (error) {
+      console.error(`❌ Erro ao criar usuário:`, error);
+      return null;
+    }
   }
   return user;
 };
@@ -232,23 +256,48 @@ export const getOrCreateUser = (userId, displayName, guildId) => {
 /// ==============================================
 
 export const hasEscudo = (userId, guildId) => {
+  if (!isValidUserId(userId) || !isValidGuildId(guildId)) return false;
   const user = getUser(userId, guildId);
-  if (!user || !user.escudo_expiry) return false;
+  if (!user?.escudo_expiry) return false;
   return new Date(user.escudo_expiry) > new Date();
 };
 
 export const setEscudo = (userId, guildId, hours = 24) => {
+  if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
+    console.error(`❌ Invalid IDs in setEscudo`);
+    return null;
+  }
   const expiry = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-  db.prepare("UPDATE users SET escudo_expiry = ? WHERE id = ? AND guild_id = ?")
-    .run(expiry, userId, guildId);
-  return expiry;
+  try {
+    db.prepare("UPDATE users SET escudo_expiry = ? WHERE id = ? AND guild_id = ?")
+      .run(expiry, userId, guildId);
+    return expiry;
+  } catch (error) {
+    console.error(`❌ Erro ao definir escudo:`, error);
+    return null;
+  }
 };
 
 export const getEscudoExpiry = (userId, guildId) => {
+  if (!isValidUserId(userId) || !isValidGuildId(guildId)) return null;
   const user = getUser(userId, guildId);
-  if (!user || !user.escudo_expiry) return null;
+  if (!user?.escudo_expiry) return null;
   const d = new Date(user.escudo_expiry);
   return d > new Date() ? d : null;
+};
+
+export const getEscudoTimeRemaining = (userId, guildId) => {
+  const expiry = getEscudoExpiry(userId, guildId);
+  if (!expiry) return null;
+
+  const now = new Date();
+  const diffMs = expiry - now;
+  if (diffMs <= 0) return null;
+
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 };
 
 /// ==============================================
@@ -474,12 +523,12 @@ export const addChars = (userId, guildId, amount) => {
 };
 
 export const getRandomUserId = (guildId, excludeUserId) => {
-  const row = db
-    .prepare("SELECT id FROM users WHERE guild_id = ? AND id != ? ORDER BY RANDOM() LIMIT 1")
-    .get(guildId, excludeUserId);
-  return row ? row.id : null;
+  if (!guildId) return null;
+  const row = db.queries.getGuildRandomUser.get(guildId, excludeUserId || "");
+  return row?.id || null;
 };
 
 export const getGuildUsers = (guildId) => {
-  return db.prepare("SELECT * FROM users WHERE guild_id = ?").all(guildId);
+  if (!guildId) return [];
+  return db.queries.getGuildAllUsers.all(guildId);
 };

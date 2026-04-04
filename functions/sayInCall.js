@@ -65,22 +65,31 @@ function fixText(text) {
 }
 
 export async function sayInCall(message, responseText) {
-  const connection = joinCall(message);
-  if (!connection) return;
+  try {
+    const connection = joinCall(message);
+    if (!connection) return;
 
-  let tratedText = fixText(responseText);
+    let tratedText = fixText(responseText);
 
-  const audio = await createAudioFileTTSElevenLabs(tratedText);
-  // const audio = await createAudioFileFromText(tratedText);
+    const audio = await createAudioFileTTSElevenLabs(tratedText);
+    // const audio = await createAudioFileFromText(tratedText);
 
-  console.log(audio)
+    console.log(`🔊 Reproduzindo áudio: ${audio}`)
 
-  const player = createAudioPlayer();
-  const resource = createAudioResource(audio);
-  connection.subscribe(player);
-  player.play(resource);
+    const player = createAudioPlayer();
+    const resource = createAudioResource(audio);
+    connection.subscribe(player);
+    player.play(resource);
 
-  player.on(AudioPlayerStatus.Idle, () => {
-    unlinkSync(audio);
-  });
+    player.on(AudioPlayerStatus.Idle, () => {
+      try {
+        unlinkSync(audio);
+      } catch (e) {
+        console.error(`⚠️  Erro ao deletar arquivo de áudio ${audio}:`, e.message);
+      }
+    });
+  } catch (error) {
+    console.error("❌ Erro em sayInCall:", error.message);
+    throw error;
+  }
 }

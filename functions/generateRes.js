@@ -207,7 +207,7 @@ const analyzeImage = async (imageUrl) => {
 
 export const invertMessage = async (text) => {
   try {
-    const promptText = `Reescreva a mensagem abaixo mantendo estilo e tamanho aproximado, mas invertendo completamente seu significado.\nMensagem: "${text}"`;
+    const promptText = `Reescreva a mensagem abaixo mantendo estilo e tamanho aproximado, mas invertendo completamente seu significado, envie somente a mensagem com sentido invertido sem aspas, ou nada adicional.\nMensagem: "${text}"`;
     let modelToUse = dbBot.data.AiConfig.textModel;
     if (Array.isArray(dbBot.data.AiConfig.fastModels) && dbBot.data.AiConfig.fastModels.length > 0) {
       const arr = dbBot.data.AiConfig.fastModels;

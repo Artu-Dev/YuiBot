@@ -1,44 +1,49 @@
+import { SlashCommandBuilder } from "discord.js";
 import { getOrCreateUser, getUserPenalities } from "../database.js";
 
 export const name = "penality";
+
+export const data = new SlashCommandBuilder()
+  .setName("penality")
+  .setDescription("Mostra as penalidades de um usuário.")
+  .addUserOption(option =>
+    option.setName("usuário")
+      .setDescription("O usuário para verificar (opcional, padrão é você mesmo)")
+      .setRequired(false)
+  );
 
 const formatPenaltyList = (list) =>
   list.length > 0
     ? list.map((pen, idx) => `• ${idx + 1}. ${pen}`).join("\n")
     : "Nenhuma penalidade encontrada.";
 
-export async function run(client, message) {
-  const guildId = message.guild.id;
-  const targetUser = message.mentions.users.first() || message.author;
-  const displayName = message.mentions.users.first()
-    ? message.mentions.users.first().username
-    : message.author.username;
-
-  getOrCreateUser(targetUser.id, displayName, guildId);
-
-  const penalities = getUserPenalities(targetUser.id, guildId);
-
-  if (penalities.length === 0) {
-    return message.reply(`${displayName} não tem penalidades.`);
+function parseArgs(data) {
+  if (data.fromInteraction) {
+    return {
+      mentionedUser: data.getUser("usuário"),
+    };
   }
 
-  return message.reply(
-    `Penalidades de ${displayName}:\n${formatPenaltyList(penalities)}`
-  );
+  return {
+    mentionedUser: data.mentionedUser,
+  };
 }
 
-export async function runInteraction(client, interaction) {
-  const guildId = interaction.guildId;
-  const targetUser = interaction.options.getUser("usuário") || interaction.options.getUser("usuario") || interaction.user;
+export async function execute(client, data) {
+  const { userId, guildId, username } = data;
+  const { mentionedUser } = parseArgs(data);
 
+  const targetUser = mentionedUser || { id: userId, username };
   const displayName = targetUser.username;
   getOrCreateUser(targetUser.id, displayName, guildId);
 
   const penalities = getUserPenalities(targetUser.id, guildId);
 
   if (penalities.length === 0) {
-    return interaction.reply({ content: `${displayName} não tem penalidades.`, ephemeral: true });
+    return data.reply(`${displayName} não tem penalidades.`);
   }
 
-  return interaction.reply({ content: `Penalidades de ${displayName}:\n${formatPenaltyList(penalities)}`, ephemeral: true });
+  return data.reply(
+    `Penalidades de ${displayName}:\n${formatPenaltyList(penalities)}`
+  );
 }

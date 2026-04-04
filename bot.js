@@ -22,19 +22,37 @@ const client = new Client({
 
 const log = (msg) => console.log(`\x1b[36m[Bot]\x1b[0m ${msg}`);
 
+// === CARREGAR COMANDOS ===
 client.commands = new Map();
 const commandsPath = path.join(process.cwd(), "commands");
 for (const file of readdirSync(commandsPath)) {
-  const command = await import(`./commands/${file}`);
-  client.commands.set(command.name, command);
+  try {
+    const command = await import(`./commands/${file}`);
+    if (!command.name || typeof command.execute !== "function") {
+      console.error(`⚠️  Comando inválido em ${file}: faltam 'name' ou 'execute'`);
+      continue;
+    }
+    client.commands.set(command.name, command);
+  } catch (error) {
+    console.error(`❌ Erro ao carregar comando ${file}:`, error.message);
+  }
 }
 
 log(`Carregados ${client.commands.size} comandos.`);
 
+// === CARREGAR EVENTOS ===
 const eventsPath = path.join(process.cwd(), "events");
 for (const file of readdirSync(eventsPath)) {
-  const event = await import(`./events/${file}`);
-  client.on(event.name, (...args) => event.execute(...args, client));
+  try {
+    const event = await import(`./events/${file}`);
+    if (!event.name || !event.execute) {
+      console.error(`⚠️  Evento inválido em ${file}: faltam 'name' ou 'execute'`);
+      continue;
+    }
+    client.on(event.name, (...args) => event.execute(...args, client));
+  } catch (error) {
+    console.error(`❌ Erro ao carregar evento ${file}:`, error.message);
+  }
 }
 
 log(`Eventos ativos: ${readdirSync(eventsPath).length}`);
@@ -69,4 +87,18 @@ client.once("clientReady", () => {
   setInterval(checkMonthlyReset, 6 * 60 * 60 * 1000);
 });
 
-client.login(process.env.DISCORD_TOKEN);
+// === LOGIN COM TRATAMENTO DE ERRO ===
+try {
+  await client.login(process.env.DISCORD_TOKEN);
+} catch (error) {
+  console.error("❌ Erro crítico ao fazer login:", error.message);
+  process.exit(1);
+}
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("❌ Promise rejeitada não tratada:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("❌ Erro não capturado:", error);
+});
