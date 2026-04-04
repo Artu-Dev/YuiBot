@@ -60,7 +60,6 @@ const USERS_SCHEMA = {
   escudo_expiry: "TEXT DEFAULT ''",
   consecutive_robbery_losses: "INTEGER DEFAULT 0",
   total_robberies: "INTEGER DEFAULT 0",
-  palavra_penalty_date: "TEXT DEFAULT ''",
   luck_stat: "INTEGER DEFAULT 0",
   last_spin_time: "INTEGER DEFAULT 0",
   tiger_spin_date: "TEXT DEFAULT ''",

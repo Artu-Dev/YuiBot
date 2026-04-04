@@ -100,6 +100,39 @@ function normalize(content) {
   return typeof content === "string" ? { content } : content;
 }
 
+/** Texto contém a palavra proibida do dia (config). */
+export function messageContainsDailyWord(text) {
+  const w = dbBot.data?.configs?.dailyWord;
+  if (!w || typeof text !== "string") return false;
+  return text.toLowerCase().includes(String(w).trim().toLowerCase());
+}
+
+/**
+ * Responde à mensagem; se a referência for inválida (mensagem apagada), envia no canal com menção.
+ * @param {import("discord.js").Message} message
+ * @param {string} content
+ */
+export async function safeReplyToMessage(message, content) {
+  try {
+    return await message.reply({ content });
+  } catch (err) {
+    const raw = JSON.stringify(err?.rawError ?? {});
+    const refUnknown =
+      err?.code === 10008 ||
+      (err?.code === 50035 &&
+        (raw.includes("MESSAGE_REFERENCE_UNKNOWN_MESSAGE") ||
+          String(err?.message ?? "").includes("Unknown message")));
+    if (!refUnknown) throw err;
+    if (!message.channel?.isTextBased?.()) throw err;
+    const uid = message.author?.id;
+    const prefix = uid ? `<@${uid}> ` : "";
+    return await message.channel.send({
+      content: `${prefix}${content}`,
+      allowedMentions: uid ? { users: [uid] } : { parse: [] },
+    });
+  }
+}
+
 /** URL do avatar para embeds (User, Member ou objeto com displayAvatarURL). */
 export function resolveDisplayAvatarURL(userLike, options) {
   if (!userLike || typeof userLike.displayAvatarURL !== "function") return null;

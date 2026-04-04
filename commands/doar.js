@@ -1,5 +1,6 @@
 import { SlashCommandBuilder } from "discord.js";
 import { getOrCreateUser, getUser, addChars, reduceChars, getBotPrefix } from "../database.js";
+import { ALLOWED_MESSAGE_BOT_ID } from "../constants.js";
 
 export const name = "doar";
 
@@ -63,7 +64,7 @@ export async function execute(client, data) {
     return await data.reply("Você não pode se doar chars.");
   }
 
-  if (targetUser.bot) {
+  if (targetUser.bot && targetUser.id !== ALLOWED_MESSAGE_BOT_ID) {
     return await data.reply("Bot não precisa de chars.");
   }
 

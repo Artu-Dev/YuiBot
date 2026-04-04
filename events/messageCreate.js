@@ -8,18 +8,23 @@ import { handleAchievements } from "../functions/achievements.js";
 import { generateAiRes } from "../functions/generateRes.js";
 import { limitChar } from "../functions/limitChar.js";
 import { sayInCall } from "../functions/sayInCall.js";
-import { parseMessage, replaceMentions, contextFromMessage } from "../functions/utils.js";
+import {
+  parseMessage,
+  replaceMentions,
+  contextFromMessage,
+  safeReplyToMessage,
+  messageContainsDailyWord,
+} from "../functions/utils.js";
 import { randomResend } from "../functions/randomActions.js";
+import { ALLOWED_MESSAGE_BOT_ID } from "../constants.js";
 
 export const name = "messageCreate";
-
-const ALLOWED_BOT_ID        = "974297735559806986";
 const AI_COOLDOWN_MS        = 12_000;
 const COOLDOWN_CLEANUP_MS   = 60_000;
 const COOLDOWN_TTL_FACTOR   = 5;
-const RESEND_CHANCE         = 0.03;
+const RESEND_CHANCE         = 0.003;
 const MENTION_REPLY_CHANCE  = 0.5;
-const RANDOM_REPLY_CHANCE   = 0.05;
+const RANDOM_REPLY_CHANCE   = 0.006;
 
 const aiCooldowns = new Map();
 
@@ -38,7 +43,7 @@ function isOnCooldown(userId) {
 
 export const execute = async (message, client) => {
   const { author } = message;
-  if (!author || (author.bot && author.id !== ALLOWED_BOT_ID)) return;
+  if (!author || (author.bot && author.id !== ALLOWED_MESSAGE_BOT_ID)) return;
 
   const { guildId, userId, channelId, displayName, text, mentions } =
     parseMessage(message, client);
@@ -51,7 +56,7 @@ export const execute = async (message, client) => {
   const userData = getOrCreateUser(userId, displayName, guildId);
   const imageUrl  = extractImageUrl(message);
 
-  limitChar(message, userData);
+  await limitChar(message, userData);
 
   await saveMessageContext(
     channelId,
@@ -111,13 +116,18 @@ function extractImageUrl(message) {
 }
 
 async function handleRandomActions(message, userId, mentions) {
-  if (Math.random() < RESEND_CHANCE) {
+  const genOn = dbBot.data.configs.generateMessage !== false;
+
+  if (genOn && Math.random() < RESEND_CHANCE) {
     await randomResend(message);
     return;
   }
 
   const shouldReplyToMention = mentions.isMentioningClient && Math.random() < MENTION_REPLY_CHANCE;
-  const shouldReplyRandomly  = Math.random() < RANDOM_REPLY_CHANCE;
+  const shouldReplyRandomly =
+    genOn &&
+    !messageContainsDailyWord(message.content || "") &&
+    Math.random() < RANDOM_REPLY_CHANCE;
 
   if (shouldReplyToMention || shouldReplyRandomly) {
     if (isOnCooldown(userId)) return;
@@ -145,14 +155,9 @@ async function replyWithAi(message) {
   if (!aiResponse) return;
 
   try {
-    await message.reply(aiResponse);
-  } catch (replyErr) {
-    console.warn("⚠️ Não foi possível responder, enviando no canal:", replyErr.message);
-    try {
-      await message.channel.send(aiResponse);
-    } catch (sendErr) {
-      console.error("❌ Erro ao enviar resposta no canal:", sendErr.message);
-    }
+    await safeReplyToMessage(message, aiResponse);
+  } catch (err) {
+    console.error("❌ Erro ao enviar resposta da IA:", err.message);
   }
 
   if (dbBot.data.configs.speakMessage) {

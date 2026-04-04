@@ -1,5 +1,5 @@
-import { dbBot, db, reduceChars, setUserProperty, getOrCreateUser, addUserPenality, addChars } from "../database.js";
-import { parseMessage } from "./utils.js";
+import { dbBot, db, reduceChars, setUserProperty, addChars } from "../database.js";
+import { parseMessage, safeReplyToMessage } from "./utils.js";
 import { readFileSync } from "fs";
 import path from "path";
 import { penalities, handlePenalities } from "./penalities.js";
@@ -35,44 +35,53 @@ export const limitChar = async (message, userData) => {
   }
 
   if (randomWordBanned && text.toLowerCase().includes(randomWordBanned.toLowerCase())) {
-    const user = getOrCreateUser(userId, displayName, guildId);
-    const today = new Date().toISOString().split("T")[0];
-    const palavraPenaltyDate = user.palavra_penalty_date || "";
-    
-    if (palavraPenaltyDate !== today) {
-      addUserPenality(userId, guildId, "palavra_proibida");
-      setUserProperty("palavra_penalty_date", userId, guildId, today);
-      
-      const poorestUsers = db.prepare(`
-        SELECT id, charLeft, display_name 
-        FROM users 
-        WHERE guild_id = ? AND id != ? AND charLeft > 0 
-        ORDER BY charLeft ASC 
-        LIMIT 10
-      `).all(guildId, userId);
-      
-      const totalPenalty = 500;
-      let totalDistributed = 0;
-      
-      if (poorestUsers.length > 0) {
-        const shareAmount = Math.floor(totalPenalty / poorestUsers.length);
-        
-        for (const poorUser of poorestUsers) {
-          addChars(poorUser.id, guildId, shareAmount);
-          totalDistributed += shareAmount;
-        }
-        
-        reduceChars(userId, guildId, totalDistributed);
-        
-        await message.reply(`⚠️ **PALAVRA PROIBIDA!** Você disse: **${randomWordBanned}**\nVocê perdeu **${totalDistributed} caracteres**, que foram distribuídos como doação para os usuários mais pobres do servidor!`);
-      } else {
-        reduceChars(userId, guildId, totalPenalty);
-        await message.reply(`⚠️ **PALAVRA PROIBIDA!** Você disse: **${randomWordBanned}**\nVocê perdeu **${totalPenalty} caracteres**!`);
+    const poorestUsers = db.prepare(`
+      SELECT id, charLeft, display_name 
+      FROM users 
+      WHERE guild_id = ? AND id != ? AND charLeft > 0 
+      ORDER BY charLeft ASC 
+      LIMIT 10
+    `).all(guildId, userId);
+
+    const poolCap = 500;
+    const userChars = Math.max(0, Number(userData.charLeft) || 0);
+    const budget = Math.min(poolCap, userChars);
+    let totalDistributed = 0;
+
+    if (poorestUsers.length > 0 && budget > 0) {
+      const n = poorestUsers.length;
+      const base = Math.floor(budget / n);
+      let remainder = budget - base * n;
+
+      for (let i = 0; i < n; i++) {
+        const add = base + (remainder > 0 ? 1 : 0);
+        if (remainder > 0) remainder -= 1;
+        addChars(poorestUsers[i].id, guildId, add);
+        totalDistributed += add;
       }
-      
-      console.log(`[Palavra] ${displayName} foi punido. ${totalDistributed} chars foram distribuídos por usar: "${randomWordBanned}"`);
-      return;
+
+      reduceChars(userId, guildId, totalDistributed);
+
+      await safeReplyToMessage(
+        message,
+        `⚠️ **PALAVRA DO DIA!** Você disse: **${randomWordBanned}**\n**${totalDistributed}** dos seus caracteres foram redistribuídos para quem tem menos saldo no servidor.`
+      );
+    } else if (poorestUsers.length === 0) {
+      await safeReplyToMessage(
+        message,
+        `⚠️ **PALAVRA DO DIA!** Você disse: **${randomWordBanned}** — não tinha ninguém com saldo pra receber a redistribuição, então nada foi cobrado.`
+      );
+    } else {
+      await safeReplyToMessage(
+        message,
+        `⚠️ **PALAVRA DO DIA!** Você disse: **${randomWordBanned}** — você tá sem caracteres pra redistribuir.`
+      );
     }
+
+    console.log(
+      `[Palavra] ${displayName} acionou a palavra do dia. ${totalDistributed} chars redistribuídos ("${randomWordBanned}").`
+    );
+    return;
   }
 
   let textSize = text.length;
@@ -138,12 +147,11 @@ export const limitChar = async (message, userData) => {
         setUserProperty("penalityWord", userId, guildId, randomWord);
       }
 
-      await message.reply(
-        `!${displayName} seus caracteres acabaram e voce recebeu a penalidade: ${randomPenality.nome}`,
+      await safeReplyToMessage(
+        message,
+        `!${displayName} seus caracteres acabaram e voce recebeu a penalidade: ${randomPenality.nome}`
       );
-      await message.reply(
-        `${randomPenality.description}${randomWord}`,
-      );
+      await safeReplyToMessage(message, `${randomPenality.description}${randomWord}`);
 
       setTimeout(() => {
         message.delete().catch(() => {});
@@ -154,7 +162,10 @@ export const limitChar = async (message, userData) => {
     if (penalitiesList.length > 0) {
       setUserProperty("penalities", userId, guildId, JSON.stringify([]));
       setUserProperty("penalityWord", userId, guildId, "");
-      await message.reply(`${displayName} seus caracteres voltaram ao positivo! como seu nome saiu do Serasa, Suas penalidades foram removidas.`);
+      await safeReplyToMessage(
+        message,
+        `${displayName} seus caracteres voltaram ao positivo! como seu nome saiu do Serasa, Suas penalidades foram removidas.`
+      );
     }
   }
 };

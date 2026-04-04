@@ -33,20 +33,42 @@ export async function execute(client, data) {
 
   if (spinsToday >= TIGRE_LIMITE_DIARIO) {
     return data.reply(
-      `Só pode apostar no tigre **${TIGRE_LIMITE_DIARIO}x** por dia fi! Volta amanhã (UTC).`
+      `Só pode apostar no tigre **${TIGRE_LIMITE_DIARIO}x** por dia fi! Volta amanhã.`
     );
   }
 
-  // Taxa de entrada: sempre cobrada ao jogar (vitória/empate especial já entram líquidas em cima disso).
   reduceChars(userId, guildId, TIGRE_CUSTO);
 
-  const outcomes = [
-    { chance: 0.60, multiplier: -1, amount: Math.floor(Math.random() * 300) + 100, emoji: "💸", desc: "Perdeu" },
-    { chance: 0.30, multiplier: 1, amount: Math.floor(Math.random() * 200) + 100, emoji: "💰", desc: "Ganhou" },
-    { chance: 0.09, multiplier: 2, amount: 0, emoji: "🔄", desc: "Próximo roubo dobrado!" },
-    { chance: 0.01, multiplier: 1, amount: 2000, emoji: "🎰", desc: "JACKPOT!" }
-  ];
-
+const outcomes = [
+  { 
+    chance: 0.65, 
+    multiplier: -1, 
+    amount: Math.floor(Math.random() * 1701) + 300,
+    emoji: "💸", 
+    desc: "Perdeu" 
+  },
+  {
+    chance: 0.25,
+    multiplier: 1,
+    amount: Math.floor(Math.random() * 1501) + 1000,
+    emoji: "💰",
+    desc: "Ganhou",
+  },
+  { 
+    chance: 0.09, 
+    multiplier: 2, 
+    amount: 0, 
+    emoji: "🔄", 
+    desc: "Próximo roubo dobrado!" 
+  },
+  {
+    chance: 0.01,
+    multiplier: 1,
+    amount: Math.floor(Math.random() * 20001) + 5000, 
+    emoji: "🎰",
+    desc: "JACKPOT!",
+  },
+];
   const classLucky = getClassModifier(user.user_class || 'none', 'lucky');
   const adjustedOutcomes = outcomes.map(outcome => {
     const modifier = outcome.multiplier >= 1 ? 1 + classLucky : 1 - classLucky;
@@ -118,7 +140,7 @@ ${resultMessage}
 
 **📊 Estatísticas:**
 • **Caracteres atuais:** ${saldoFinal}
-• **Custo da rodada:** ${TIGRE_CUSTO} chars
+• **Custo da rodada:** ${TIGRE_CUSTO} chars (prêmios de vitória são **líquidos**, além desse custo)
 • **Sorte atual:** ${newLuck > 0 ? "+" : ""}${newLuck}
     `)
     .setFooter({ text: "Tigrinho é agro tigrinho é pop" });

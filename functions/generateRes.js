@@ -52,35 +52,42 @@ const buildPromptText = async (message, text, imageSummary = null, guildId = nul
     parts.push(`A mensagem contém uma imagem que foi descrita assim: ${imageSummary}`);
   }
 
-  if (message.reference) {
-    const replied = await message.channel.messages.fetch(message.reference.messageId);
-    const processedReply = await replaceMentions(replied, replied.content);
-    parts.push(`Respondendo a ${replied.author.displayName}: "${processedReply}"`);
+  if (message.reference?.messageId) {
+    let replied;
+    try {
+      replied = await message.channel.messages.fetch(message.reference.messageId);
+    } catch {
+      replied = null;
+    }
+    if (replied) {
+      const processedReply = await replaceMentions(replied, replied.content);
+      parts.push(`Respondendo a ${replied.author.displayName}: "${processedReply}"`);
 
-    if (replied.attachments?.size > 0) {
-      const imageAttachment = replied.attachments.find((attachment) => {
-        const isImageType = attachment.contentType?.startsWith("image/");
-        const name = attachment.name || "";
-        const isImageExt = /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name);
-        return isImageType || isImageExt;
-      });
+      if (replied.attachments?.size > 0) {
+        const imageAttachment = replied.attachments.find((attachment) => {
+          const isImageType = attachment.contentType?.startsWith("image/");
+          const name = attachment.name || "";
+          const isImageExt = /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name);
+          return isImageType || isImageExt;
+        });
 
-      if (imageAttachment) {
-        try {
-          const { getMessageContextByMessageId, setMessageImageAnalysis } = await import("../database.js");
-          const existingContext = getMessageContextByMessageId(replied.id, guild);
-          let referencedImageAnalysis = existingContext?.image_analysis || null;
+        if (imageAttachment) {
+          try {
+            const { getMessageContextByMessageId, setMessageImageAnalysis } = await import("../database.js");
+            const existingContext = getMessageContextByMessageId(replied.id, guild);
+            let referencedImageAnalysis = existingContext?.image_analysis || null;
 
-          if (!referencedImageAnalysis) {
-            referencedImageAnalysis = await analyzeImage(imageAttachment.url);
-            setMessageImageAnalysis(replied.id, guild, referencedImageAnalysis);
+            if (!referencedImageAnalysis) {
+              referencedImageAnalysis = await analyzeImage(imageAttachment.url);
+              setMessageImageAnalysis(replied.id, guild, referencedImageAnalysis);
+            }
+
+            if (referencedImageAnalysis) {
+              parts.push(`A mensagem que ele respondeu continha uma imagem descrita assim: ${referencedImageAnalysis}`);
+            }
+          } catch (error) {
+            console.error("Erro ao processar imagem da mensagem referenciada:", error.message);
           }
-
-          if (referencedImageAnalysis) {
-            parts.push(`A mensagem que ele respondeu continha uma imagem descrita assim: ${referencedImageAnalysis}`);
-          }
-        } catch (error) {
-          console.error("Erro ao processar imagem da mensagem referenciada:", error.message);
         }
       }
     }

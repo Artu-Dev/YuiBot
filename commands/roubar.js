@@ -1,6 +1,9 @@
 import { SlashCommandBuilder } from "discord.js";
 import { addChars, addUserPropertyByAmount, getOrCreateUser, getRandomUserId, getUser, reduceChars, setUserProperty } from "../database.js";
 import { applyClassModifier, getClassModifier, ESCUDO_BLOCK_BASE } from "../functions/classes.js";
+
+const ESCUDO_SUCCESS_FACTOR_MIN = 0.08;
+const ESCUDO_SUCCESS_FACTOR_SPREAD = 0.14;
 import { parseMessage } from "../functions/utils.js";
 
 export const name = "roubar";
@@ -93,14 +96,16 @@ export async function execute(client, data) {
   const penalty = applyClassModifier(isTargeted ? 150 : 100, 'robCost', userClass);
   const victimDefense = getClassModifier(victimClass, 'robDefense');
 
-  if (hasEscudo(victimId, guildId)) {
+  const victimHasEscudo = hasEscudo(victimId, guildId);
+  let escudoUserHint = "";
+  if (victimHasEscudo) {
     const escudoBonus = getClassModifier(victimClass, 'escudoBonus');
-    const blockChance = Math.min(1, Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus));
-
-    if (Math.random() < blockChance) {
-      await data.reply(`${victimName} está protegido com escudo! Você não consegue roubar dele agora.`);
-      return;
-    }
+    const shieldStrength = Math.min(1, Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus));
+    const escudoMult =
+      ESCUDO_SUCCESS_FACTOR_MIN + (1 - shieldStrength) * ESCUDO_SUCCESS_FACTOR_SPREAD;
+    successChance *= escudoMult;
+    escudoUserHint =
+      "\n\n_A vítima tinha **escudo** ativo — sua chance de sucesso foi bem menor._";
   }
 
   if (victimChars <= 0) {
@@ -165,18 +170,18 @@ export async function execute(client, data) {
     reduceChars(victimId, guildId, stolenAmount);
 
     if (isTargeted) {
-      await data.reply(getRandom(replies.successTargeted));
+      await data.reply(getRandom(replies.successTargeted) + escudoUserHint);
     } else {
-      await data.reply(getRandom(replies.successRandom));
+      await data.reply(getRandom(replies.successRandom) + escudoUserHint);
     }
   } else {
     reduceChars(userId, guildId, penalty);
     addChars(victimId, guildId, penalty);
 
     if (isTargeted) {
-      await data.reply(getRandom(replies.failTargeted));
+      await data.reply(getRandom(replies.failTargeted) + escudoUserHint);
     } else {
-      await data.reply(getRandom(replies.failRandom));
+      await data.reply(getRandom(replies.failRandom) + escudoUserHint);
     }
   }
 }

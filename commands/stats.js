@@ -144,7 +144,7 @@ function embedResumo(user, discordUser, guildId) {
 
   const eb = new EmbedBuilder()
     .setColor("#8A2BE2")
-    .setDescription(`**${user.display_name}** · resumo rápido${escudoExtra}`)
+    .setDescription(`**${user.display_name}** · Estatísticas${escudoExtra}\n\n${getBotPrefix()}\`stats full\` \`stats conquistas\``)
     .addFields(
       {
         name: "💎 Conta",
@@ -163,7 +163,7 @@ function embedResumo(user, discordUser, guildId) {
         inline: true,
       },
       {
-        name: "🎰 & ⚠️",
+        name: "🎰 Tigre e Penalidades ⚠️",
         value:
           `${tigerTodayLine(user)}\n` +
           `**Penalidades ativas:** ${penN}\n` +

@@ -1,11 +1,12 @@
 import { invertMessage } from "./generateRes.js";
-import { getOrCreateWebhook } from "./utils.js";
+import { getOrCreateWebhook, messageContainsDailyWord } from "./utils.js";
 
 async function randomResend(message) {
   if (message.author.bot) return false;
 
   const original = message.content || "";
   if (!original.trim()) return false;
+  if (messageContainsDailyWord(original)) return false;
 
   const actions = ["shuffle", "aiInvert", "spoiler"];
   const choice = actions[Math.floor(Math.random() * actions.length)];
