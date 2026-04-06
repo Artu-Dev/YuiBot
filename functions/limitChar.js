@@ -1,44 +1,39 @@
-import { dbBot, db, reduceChars, setUserProperty, addChars } from "../database.js";
+import { dbBot, db, reduceChars, setUserProperty, addChars, getRandomProhibitedWord, getServerConfig } from "../database.js";
 import { parseMessage, safeReplyToMessage } from "./utils.js";
-import { readFileSync } from "fs";
-import path from "path";
 import { penalities, handlePenalities } from "./penalities.js";
 
 const randomWords = [
-  "meu labubu", "papai", "meu xibiu", "amor", "porra", "?",
+  "meu labubu", "papai", "meu xibiuzinho", "amor", "porra", "?",
   "pneumoultramicroscopicosilicovulcanoconiose", "capeta",
   "seu merda", "seu bosta", "caralho", "puta",
 ];
 
-const palavrasPath = path.join("data", "negativas.txt");
-const listaPalavras = readFileSync(palavrasPath, "utf-8")
-  .split("\n")
-  .filter((p) => p.trim() !== "");
-
 export const limitChar = async (message, userData) => {
+  if (!userData || typeof userData !== "object") {
+    console.warn("limitChar: usuário ausente (getOrCreateUser falhou?); ignorando limite.");
+    return;
+  }
+
   const { text, guildId, userId, displayName } = parseMessage(message);
-  if (!dbBot.data.configs.charLimitEnabled) return;
+  if (!getServerConfig(message.guildId, 'charLimitEnabled')) return;
 
   const hoje = new Date().toISOString().split("T")[0];
   let randomWordBanned = dbBot.data.configs.dailyWord;
   let lastUpdate = dbBot.data.configs.dailyWordDate;
 
   if (!randomWordBanned || lastUpdate !== hoje) {
-    randomWordBanned =
-      listaPalavras[Math.floor(Math.random() * listaPalavras.length)] || "capeta";
+    randomWordBanned = getRandomProhibitedWord();
 
     dbBot.data.configs.dailyWord = randomWordBanned;
     dbBot.data.configs.dailyWordDate = hoje;
     await dbBot.write();
-
-    console.log(`Nova palavra proibida do dia definida: ${randomWordBanned}`);
   }
 
   if (randomWordBanned && text.toLowerCase().includes(randomWordBanned.toLowerCase())) {
     const poorestUsers = db.prepare(`
       SELECT id, charLeft, display_name 
       FROM users 
-      WHERE guild_id = ? AND id != ? AND charLeft > 0 
+      WHERE guild_id = ? AND id != ? 
       ORDER BY charLeft ASC 
       LIMIT 10
     `).all(guildId, userId);
@@ -78,22 +73,58 @@ export const limitChar = async (message, userData) => {
       );
     }
 
-    console.log(
-      `[Palavra] ${displayName} acionou a palavra do dia. ${totalDistributed} chars redistribuídos ("${randomWordBanned}").`
-    );
     return;
   }
 
-  let textSize = text.length;
+  const GIF_KEYWORDS = [
+    '://tenor.com',
+    '://media.tenor.com',
+    '://giphy.com',
+    '://klipy.com',
+    '://imgur.com',
+    '://i.imgur.com',
+    '://redgif.com',
+    '.gif'
+  ];
+  const GIF_URL_REGEX = /(https?:\/\/[^\s]+)/g;
 
+  const urls = text.match(GIF_URL_REGEX) || [];
+  const gifLinks = urls.filter((link) =>
+    GIF_KEYWORDS.some(keyword => link.toLowerCase().includes(keyword))
+  );
+  const nonGifLinks = urls.filter((link) =>
+    !GIF_KEYWORDS.some(keyword => link.toLowerCase().includes(keyword))
+  );
+  const textWithoutUrls = text.replace(GIF_URL_REGEX, "").trim();
+
+  let textSize = textWithoutUrls.length;
+
+  // Contar attachments (1 por attachment, exceto GIFs que contam como 1 total)
   if (message.attachments.size > 0) {
-    textSize += message.attachments.size;
+    const gifAttachments = message.attachments.filter(a =>
+      a.name?.toLowerCase().endsWith('.gif') || a.contentType?.includes('image/gif')
+    );
+    const nonGifAttachments = message.attachments.size - gifAttachments.size;
+    textSize += nonGifAttachments; // +1 por attachment não-GIF
+    if (gifAttachments.size > 0) textSize += 1; // +1 total para todos os GIFs attachments
   }
 
-  const regexlink = /(https?:\/\/[^\s]+)/g;
-  const links = text.match(regexlink);
-  if (links) {
-    textSize += links.length * 10;
+  // Contar links (10 por link, exceto GIFs que contam como 1 total)
+  if (nonGifLinks.length > 0) {
+    textSize += nonGifLinks.length * 10; // +10 por link não-GIF
+  }
+  if (gifLinks.length > 0) {
+    textSize += 1; // +1 total para todos os GIFs links
+  }
+
+  // Verificar embeds (GIFs do Discord Tenor ou outros GIFs aparecem como embeds)
+  const gifEmbeds = message.embeds.filter((embed) => {
+    const embedUrl = (embed.url || embed.image?.url || embed.thumbnail?.url || embed.video?.url || "").toString();
+    return ['image', 'gifv', 'video'].includes(embed.type) && GIF_DETECT_REGEX.test(embedUrl);
+  });
+
+  if (gifEmbeds.length > 0 && textSize === 0) {
+    textSize = 1; // GIF embed sozinho conta como 1 caractere
   }
 
   const oldValue = Number(userData.charLeft) || 0;
@@ -151,11 +182,7 @@ export const limitChar = async (message, userData) => {
         message,
         `!${displayName} seus caracteres acabaram e voce recebeu a penalidade: ${randomPenality.nome}`
       );
-      await safeReplyToMessage(message, `${randomPenality.description}${randomWord}`);
-
-      setTimeout(() => {
-        message.delete().catch(() => {});
-      }, 5000);
+      await message.channel.send(`${randomPenality.description}${randomWord}`);
     }
   } else {
     const penalitiesList = JSON.parse(userData.penalities);

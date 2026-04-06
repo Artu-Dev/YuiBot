@@ -5,18 +5,12 @@ import {
   getOrCreateUser,
   dbBot,
   getLastMessageAuthor,
+  getProhibitedWords,
 } from "../database.js";
 import { gerar_conquista } from "./image.js";
 import { parseMessage } from "./utils.js";
-import { readFileSync } from "fs";
 
-const swearsFile = readFileSync("./data/negativas.txt", "utf-8");
-const swearsList = swearsFile
-  .split("\n")
-  .map((word) => word.trim().toLowerCase())
-  .filter((word) => word.length > 0);
-
-const setPalavroes = new Set(swearsList);
+const setPalavroes = getProhibitedWords();
 
 const isOnlyCaps = (text) => /^[A-Z\s]+$/.test(text);
 const isQuestionMessage = (text) => text.endsWith("?");
@@ -26,8 +20,12 @@ const isNightOwlHour = () => {
 };
 
 const updateUserStats = (userId, guildId, updates) => {
-  for (const [prop] of Object.entries(updates)) {
-    addUserProperty(prop, userId, guildId);
+  for (const [prop, value] of Object.entries(updates)) {
+    if (typeof value === "number") {
+      addUserProperty(prop, userId, guildId, value);
+    } else {
+      addUserProperty(prop, userId, guildId);
+    }
   }
 };
 
@@ -62,19 +60,45 @@ export const giveAchievement = async (message, userId, achievementKey, authorUse
   );
 };
 
-const checkAllAchievements = async (message, userId, stats, authorUserObj) => {
-  for (const [key, ach] of Object.entries(achievements)) {
-    if (ach.check(stats)) {
+const achievementsByUpdate = {
+  night_owl_messages:   ["night_owl", "insone"],
+  messages_sent:        ["chatterbox", "first_message", "chat_legend"],
+  caps_lock_messages:   ["caps_addict"],
+  question_marks:       ["question_everything"],
+  morning_messages:     ["good_morning"],
+  laught_messages:      ["funny_today"],
+  swears_count:         ["dirty_mouth", "vocabulario_rico"],
+  long_questions:       ["philosopher"],
+  caps_streak:          ["urgency"],
+  specific_time_messages: ["devil_message"],
+  suspense_messages:    ["misterioso"],
+  textao_messages:      ["textao_enem"],
+  monologo_streak:      ["monologo"],
+  bot_commands_used:    ["bot_addicted"],
+  mentions_sent:        ["stalker"],
+  mentions_received:    ["popular"],
+};
+
+const checkRelevantAchievements = async (message, userId, stats, authorUserObj, updates) => {
+  const keysToCheck = new Set();
+  
+  for (const updateKey of Object.keys(updates)) {
+    const relevant = achievementsByUpdate[updateKey] || [];
+    relevant.forEach(key => keysToCheck.add(key));
+  }
+  
+  for (const key of keysToCheck) {
+    if (achievements[key] && achievements[key].check(stats)) {
       await giveAchievement(message, userId, key, authorUserObj);
     }
   }
 };
 
-const handleMentions = async (message) => {
+const handleMentions = async (message, guildId, userId, displayName, stats) => {
   if (!message.mentions.users.size) return;
-  const { guildId, userId, displayName, mentions } = parseMessage(message);
+  const mentions = Array.from(message.mentions.users.keys());
 
-  for (const mentionedId of mentions.users) {
+  for (const mentionedId of mentions) {
     const mentionedUser = message.mentions.users.get(mentionedId);
     if (!mentionedUser) continue;
 
@@ -84,8 +108,7 @@ const handleMentions = async (message) => {
 
     if (!mentionedUser.bot) {
       addUserProperty("mentions_sent", userId, guildId);
-      const userStats = getOrCreateUser(userId, displayName, guildId);
-      if (achievements.stalker.check(userStats)) {
+      if (achievements.stalker.check(stats)) {
         await giveAchievement(message, userId, "stalker", message.author);
       }
     }
@@ -105,21 +128,19 @@ const handleMentions = async (message) => {
 };
 
 const checkSwears = (text) => {
-  if (text.length > 2) {
-    const tokens = text.toLowerCase().split(/[\s,.;!?]+/);
-    let swearsCount = 0;
-    for (const token of tokens) {
-      if (setPalavroes.has(token)) swearsCount++;
-    }
-    return swearsCount;
+  if (text.length < 2) return 0;
+  
+  const tokens = text.toLowerCase().split(/[\s,.;!?]+/);
+  let swearsCount = 0;
+  for (const token of tokens) {
+    if (token && setPalavroes.has(token)) swearsCount++;
   }
-  return 0;
+  return swearsCount;
 };
 
 export const handleAchievements = async (message) => {
   const now = new Date();
   const { displayName, guildId, text, channelId, userId } = parseMessage(message);
-  const lastAuthor = getLastMessageAuthor(channelId, guildId);
 
   let stats = getOrCreateUser(userId, displayName, guildId);
   const updates = {};
@@ -133,47 +154,55 @@ export const handleAchievements = async (message) => {
   if (now.getHours() >= 6 && now.getHours() < 12 && /bom dia/i.test(text))
     updates.morning_messages = 1;
 
-  if (/k{10,}/i.test(text)) updates.laught_messages = 1;
+  if (/k{50,}/i.test(text)) updates.laught_messages = 1;
 
   const swearsCount = checkSwears(text);
   if (swearsCount > 0) updates.swears_count = swearsCount;
 
   if (text.endsWith("?") && text.length >= 100) updates.long_questions = 1;
 
-  if (!stats._caps_temp) stats._caps_temp = 0;
-  if (/^[A-Z\s]+$/.test(text)) stats._caps_temp++;
-  else stats._caps_temp = 0;
-  setUserProperty("caps_streak", userId, guildId, stats._caps_temp);
+  const prevCapsStreak = Number(stats.caps_streak) || 0;
+  const newCapsStreak = /^[A-Z\s]+$/.test(text) ? prevCapsStreak + 1 : 0;
+  setUserProperty("caps_streak", userId, guildId, newCapsStreak);
+  updates.caps_streak = true;
 
   const date = new Date();
   if (date.getHours() === 3 && date.getMinutes() === 33)
     updates.specific_time_messages = 1;
 
-  if (/(uwu|owo|nya+)/i.test(text)) updates.otaku_messages = 1;
-
-  if (/\b(bro|wtf|lmao|fr|literally)\b/i.test(text))
-    updates.gringo_messages = 1;
-
   if ((text.match(/\.\.\./g) || []).length >= 2) updates.suspense_messages = 1;
 
   if (text.length >= 600) updates.textao_messages = 1;
 
-  if (lastAuthor === userId) {
-    if (!stats._monologo_temp) stats._monologo_temp = 1;
-    stats._monologo_temp++;
-  } else {
-    stats._monologo_temp = 1;
-  }
-  setUserProperty("monologo_streak", userId, guildId, stats._monologo_temp);
+  const previousAuthor = getLastMessageAuthor(channelId, guildId);
+  const prevMonologo = Number(stats.monologo_streak) || 0;
+  const newMonologoStreak =
+    previousAuthor === userId ? prevMonologo + 1 : 1;
+  setUserProperty("monologo_streak", userId, guildId, newMonologoStreak);
+  updates.monologo_streak = true;
 
   if (message.content.startsWith(dbBot.data.configs.prefix))
     updates.bot_commands_used = 1;
 
   updateUserStats(userId, guildId, updates);
-  stats = getOrCreateUser(userId, displayName, guildId);
+  stats.messages_sent = (stats.messages_sent || 0) + (updates.messages_sent || 0);
+  stats.caps_lock_messages = (stats.caps_lock_messages || 0) + (updates.caps_lock_messages || 0);
+  stats.question_marks = (stats.question_marks || 0) + (updates.question_marks || 0);
+  stats.morning_messages = (stats.morning_messages || 0) + (updates.morning_messages || 0);
+  stats.laught_messages = (stats.laught_messages || 0) + (updates.laught_messages || 0);
+  stats.swears_count = (stats.swears_count || 0) + (updates.swears_count || 0);
+  stats.long_questions = (stats.long_questions || 0) + (updates.long_questions || 0);
+  stats.caps_streak = newCapsStreak;
+  stats.specific_time_messages = (stats.specific_time_messages || 0) + (updates.specific_time_messages || 0);
+  stats.suspense_messages = (stats.suspense_messages || 0) + (updates.suspense_messages || 0);
+  stats.textao_messages = (stats.textao_messages || 0) + (updates.textao_messages || 0);
+  stats.monologo_streak = newMonologoStreak;
+  stats.bot_commands_used = (stats.bot_commands_used || 0) + (updates.bot_commands_used || 0);
+  stats.night_owl_messages = (stats.night_owl_messages || 0) + (updates.night_owl_messages || 0);
 
-  await handleMentions(message);
-  await checkAllAchievements(message, userId, stats, message.author);
+  await handleMentions(message, guildId, userId, displayName, stats);
+  
+  await checkRelevantAchievements(message, userId, stats, message.author, updates);
 
   // Ghost achievement (30 dias sem mensagem)
   const lastMessageTime = stats.last_message_time
@@ -201,24 +230,24 @@ export const achievements = {
   ghost: {
     id: 1,
     name: "Fantasma",
-    charPoints: 800,
+    charPoints: 5000,
     emoji: "👻",
-    description: "Ficou 30 dias sem mandar mensagem e voltou",
-    check: () => false, // Checado manualmente acima
+    description: "30 dias sem mensagens e voltou",
+    check: () => false,
   },
 
   caps_addict: {
     id: 3,
-    charPoints: 400,
+    charPoints: 800,
     name: "VICIADO EM CAPS LOCK",
     emoji: "📢",
-    description: "Mandou 50 mensagens gritando",
+    description: "50 mensagens gritando",
     check: (stats) => stats.caps_lock_messages >= 50,
   },
 
   night_owl: {
     id: 5,
-    charPoints: 800,
+    charPoints: 1000,
     name: "Coruja Noturna",
     emoji: "🦉",
     description: "Mandou 100 mensagens na madrugada (2h-6h)",
@@ -227,16 +256,16 @@ export const achievements = {
 
   popular: {
     id: 6,
-    charPoints: 1000,
+    charPoints: 2000,
     name: "Popularzinho",
     emoji: "⭐",
-    description: "Recebeu 200 menções",
+    description: "200 menções recebidas",
     check: (stats) => stats.mentions_received >= 200,
   },
 
   stalker: {
     id: 7,
-    charPoints: 600,
+    charPoints: 1500,
     name: "Stalker",
     emoji: "👀",
     description: "Mencionou os outros 300 vezes",
@@ -245,8 +274,8 @@ export const achievements = {
 
   question_everything: {
     id: 8,
-    charPoints: 500,
-    name: "O Curioso",
+    charPoints: 2000,
+    name: "Curioso",
     emoji: "❓",
     description: "Fez 150 perguntas no chat",
     check: (stats) => stats.question_marks >= 150,
@@ -254,10 +283,10 @@ export const achievements = {
 
   chatterbox: {
     id: 11,
-    charPoints: 1200,
+    charPoints: 1850,
     name: "Tagarela",
     emoji: "💬",
-    description: "Enviou 1.000 mensagens",
+    description: "1.000 mensagens enviadas",
     check: (stats) => stats.messages_sent >= 1000,
   },
 
@@ -272,26 +301,26 @@ export const achievements = {
 
   good_morning: {
     id: 13,
-    charPoints: 100,
-    name: "Bom Dia Grupo",
+    charPoints: 400,
+    name: "Acorda!!!",
     emoji: "☀️",
-    description: "Mandou um 'bom dia' igual idoso no zap",
+    description: "Mandou 'bom dia' no chat",
     check: (stats) => stats.morning_messages >= 1,
   },
 
   monologo: {
     id: 14,
-    charPoints: 250,
-    name: "Esquizofrenia",
+    charPoints: 400,
+    name: "Esquizofrenico",
     emoji: "🗣️",
-    description: "Mandou 5 mensagens seguidas falando sozinho",
-    check: (stats) => stats.monologo_streak >= 5,
+    description: "10 mensagens seguidas falando sozinho",
+    check: (stats) => stats.monologo_streak >= 10,
   },
 
   devil_message: {
     id: 15,
     charPoints: 1500,
-    name: "O Capiroto",
+    name: "DIABOLICO",
     emoji: "😈",
     description: "Mandou mensagem exatamente às 03:33",
     check: (stats) => stats.specific_time_messages >= 1,
@@ -299,19 +328,19 @@ export const achievements = {
 
   reincarnation: {
     id: 16,
-    charPoints: 5000,
-    name: "Reencarnação",
+    charPoints: 50000,
+    name: "Reencarnou",
     emoji: "🧟‍♂️",
-    description: "Voltou dos mortos depois de 1 ano offline",
-    check: () => false, 
+    description: "Voltou depois de 1 ano sem mandar mensagem",
+    check: () => false,
   },
 
   chat_legend: {
     id: 17,
-    charPoints: 4000,
-    name: "Toca na Grama",
+    charPoints: 10000,
+    name: "Inimigo da Vida Social",
     emoji: "🌱",
-    description: "Enviou 10.000 mensagens (vai viver a vida)",
+    description: "Enviou 10.000 mensagens",
     check: (stats) => stats.messages_sent >= 10000,
   },
 
@@ -320,7 +349,7 @@ export const achievements = {
     charPoints: 100,
     name: "Calma Calabreso",
     emoji: "🚨",
-    description: "Mandou 3 mensagens seguidas em CAPS LOCK",
+    description: "3 mensagens seguidas em CAPS",
     check: (stats) => stats.caps_streak >= 3,
   },
 
@@ -329,14 +358,14 @@ export const achievements = {
     charPoints: 150,
     name: "Filósofo",
     emoji: "🧠",
-    description: "Fez uma pergunta imensa (mais de 100 caracteres)",
+    description: "Pergunta com mais de 100 caracteres",
     check: (stats) => stats.long_questions >= 1,
   },
 
   funny_today: {
     id: 20,
-    charPoints: 50,
-    name: "Tá Engrasado Hj",
+    charPoints: 200,
+    name: "paliasso",
     emoji: "🤡",
     description: "Deu uma risada muito longa (kkkkkk)",
     check: (stats) => stats.laught_messages >= 1,
@@ -354,74 +383,54 @@ export const achievements = {
   bot_addicted: {
     id: 22,
     charPoints: 400,
-    name: "Escravo de Bot",
+    name: "Entusiasta do Bot",
     emoji: "🤖",
-    description: "Usou 50 comandos meus",
+    description: "50 comandos usados",
     check: (stats) => stats.bot_commands_used >= 50,
-  },
-
-  otaku_fedido: {
-    id: 23,
-    charPoints: 200,
-    name: "Otaku Fedido",
-    emoji: "🌸",
-    description: "Usou 'uwu', 'owo' ou 'nya' 10 vezes (tome banho)",
-    check: (stats) => stats.otaku_messages >= 10,
-  },
-
-  gringo_falsificado: {
-    id: 24,
-    charPoints: 200,
-    name: "Gringo do Paraguai",
-    emoji: "🇺🇸",
-    description: "Usou 20 gírias em inglês tipo 'bro', 'wtf' ou 'lmao'",
-    check: (stats) => stats.gringo_messages >= 20,
   },
 
   misterioso: {
     id: 25,
     charPoints: 150,
-    name: "Senhor Suspense",
+    name: "Misterioso",
     emoji: "🌫️",
-    description: "Enviou 15 mensagens cheias de reticências...",
+    description: "15 Mensagens com reticências...",
     check: (stats) => stats.suspense_messages >= 15,
   },
 
   textao_enem: {
     id: 26,
-    charPoints: 300,
-    name: "Redação do Enem",
+    charPoints: 800,
+    name: "Escritor maldito",
     emoji: "📝",
     description: "Mandou um textão com mais de 600 caracteres",
     check: (stats) => stats.textao_messages >= 1,
   },
 
-  // === NOVAS CONQUISTAS ===
-
   insone: {
     id: 27,
     charPoints: 1500,
-    name: "Insone Profissional",
+    name: "Insonia PLUS",
     emoji: "🌑",
-    description: "Mandou 500 mensagens na madrugada (2h-6h). Dorme.",
+    description: "500 mensagens de madrugada (2h-6h).",
     check: (stats) => stats.night_owl_messages >= 500,
   },
 
   vocabulario_rico: {
     id: 28,
-    charPoints: 600,
+    charPoints: 1000,
     name: "Vocabulário Rico",
     emoji: "🤬",
-    description: "Falou palavrao 200 vezes. Orgulho de mãe.",
+    description: "200 palavrões ditos",
     check: (stats) => stats.swears_count >= 200,
   },
 
   dependente: {
     id: 29,
     charPoints: 700,
-    name: "Dependente",
+    name: "Ladrão profissional",
     emoji: "🔪",
-    description: "Roubou 30 vezes no total. Ladrão profissional.",
+    description: "Roubou 30 vezes no total.",
     check: (stats) => (stats.total_robberies || 0) >= 30,
   },
 
@@ -433,4 +442,70 @@ export const achievements = {
     description: "Perdeu 6 roubos seguidos. Talento natural.",
     check: (stats) => (stats.consecutive_robbery_losses || 0) >= 6,
   },
+
+  generoso: {
+    id: 31,
+    charPoints: 2500,
+    name: "Filantropo",
+    emoji: "🤲",
+    description: "Doou 10.000 caracteres no total",
+    check: (stats) => (stats.total_chars_donated || 0) >= 10000,
+  },
+
+  tigrinho_lenda: {
+    id: 32,
+    charPoints: 100,
+    name: "CEO do tigrinho",
+    emoji: "🎰",
+    description: "Ganhou 2 jackpot's no tigre",
+    check: (stats) => (stats.tiger_jackpots || 0) >= 2,
+  },
+
+  tigre_centuria: {
+    id: 33,
+    charPoints: 1500,
+    name: "Viciado no Tigrinho",
+    emoji: "🐯",
+    description: "Jogou o tigre 100 vezes no total",
+    check: (stats) => (stats.lifetime_tiger_spins || 0) >= 100,
+  },
 };
+
+export async function awardAchievementInCommand(client, data, achievementKey) {
+  const achievement = achievements[achievementKey];
+  if (!achievement || typeof achievement.check !== "function") return;
+
+  const stats = getOrCreateUser(data.userId, data.displayName, data.guildId);
+  if (!achievement.check(stats)) return;
+
+  const isNew = unlockAchievement(data.userId, data.guildId, achievementKey);
+  if (!isNew) return;
+
+  const userData = getOrCreateUser(data.userId, data.displayName, data.guildId);
+  setUserProperty(
+    "charLeft",
+    data.userId,
+    data.guildId,
+    (userData.charLeft || 0) + achievement.charPoints
+  );
+
+  if (!data.channelId) return;
+  const channel = await client.channels.fetch(data.channelId).catch(() => null);
+  if (!channel?.isTextBased?.()) return;
+
+  const size = achievement.description.length > 22 ? "small" : "normal";
+  const authorLike = {
+    displayName: data.displayName,
+    username: data.username,
+    displayAvatarURL: typeof data.avatarURL === "function" ? data.avatarURL : () => null,
+  };
+
+  const buffer = await gerar_conquista(authorLike, achievement, size);
+
+  await channel.send({
+    files: [{ attachment: buffer, name: "achievement.png" }],
+  });
+  await channel.send(
+    `**${data.displayName}** ganhou **${achievement.charPoints}** caracteres como recompensa`
+  );
+}

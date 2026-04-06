@@ -3,6 +3,8 @@ import {
   getChannels,
   saveMessageContext,
   getOrCreateUser,
+  isGuildAiSilenced,
+  getServerConfig,
 } from "../database.js";
 import { handleAchievements } from "../functions/achievements.js";
 import { generateAiRes } from "../functions/generateRes.js";
@@ -22,9 +24,9 @@ export const name = "messageCreate";
 const AI_COOLDOWN_MS        = 12_000;
 const COOLDOWN_CLEANUP_MS   = 60_000;
 const COOLDOWN_TTL_FACTOR   = 5;
-const RESEND_CHANCE         = 0.003;
+const RESEND_CHANCE         = 0.01;
 const MENTION_REPLY_CHANCE  = 0.5;
-const RANDOM_REPLY_CHANCE   = 0.006;
+const RANDOM_REPLY_CHANCE   = 0.05;
 
 const aiCooldowns = new Map();
 
@@ -54,7 +56,9 @@ export const execute = async (message, client) => {
   if (!channelSet.has(channelId)) return;
 
   const userData = getOrCreateUser(userId, displayName, guildId);
-  const imageUrl  = extractImageUrl(message);
+  if (!userData) return;
+
+  const imageUrl = extractImageUrl(message);
 
   await limitChar(message, userData);
 
@@ -75,7 +79,7 @@ export const execute = async (message, client) => {
 // ── Funções auxiliares ────────────────────────────────────────
 
 async function tryHandleCommand(message, client, text) {
-  const prefix = dbBot.data.configs.prefix || "$";
+  const prefix = getServerConfig(message.guildId, 'prefix') || "$";
   const isSlash  = text.startsWith("/");
   const isPrefix = text.startsWith(prefix);
 
@@ -116,7 +120,9 @@ function extractImageUrl(message) {
 }
 
 async function handleRandomActions(message, userId, mentions) {
-  const genOn = dbBot.data.configs.generateMessage !== false;
+  if (isGuildAiSilenced(message.guildId)) return;
+
+  const genOn = getServerConfig(message.guildId, 'generateMessage') !== false;
 
   if (genOn && Math.random() < RESEND_CHANCE) {
     await randomResend(message);
@@ -142,6 +148,8 @@ async function handleRandomActions(message, userId, mentions) {
 }
 
 async function replyWithAi(message) {
+  if (isGuildAiSilenced(message.guildId)) return;
+
   message.channel.sendTyping().catch(() => {});
 
   let aiResponse;
@@ -152,17 +160,30 @@ async function replyWithAi(message) {
     return;
   }
 
-  if (!aiResponse) return;
+  const replyText =
+    typeof aiResponse === "string" ? aiResponse.trim() : String(aiResponse ?? "").trim();
+  if (!replyText) {
+    console.warn("replyWithAi: texto vazio após geração; enviando fallback.");
+    try {
+      await safeReplyToMessage(
+        message,
+        "Travei aqui e não saiu texto nenhum — tenta de novo daqui a pouco.",
+      );
+    } catch (e) {
+      console.error("❌ Fallback reply falhou:", e.message);
+    }
+    return;
+  }
 
   try {
-    await safeReplyToMessage(message, aiResponse);
+    await safeReplyToMessage(message, replyText);
   } catch (err) {
     console.error("❌ Erro ao enviar resposta da IA:", err.message);
   }
 
-  if (dbBot.data.configs.speakMessage) {
+  if (getServerConfig(message.guildId, 'speakMessage') && !isGuildAiSilenced(message.guildId)) {
     try {
-      await sayInCall(message, aiResponse);
+      await sayInCall(message, replyText);
     } catch (error) {
       console.error("❌ Erro ao reproduzir áudio no call:", error.message);
     }

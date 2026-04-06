@@ -72,10 +72,6 @@ export async function sayInCall(message, responseText) {
     let tratedText = fixText(responseText);
 
     const audio = await createAudioFileTTSElevenLabs(tratedText);
-    // const audio = await createAudioFileFromText(tratedText);
-
-    console.log(`🔊 Reproduzindo áudio: ${audio}`)
-
     const player = createAudioPlayer();
     const resource = createAudioResource(audio);
     connection.subscribe(player);

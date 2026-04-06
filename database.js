@@ -3,9 +3,8 @@ import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
 import { isValidUserId, isValidGuildId } from "./functions/validation.js";
 
-/** Prefixo configurável (lowdb já carregado pelo bot antes dos comandos). */
-export function getBotPrefix() {
-  return dbBot.data?.configs?.prefix ?? "$";
+export function getBotPrefix(guildId) {
+  return getServerConfig(guildId, 'prefix') || '$';
 }
 
 export const dbBot = new Low(new JSONFile("./data/dbBot.json"), {
@@ -16,57 +15,64 @@ export const dbBot = new Low(new JSONFile("./data/dbBot.json"), {
     generateMessage: true,
     maxSavedAudios: 50,
     prefix: "$",
+    guildSilenceUntil: {},
   },
   AiConfig: {
     voiceId: "4tRn1lSkEn13EVTuqb0g",
-    textModel: "gpt-oss:3b-cloud",
+    textModel: "glm-4.6:cloud",
+    groqInvertModel: "llama-3.1-8b-instant",
     visionModel: "qwen3.5:cloud",
-    fastModels: ["gpt-oss:3b-cloud", "gpt-oss:1.3b-cloud", "gpt-oss:7b-cloud"],
+    fastModels: "gemini-3-flash-preview",
     voiceModel: "eleven_flash_v2_5",
   },
 });
 export const db = new Database("./data/data.db");
+const palavrasDb = new Database("./data/palavras_proibidas.db", { readonly: true });
+
 const charLimit = dbBot.data.configs.limitChar;
 
-// === SCHEMA DEFINITION (Single Source of Truth) ===
 const USERS_SCHEMA = {
   display_name: "TEXT",
   charLeft: `INTEGER DEFAULT ${charLimit}`,
+  
   messages_sent: "INTEGER DEFAULT 0",
+  achievements_unlocked: "TEXT DEFAULT '{}'",
+  penalities: "TEXT DEFAULT '[]'",
+  penalityWord: "TEXT DEFAULT ''",
+
+  last_message_time: "TEXT",
   mentions_received: "INTEGER DEFAULT 0",
   mentions_sent: "INTEGER DEFAULT 0",
   caps_lock_messages: "INTEGER DEFAULT 0",
   question_marks: "INTEGER DEFAULT 0",
   night_owl_messages: "INTEGER DEFAULT 0",
-  last_message_time: "TEXT",
   morning_messages: "INTEGER DEFAULT 0",
-  messages_without_reply: "INTEGER DEFAULT 0",
   specific_time_messages: "INTEGER DEFAULT 0",
   long_questions: "INTEGER DEFAULT 0",
   laught_messages: "INTEGER DEFAULT 0",
   swears_count: "INTEGER DEFAULT 0",
-  bot_commands_used: "INTEGER DEFAULT 0",
   caps_streak: "INTEGER DEFAULT 0",
-  achievements_unlocked: "TEXT DEFAULT '{}'",
-  penalities: "TEXT DEFAULT '[]'",
-  lastRoubo: "TEXT",
-  penalityWord: "TEXT DEFAULT ''",
-  timesRoubou: "INTEGER DEFAULT 0",
-  otaku_messages: "INTEGER DEFAULT 0",
-  gringo_messages: "INTEGER DEFAULT 0",
   suspense_messages: "INTEGER DEFAULT 0",
   textao_messages: "INTEGER DEFAULT 0",
   monologo_streak: "INTEGER DEFAULT 0",
-  escudo_expiry: "TEXT DEFAULT ''",
+  bot_commands_used: "INTEGER DEFAULT 0",
+  
+  lastRoubo: "TEXT",
   consecutive_robbery_losses: "INTEGER DEFAULT 0",
   total_robberies: "INTEGER DEFAULT 0",
+  
   luck_stat: "INTEGER DEFAULT 0",
-  last_spin_time: "INTEGER DEFAULT 0",
   tiger_spin_date: "TEXT DEFAULT ''",
   tiger_spins_count: "INTEGER DEFAULT 0",
+  tiger_pending_double: "INTEGER DEFAULT 0",
+  lifetime_tiger_spins: "INTEGER DEFAULT 0",
+  tiger_jackpots: "INTEGER DEFAULT 0",
+  
+  escudo_expiry: "TEXT DEFAULT ''",
+  
   last_escudo_shown: "TEXT DEFAULT ''",
+  total_chars_donated: "INTEGER DEFAULT 0",
   user_class: "TEXT DEFAULT 'none'",
-  image_analysis: "TEXT DEFAULT ''",
 };
 
 function updateUserDb() {
@@ -85,14 +91,18 @@ function updateUserDb() {
   }
 }
 
+function buildUsersColumnsSQL() {
+  return Object.entries(USERS_SCHEMA)
+    .map(([col, type]) => `${col} ${type}`)
+    .join(",\n      ");
+}
+
 export const intializeDbBot = async () => {
   await dbBot.read();
   await dbBot.write();
 
-  // Build column definitions from schema
-  const columnsSQL = Object.entries(USERS_SCHEMA)
-    .map(([col, type]) => `${col} ${type}`)
-    .join(",\n      ");
+
+  const columnsSQL = buildUsersColumnsSQL();
 
   db.prepare(
     `
@@ -133,6 +143,21 @@ export const intializeDbBot = async () => {
   `
   ).run();
 
+  db.prepare(
+    `
+    CREATE TABLE IF NOT EXISTS server_configs (
+      guild_id TEXT PRIMARY KEY,
+      limitChar INTEGER DEFAULT 2000,
+      speakMessage INTEGER DEFAULT 0,
+      charLimitEnabled INTEGER DEFAULT 1,
+      generateMessage INTEGER DEFAULT 1,
+      maxSavedAudios INTEGER DEFAULT 50,
+      prefix TEXT DEFAULT '$',
+      guildSilenceUntil TEXT DEFAULT '0'
+    )
+  `
+  ).run();
+
   const existingMsgContextColumns = db
     .prepare("PRAGMA table_info(message_context)")
     .all()
@@ -148,7 +173,6 @@ export const intializeDbBot = async () => {
     db.prepare("ALTER TABLE message_context ADD COLUMN image_analysis TEXT").run();
   }
 
-  // Prepared statements for frequently used queries
   db.queries = {
     getUserById: db.prepare("SELECT * FROM users WHERE id = ? AND guild_id = ?"),
     addUserPenalty: db.prepare("UPDATE users SET penalities = ? WHERE id = ? AND guild_id = ?"),
@@ -163,6 +187,8 @@ export const intializeDbBot = async () => {
     getRecentMessages: db.prepare(
       "SELECT author, content, timestamp, message_id, image_url, image_analysis FROM message_context WHERE channel_id = ? AND guild_id = ? ORDER BY timestamp DESC LIMIT ?"
     ),
+    getServerConfig: db.prepare("SELECT * FROM server_configs WHERE guild_id = ?"),
+    setServerConfig: db.prepare("INSERT OR REPLACE INTO server_configs (guild_id, limitChar, speakMessage, charLimitEnabled, generateMessage, maxSavedAudios, prefix, guildSilenceUntil) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"),
   };
 };
 
@@ -229,6 +255,63 @@ export const clearUserPenalities = (userId, guildId) => {
   setUserPenalities(userId, guildId, []);
 };
 
+/// ==============================================
+/// SERVER CONFIGS
+/// ==============================================
+
+const DEFAULT_CONFIGS = {
+  limitChar: 2000,
+  speakMessage: false,
+  charLimitEnabled: true,
+  generateMessage: true,
+  maxSavedAudios: 50,
+  prefix: '$',
+  guildSilenceUntil: '0'
+};
+
+export function getServerConfig(guildId, key) {
+  if (!guildId) return DEFAULT_CONFIGS[key];
+  const row = db.queries.getServerConfig.get(guildId);
+  if (!row) {
+    // insert default
+    db.queries.setServerConfig.run(guildId, DEFAULT_CONFIGS.limitChar, DEFAULT_CONFIGS.speakMessage ? 1 : 0, DEFAULT_CONFIGS.charLimitEnabled ? 1 : 0, DEFAULT_CONFIGS.generateMessage ? 1 : 0, DEFAULT_CONFIGS.maxSavedAudios, DEFAULT_CONFIGS.prefix, DEFAULT_CONFIGS.guildSilenceUntil);
+    return DEFAULT_CONFIGS[key];
+  }
+  // convert back booleans
+  if (key === 'speakMessage' || key === 'charLimitEnabled' || key === 'generateMessage') {
+    return row[key] === 1;
+  }
+  if (key === 'guildSilenceUntil') {
+    return row[key] || '0';
+  }
+  return row[key];
+}
+
+export function setServerConfig(guildId, key, value) {
+  if (!guildId) return; // can't set for null
+  const row = db.queries.getServerConfig.get(guildId);
+  let insertData;
+  if (!row) {
+    insertData = { ...DEFAULT_CONFIGS };
+  } else {
+    insertData = {
+      limitChar: row.limitChar,
+      speakMessage: row.speakMessage,
+      charLimitEnabled: row.charLimitEnabled,
+      generateMessage: row.generateMessage,
+      maxSavedAudios: row.maxSavedAudios,
+      prefix: row.prefix,
+      guildSilenceUntil: row.guildSilenceUntil
+    };
+  }
+  insertData[key] = value;
+  // convert booleans to int
+  if (key === 'speakMessage' || key === 'charLimitEnabled' || key === 'generateMessage') {
+    insertData[key] = value ? 1 : 0;
+  }
+  db.queries.setServerConfig.run(guildId, insertData.limitChar, insertData.speakMessage, insertData.charLimitEnabled, insertData.generateMessage, insertData.maxSavedAudios, insertData.prefix, insertData.guildSilenceUntil);
+}
+
 export const getOrCreateUser = (userId, displayName, guildId) => {
   if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
     console.error(`❌ Invalid IDs in getOrCreateUser: userId=${userId}, guildId=${guildId}`);
@@ -243,6 +326,14 @@ export const getOrCreateUser = (userId, displayName, guildId) => {
       ).run(userId, displayName || "Unknown", guildId);
       user = getUser(userId, guildId);
     } catch (error) {
+      const code = error?.code;
+      if (
+        code === "SQLITE_CONSTRAINT_PRIMARYKEY" ||
+        code === "SQLITE_CONSTRAINT_UNIQUE"
+      ) {
+        user = getUser(userId, guildId);
+        if (user) return user;
+      }
       console.error(`❌ Erro ao criar usuário:`, error);
       return null;
     }
@@ -371,15 +462,20 @@ export function setMessageImageAnalysis(messageId, guildId, analysis) {
   ).run(analysis, messageId, guildId);
 }
 
+
 export function getLastMessageAuthor(channelId, guildId) {
-  const row = db.prepare(`
-    SELECT id 
+  const row = db
+    .prepare(
+      `
+    SELECT userId
     FROM message_context
     WHERE channel_id = ? AND guild_id = ?
-    ORDER BY timestamp DESC
-    LIMIT 1
-  `).get(channelId, guildId);
-  return row ? row.userId : null;
+    ORDER BY timestamp DESC, id DESC
+    LIMIT 1 OFFSET 1
+  `,
+    )
+    .get(channelId, guildId);
+  return row?.userId ?? null;
 }
 
 export function getGuildMembers(guildId, limit = 10) {
@@ -446,6 +542,19 @@ export function unlockAchievement(userId, guildId, achievementKey) {
 /// ==============================================
 /// CANAIS
 /// ==============================================
+
+export function isGuildAiSilenced(guildId) {
+  if (!guildId) return false;
+  const until = Number(getServerConfig(guildId, 'guildSilenceUntil')) || 0;
+  return Date.now() < until;
+}
+
+export async function extendGuildAiSilenceMs(guildId, ms) {
+  const now = Date.now();
+  const cur = Number(getServerConfig(guildId, 'guildSilenceUntil')) || 0;
+  const base = Math.max(now, cur);
+  setServerConfig(guildId, 'guildSilenceUntil', (base + ms).toString());
+}
 
 export const getChannels = (guildId) => {
   const row = db
@@ -531,3 +640,41 @@ export const getGuildUsers = (guildId) => {
   if (!guildId) return [];
   return db.queries.getGuildAllUsers.all(guildId);
 };
+
+export const getPalavrao = (guildId) => {
+  const row = dbBot.data.configs.dailyWord;
+  return row || null;
+}
+
+function getProhibitedWordsSet() {
+  try {
+    const rows = palavrasDb
+      .prepare("SELECT palavra FROM palavras_proibidas")
+      .all();
+    const set = new Set(
+      rows
+        .map((row) => String(row.palavra || "").trim().toLowerCase())
+        .filter((word) => word.length > 0)
+    );
+    return set;
+  } catch (error) {
+    console.error("❌ Erro ao carregar palavras proibidas:", error);
+    return new Set(["capeta"]);
+  }
+}
+
+// Cache das palavras proibidas em memória (carregado uma vez na inicialização)
+let prohibitedWordsCache = null;
+
+export function getProhibitedWords() {
+  if (!prohibitedWordsCache) {
+    prohibitedWordsCache = getProhibitedWordsSet();
+  }
+  return prohibitedWordsCache;
+}
+
+export function getRandomProhibitedWord() {
+  const getRandomPalavraStmt = palavrasDb.prepare("SELECT palavra FROM palavras_proibidas ORDER BY RANDOM() LIMIT 1");
+  const result = getRandomPalavraStmt.get();
+  return result ? result.palavra : "capeta";
+}

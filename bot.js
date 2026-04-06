@@ -18,6 +18,9 @@ const client = new Client({
     GatewayIntentBits.GuildModeration,
     GatewayIntentBits.GuildMessageReactions,
   ],
+  rest: {
+    timeout: 20000,
+  },
 });
 
 const log = (msg) => console.log(`\x1b[36m[Bot]\x1b[0m ${msg}`);

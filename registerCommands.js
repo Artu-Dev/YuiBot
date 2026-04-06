@@ -5,6 +5,7 @@ config();
 // Import all command data
 import { data as addChannelData } from './commands/addChannel.js';
 import { data as ajudaConqsData } from './commands/ajudaConqs.js';
+import { data as calarData } from './commands/calar.js';
 import { data as charsData } from './commands/chars.js';
 import { data as classeData } from './commands/classe.js';
 import { data as configData } from './commands/config.js';
@@ -28,6 +29,7 @@ import { data as tigreData } from './commands/tigre.js';
 const commands = [
   addChannelData,
   ajudaConqsData,
+  calarData,
   charsData,
   classeData,
   configData,

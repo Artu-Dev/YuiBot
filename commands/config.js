@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { dbBot, getBotPrefix } from "../database.js";
+import { dbBot, getBotPrefix, setServerConfig } from "../database.js";
 
 export const name = "config";
 
@@ -28,9 +28,9 @@ export const data = new SlashCommandBuilder()
               value: "random",
             },
             {
-              name: "Bot falar no voice (TTS) quando responder",
-              value: "speak",
-            }
+              name: "Limite de caracteres (mês)",
+              value: "limitChar",
+            },
           )
       )
       .addStringOption((opt) =>
@@ -87,9 +87,14 @@ function parseArgs(data) {
   };
 }
 
-function buildConfigEmbed() {
-  const c = dbBot.data.configs;
-  const p = getBotPrefix();
+function buildConfigEmbed(guildId) {
+  const c = {
+    prefix: getServerConfig(guildId, 'prefix'),
+    generateMessage: getServerConfig(guildId, 'generateMessage'),
+    speakMessage: getServerConfig(guildId, 'speakMessage'),
+    limitChar: getServerConfig(guildId, 'limitChar')
+  };
+  const p = c.prefix;
 
   return new EmbedBuilder()
     .setColor("#5865F2")
@@ -124,7 +129,7 @@ function buildConfigEmbed() {
         name: "`limitChar` — Limite de caracteres (mês)",
         value:
           `**Atual:** **${c.limitChar ?? 2000}**\n` +
-          "Altere em `data/dbBot.json` se precisar mudar o teto inicial de chars.",
+          "Limite inicial de caracteres por usuário por mês.",
         inline: false,
       },
       {
@@ -133,7 +138,8 @@ function buildConfigEmbed() {
           `\`${p}config\` — abre este resumo\n` +
           `\`${p}config prefix !\` — prefixo vira \`!\`\n` +
           `\`${p}config random off\` — desliga respostas IA\n` +
-          `\`${p}config speak on\` — liga TTS`,
+          `\`${p}config speak on\` — liga TTS\n` +
+          `\`${p}config limitChar 3000\` — limite vira 3000`,
         inline: false,
       }
     );
@@ -141,20 +147,21 @@ function buildConfigEmbed() {
 
 export async function execute(client, data) {
   const parsed = parseArgs(data);
+  const guildId = data.guildId;
 
   if (parsed.mode === "ver") {
-    return data.reply({ embeds: [buildConfigEmbed()] });
+    return data.reply({ embeds: [buildConfigEmbed(guildId)] });
   }
 
   const { field, value } = parsed;
 
   if (!field) {
-    return data.reply({ embeds: [buildConfigEmbed()] });
+    return data.reply({ embeds: [buildConfigEmbed(guildId)] });
   }
 
   if (!value && field.toLowerCase() !== "prefix") {
     return data.reply(
-      `Informe o valor. Ex.: \`${getBotPrefix()}config random on\` ou \`/config definir\`.`
+      `Informe o valor. Ex.: \`${getBotPrefix(guildId)}config random on\` ou \`/config definir\`.`
     );
   }
 
@@ -165,8 +172,7 @@ export async function execute(client, data) {
     if (!normalizedValue) {
       return data.reply("Forneça o novo prefixo. Ex.: `$config prefix !`");
     }
-    dbBot.data.configs.prefix = normalizedValue;
-    await dbBot.write();
+    setServerConfig(guildId, 'prefix', normalizedValue);
     return data.reply(`Prefixo atualizado para: \`${normalizedValue}\``);
   }
 
@@ -175,8 +181,7 @@ export async function execute(client, data) {
     if (bool === null) {
       return data.reply("Valor inválido para **random**. Use **on**, **off**, **sim**, **não**.");
     }
-    dbBot.data.configs.generateMessage = bool;
-    await dbBot.write();
+    setServerConfig(guildId, 'generateMessage', bool);
     return data.reply(
       `Respostas aleatórias com IA (**generateMessage**): **${bool ? "ligado" : "desligado"}**.`
     );
@@ -187,15 +192,23 @@ export async function execute(client, data) {
     if (bool === null) {
       return data.reply("Valor inválido para **speak**. Use **on** ou **off**.");
     }
-    dbBot.data.configs.speakMessage = bool;
-    await dbBot.write();
+    setServerConfig(guildId, 'speakMessage', bool);
     return data.reply(
       `Fala no voice (**speakMessage**): **${bool ? "ligado" : "desligado"}**.`
     );
   }
 
+  if (normalizedField === "limit" || normalizedField === "limitChar" || normalizedField === "limitchar") {
+    const num = parseInt(normalizedValue);
+    if (isNaN(num) || num < 0) {
+      return data.reply("Valor inválido para **limitChar**. Use um número positivo.");
+    }
+    setServerConfig(guildId, 'limitChar', num);
+    return data.reply(`Limite de caracteres atualizado para: **${num}**.`);
+  }
+
   return data.reply({
-    embeds: [buildConfigEmbed()],
+    embeds: [buildConfigEmbed(guildId)],
     content: "❌ Campo não reconhecido. Veja a lista acima.",
   });
 }

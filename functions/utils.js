@@ -1,4 +1,4 @@
-import { dbBot } from "../database.js";
+import { dbBot, getServerConfig } from "../database.js";
 
 export function getRandomTime(minSeconds, maxSeconds) {
   const min = minSeconds * 1000;
@@ -6,35 +6,79 @@ export function getRandomTime(minSeconds, maxSeconds) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-/**
- * @typedef {Object} CommandContext
- * @property {string}   userId
- * @property {string}   guildId
- * @property {string}   channelId
- * @property {string}   username
- * @property {string}   displayName
- * @property {Function} avatarURL
- * @property {boolean}  isBot
- * @property {boolean}  isEphemeral
- * @property {import('discord.js').User|null} mentionedUser
- * @property {Function} reply
- * @property {Function} followUp
- * @property {Function|null} editReply
- * @property {Function|null} deferReply
- * @property {boolean}      fromInteraction — true só para slash (use para parse de opções vs args)
- * @property {string}      content — texto bruto da mensagem (prefixo)
- */
+function parseArgs(content) {
+  const args = [];
+  let current = '';
+  let inQuotes = false;
+  let quoteChar = null;
 
-/**
- * Constrói o contexto a partir de uma mensagem de prefixo.
- * @param {import('discord.js').Message} message
- * @returns {CommandContext}
- */
+  for (let i = 0; i < content.length; i++) {
+    const char = content[i];
+    
+    if ((char === '"' || char === "'") && !inQuotes) {
+      inQuotes = true;
+      quoteChar = char;
+    } else if (char === quoteChar && inQuotes) {
+      inQuotes = false;
+      quoteChar = null;
+    } else if (char === ' ' && !inQuotes) {
+      if (current.length > 0) {
+        args.push(current);
+        current = '';
+      }
+    } else {
+      current += char;
+    }
+  }
+  
+  if (current.length > 0) args.push(current);
+  return args;
+}
 
-export function contextFromMessage(message) {
+function parseFlag(args, name, shortName = null) {
+  const patterns = [
+    `--${name}`,
+    shortName ? `-${shortName}` : null
+  ].filter(Boolean);
+
+  for (let i = 0; i < args.length; i++) {
+    if (patterns.includes(args[i])) {
+      if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
+        return { value: args[i + 1], index: i, length: 2 };
+      }
+      return { value: true, index: i, length: 1 };
+    }
+    
+    if (args[i].startsWith(`${patterns[0]}=`)) {
+      return { value: args[i].split('=')[1], index: i, length: 1 };
+    }
+  }
+  return null;
+}
+
+export function contextFromMessage(message, options = {}) {
+  const { prefix = dbBot.data?.configs?.prefix || '$', schema = null, subcommands = [] } = options;
+  
+  const contentWithoutPrefix = message.content.slice(prefix.length).trim();
+  const parts = contentWithoutPrefix.split(/ +/);
+  const commandName = parts[0];
+  const contentAfterCommand = contentWithoutPrefix.slice(commandName.length).trim();
+  
+  const rawArgs = parseArgs(contentAfterCommand);
+  
+  let detectedSubcommand = null;
+  let argsWithoutSub = [...rawArgs];
+  
+  if (rawArgs.length > 0 && subcommands.includes(rawArgs[0].toLowerCase())) {
+    detectedSubcommand = rawArgs[0].toLowerCase();
+    argsWithoutSub = rawArgs.slice(1);
+  }
+
+  const schemaMap = schema ? Object.fromEntries(schema.map(s => [s.name, s])) : {};
+
   return {
     userId: message.author.id,
-    guildId: message.guild.id,
+    guildId: message.guild?.id,
     channelId: message.channel.id,
     username: message.author.username,
     displayName: message.member?.displayName ?? message.author.username,
@@ -42,79 +86,261 @@ export function contextFromMessage(message) {
     isBot: message.author.bot,
     isEphemeral: false,
     mentionedUser: message.mentions.users.first() ?? null,
+    voiceChannel: message.member?.voice?.channel ?? null,
+    fromInteraction: false,
+    content: message.content,
+    args: rawArgs,
 
     reply: (content) => message.reply(normalize(content)),
     followUp: (content) => message.channel.send(normalize(content)),
     editReply: null,
     deferReply: null,
-    fromInteraction: false,
-    content: message.content,
-    args:          message.content.trim().split(/ +/).slice(1),
-    getSubcommand: () => null,
-    getString:     () => null,
-    getUser:       () => null,
-    getInteger:    () => null,
-    voiceChannel: message.member?.voice?.channel ?? null,
+
+    hasPermission: (perm) => message.member?.permissions.has(perm) ?? false,
+    isAdmin: () => message.member?.permissions.has('Administrator') ?? false,
+
+    getSubcommand: (required = false) => {
+      if (required && !detectedSubcommand) {
+        throw new Error("Subcommando obrigatório não fornecido.");
+      }
+      return detectedSubcommand;
+    },
+
+    getString: (name, required = false) => {
+      let value = null;
+      
+      if (schemaMap[name]) {
+        const index = schema.findIndex(s => s.name === name);
+        const adjustedIndex = detectedSubcommand ? index - 1 : index;
+        
+        if (adjustedIndex >= 0 && adjustedIndex < argsWithoutSub.length) {
+          value = argsWithoutSub[adjustedIndex];
+        }
+        
+        const flag = parseFlag(argsWithoutSub, name, name[0]);
+        if (flag) value = flag.value;
+      } else {
+        const flag = parseFlag(argsWithoutSub, name, name[0]);
+        if (flag) value = flag.value;
+        else if (argsWithoutSub.length > 0) value = argsWithoutSub.join(' ');
+      }
+
+      if (required && !value) throw new Error(`Opção "${name}" é obrigatória.`);
+      return value;
+    },
+
+    getInteger: (name, required = false) => {
+      const str = context.getString(name);
+      if (!str) {
+        if (required) throw new Error(`Opção "${name}" é obrigatória.`);
+        return null;
+      }
+      const num = parseInt(str.replace(/[^\d-]/g, ''), 10);
+      return isNaN(num) ? null : num;
+    },
+
+    getNumber: (name, required = false) => {
+      const str = context.getString(name);
+      if (!str) {
+        if (required) throw new Error(`Opção "${name}" é obrigatória.`);
+        return null;
+      }
+      const num = parseFloat(str.replace(/[^\d.-]/g, ''));
+      return isNaN(num) ? null : num;
+    },
+
+    getBoolean: (name, required = false) => {
+      const flag = parseFlag(argsWithoutSub, name, name[0]);
+      if (flag) return true;
+      
+      const str = context.getString(name);
+      if (!str) {
+        if (required) throw new Error(`Opção "${name}" é obrigatória.`);
+        return false;
+      }
+      return ['true', '1', 'yes', 'sim', 'on'].includes(str.toLowerCase());
+    },
+
+    getUser: (name, required = false) => {
+      let user = null;
+      
+      if (schemaMap[name]?.type === 'USER') {
+        const index = schema.findIndex(s => s.name === name);
+        const adjustedIndex = detectedSubcommand ? index - 1 : index;
+        const arg = argsWithoutSub[adjustedIndex];
+        
+        if (arg) {
+          const id = arg.replace(/[<@!>]/g, '');
+          user = message.mentions.users.get(id) || 
+                 message.client.users.cache.get(id);
+        }
+      }
+      
+      if (!user) {
+        user = message.mentions.users.first();
+      }
+      
+      if (!user) {
+        const flag = parseFlag(argsWithoutSub, name, name[0]);
+        if (flag?.value) {
+          const id = String(flag.value).replace(/[<@!>]/g, '');
+          user = message.client.users.cache.get(id);
+        }
+      }
+
+      if (required && !user) throw new Error(`Usuário "${name}" é obrigatório.`);
+      return user;
+    },
+
+    getMember: (name, required = false) => {
+      const user = context.getUser(name);
+      if (!user) {
+        if (required) throw new Error(`Membro "${name}" é obrigatório.`);
+        return null;
+      }
+      return message.guild?.members.cache.get(user.id) ?? null;
+    },
+
+    getChannel: (name, required = false) => {
+      let channel = null;
+      
+      if (schemaMap[name]?.type === 'CHANNEL') {
+        const index = schema.findIndex(s => s.name === name);
+        const adjustedIndex = detectedSubcommand ? index - 1 : index;
+        const arg = argsWithoutSub[adjustedIndex];
+        
+        if (arg) {
+          const id = arg.replace(/[<#>]/g, '');
+          channel = message.mentions.channels.get(id) ||
+                   message.guild?.channels.cache.get(id);
+        }
+      }
+      
+      // Fallback
+      if (!channel) {
+        channel = message.mentions.channels.first();
+      }
+      
+      // Flag --channel
+      if (!channel) {
+        const flag = parseFlag(argsWithoutSub, name, name[0]);
+        if (flag?.value) {
+          const id = String(flag.value).replace(/[<#>]/g, '');
+          channel = message.guild?.channels.cache.get(id);
+        }
+      }
+
+      if (required && !channel) throw new Error(`Canal "${name}" é obrigatório.`);
+      return channel;
+    },
+
+    getRole: (name, required = false) => {
+      let role = null;
+      
+      if (schemaMap[name]?.type === 'ROLE') {
+        const index = schema.findIndex(s => s.name === name);
+        const adjustedIndex = detectedSubcommand ? index - 1 : index;
+        const arg = argsWithoutSub[adjustedIndex];
+        
+        if (arg) {
+          const id = arg.replace(/[<@&>]/g, '');
+          role = message.mentions.roles.get(id) ||
+                message.guild?.roles.cache.get(id);
+        }
+      }
+      
+      if (!role) role = message.mentions.roles.first();
+      
+      // Flag --role
+      if (!role) {
+        const flag = parseFlag(argsWithoutSub, name, name[0]);
+        if (flag?.value) {
+          const id = String(flag.value).replace(/[<@&>]/g, '');
+          role = message.guild?.roles.cache.get(id);
+        }
+      }
+
+      if (required && !role) throw new Error(`Cargo "${name}" é obrigatório.`);
+      return role;
+    }
   };
 }
 
-/**
- * Constrói o contexto a partir de uma slash interaction.
- * @param {import('discord.js').ChatInputCommandInteraction} interaction
- * @returns {CommandContext}
- */
 export function contextFromInteraction(interaction) {
   const user = interaction.user ?? interaction.member?.user;
   if (!user) throw new Error("Usuário não encontrado na interação.");
+
+  const opts = interaction.options;
 
   return {
     userId: user.id,
     guildId: interaction.guildId,
     channelId: interaction.channelId,
     username: user.username,
-    displayName:
-      interaction.member?.displayName ?? user.displayName ?? user.username,
+    displayName: interaction.member?.displayName ?? user.displayName ?? user.username,
     avatarURL: (opts) => user.displayAvatarURL(opts),
     isBot: user.bot,
     isEphemeral: true,
-    mentionedUser: interaction.options.getUser("usuário") ?? null,
+    mentionedUser: opts.getUser("usuário") ?? null,
+    voiceChannel: interaction.member?.voice?.channel ?? null,
+    fromInteraction: true,
+    content: `/${opts.getSubcommand(false) ?? opts.getSubcommandGroup(false) ?? interaction.commandName}`,
+    args: [], 
 
-    reply: (content) =>
-      interaction.replied || interaction.deferred
-        ? interaction.followUp(normalize(content))
-        : interaction.reply(normalize(content)),
+    reply: (content) => {
+      const normalized = normalize(content);
+      return interaction.replied || interaction.deferred
+        ? interaction.followUp(normalized)
+        : interaction.reply(normalized);
+    },
     followUp: (content) => interaction.followUp(normalize(content)),
     editReply: (content) => interaction.editReply(normalize(content)),
     deferReply: (opts) => interaction.deferReply(opts),
-    fromInteraction: true,
-    getSubcommand: () => interaction.options.getSubcommand(false) ?? null,
-    getString: (name) => interaction.options.getString(name) ?? null,
-    getUser: (name) => interaction.options.getUser(name) ?? null,
-    getInteger: (name) => interaction.options.getInteger(name) ?? null,
-    voiceChannel: interaction.member?.voice?.channel ?? null,
+
+    hasPermission: (perm) => interaction.member?.permissions.has(perm) ?? false,
+    isAdmin: () => interaction.member?.permissions.has('Administrator') ?? false,
+
+    getSubcommand: (required = false) => {
+      const sub = opts.getSubcommand(false);
+      if (required && !sub) throw new Error("Subcommando obrigatório.");
+      return sub;
+    },
+
+    getString: (name, required = false) => opts.getString(name) ?? (required ? (() => { throw new Error(`"${name}" é obrigatório.`) })() : null),
+    getInteger: (name, required = false) => opts.getInteger(name) ?? (required ? (() => { throw new Error(`"${name}" é obrigatório.`) })() : null),
+    getNumber: (name, required = false) => opts.getNumber(name) ?? (required ? (() => { throw new Error(`"${name}" é obrigatório.`) })() : null),
+    getBoolean: (name, required = false) => opts.getBoolean(name) ?? (required ? (() => { throw new Error(`"${name}" é obrigatório.`) })() : false),
+    getUser: (name, required = false) => opts.getUser(name) ?? (required ? (() => { throw new Error(`"${name}" é obrigatório.`) })() : null),
+    getMember: (name, required = false) => opts.getMember(name) ?? (required ? (() => { throw new Error(`"${name}" é obrigatório.`) })() : null),
+    getChannel: (name, required = false) => opts.getChannel(name) ?? (required ? (() => { throw new Error(`"${name}" é obrigatório.`) })() : null),
+    getRole: (name, required = false) => opts.getRole(name) ?? (required ? (() => { throw new Error(`"${name}" é obrigatório.`) })() : null),
   };
 }
 
-/** Garante que strings viram { content } e objetos passam direto. */
 function normalize(content) {
-  return typeof content === "string" ? { content } : content;
+  if (typeof content === "string") return { content };
+  if (content && typeof content === "object" && !content.content && !content.embeds) {
+    return { content: String(content) };
+  }
+  return content;
 }
 
-/** Texto contém a palavra proibida do dia (config). */
 export function messageContainsDailyWord(text) {
   const w = dbBot.data?.configs?.dailyWord;
   if (!w || typeof text !== "string") return false;
   return text.toLowerCase().includes(String(w).trim().toLowerCase());
 }
 
-/**
- * Responde à mensagem; se a referência for inválida (mensagem apagada), envia no canal com menção.
- * @param {import("discord.js").Message} message
- * @param {string} content
- */
 export async function safeReplyToMessage(message, content) {
+  const text = typeof content === "string" ? content : String(content ?? "");
+  const safe =
+    text.length > 2000 ? `${text.slice(0, 1999)}…` : text;
+  if (!safe.trim()) {
+    throw new Error("Conteúdo vazio para reply");
+  }
   try {
-    return await message.reply({ content });
+    return await message.reply({ content: safe });
+    
   } catch (err) {
     const raw = JSON.stringify(err?.rawError ?? {});
     const refUnknown =
@@ -122,18 +348,19 @@ export async function safeReplyToMessage(message, content) {
       (err?.code === 50035 &&
         (raw.includes("MESSAGE_REFERENCE_UNKNOWN_MESSAGE") ||
           String(err?.message ?? "").includes("Unknown message")));
+
     if (!refUnknown) throw err;
     if (!message.channel?.isTextBased?.()) throw err;
+    
     const uid = message.author?.id;
     const prefix = uid ? `<@${uid}> ` : "";
     return await message.channel.send({
-      content: `${prefix}${content}`,
+      content: `${prefix}${safe}`,
       allowedMentions: uid ? { users: [uid] } : { parse: [] },
     });
   }
 }
 
-/** URL do avatar para embeds (User, Member ou objeto com displayAvatarURL). */
 export function resolveDisplayAvatarURL(userLike, options) {
   if (!userLike || typeof userLike.displayAvatarURL !== "function") return null;
   try {
@@ -144,7 +371,6 @@ export function resolveDisplayAvatarURL(userLike, options) {
   }
 }
 
-/** Fallback quando só existe data.avatarURL (contexto de comando). */
 export function resolveAvatarFromContext(data, options) {
   if (data?.avatarURL && typeof data.avatarURL === "function") {
     try {
@@ -199,8 +425,8 @@ export function parseMessage(message, client = null) {
     hasLinks: /https?:\/\//.test(cleaned),
     urls: cleaned.match(/https?:\/\/\S+/g) || [],
     emojis: cleaned.match(/<a?:\w+:\d+>/g) || [],
-    isCommand: cleaned.startsWith(dbBot.data.configs.prefix || "$"),
-    commandName: cleaned.startsWith(dbBot.data.configs.prefix || "$")
+    isCommand: cleaned.startsWith(getServerConfig(message.guildId, 'prefix') || "$"),
+    commandName: cleaned.startsWith(getServerConfig(message.guildId, 'prefix') || "$")
       ? cleaned.split(/\s+/)[0].slice(1)
       : null,
 
@@ -260,7 +486,6 @@ export async function getOrCreateWebhook(channel, author) {
   if (hook) return hook;
 
   if (webhooks.size >= 15) {
-    console.warn("Limite de webhooks atingido, reutilizando existente");
     return webhooks.first();
   }
 

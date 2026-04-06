@@ -157,7 +157,7 @@ function embedResumo(user, discordUser, guildId) {
       {
         name: "🥷 Roubos hoje",
         value:
-          `**Usos hoje:** ${user.timesRoubou ?? 0}/3\n` +
+          `**Usos hoje:** ${user.total_robberies ?? 0}/3\n` +
           `**Total de roubos:** ${user.total_robberies ?? 0}\n` +
           `**Derrotas seguidas:** ${user.consecutive_robbery_losses ?? 0}`,
         inline: true,
@@ -224,7 +224,6 @@ function embedFull(user, discordUser, guildId) {
         name: "💬 Mensagens & hábitos",
         value:
           `**Enviadas:** ${user.messages_sent ?? 0}\n` +
-          `**Sem resposta (streak):** ${user.messages_without_reply ?? 0}\n` +
           `**Perguntas (?):** ${user.question_marks ?? 0}\n` +
           `**CAPS LOCK:** ${user.caps_lock_messages ?? 0} · **Streak CAPS:** ${user.caps_streak ?? 0}\n` +
           `**Coruja (2h–6h):** ${user.night_owl_messages ?? 0}\n` +
@@ -238,8 +237,6 @@ function embedFull(user, discordUser, guildId) {
       {
         name: "🎭 Estilo de mensagem",
         value:
-          `**Otaku:** ${user.otaku_messages ?? 0}\n` +
-          `**Gringo (EN):** ${user.gringo_messages ?? 0}\n` +
           `**Suspense:** ${user.suspense_messages ?? 0}\n` +
           `**Textão:** ${user.textao_messages ?? 0}\n` +
           `**Monólogo (streak):** ${user.monologo_streak ?? 0}`,
@@ -248,7 +245,7 @@ function embedFull(user, discordUser, guildId) {
       {
         name: "🥷 Roubos & defesa",
         value:
-          `**Roubos hoje:** ${user.timesRoubou ?? 0}/3\n` +
+          `**Roubos hoje:** ${user.total_robberies ?? 0}/3\n` +
           `**Total de roubos:** ${user.total_robberies ?? 0}\n` +
           `**Derrotas seguidas:** ${user.consecutive_robbery_losses ?? 0}\n` +
           `**Último dia de roubo:** ${user.lastRoubo || "—"}`,

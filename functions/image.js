@@ -32,6 +32,6 @@ export async function gerar_conquista(usuario, achievement, size = "normal") {
     ctx.font = "32px Twemoji"
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(achievement.emoji, 12 + 20, 12 + 20 + 5);
+    ctx.fillText(achievement.emoji, 12 + 20, 12 + 20);
     return canvas.toBuffer("image/png");
 }

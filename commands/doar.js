@@ -1,5 +1,13 @@
 import { SlashCommandBuilder } from "discord.js";
-import { getOrCreateUser, getUser, addChars, reduceChars, getBotPrefix } from "../database.js";
+import {
+  getOrCreateUser,
+  getUser,
+  addChars,
+  reduceChars,
+  getBotPrefix,
+  addUserPropertyByAmount,
+} from "../database.js";
+import { awardAchievementInCommand } from "../functions/achievements.js";
 import { ALLOWED_MESSAGE_BOT_ID } from "../constants.js";
 
 export const name = "doar";
@@ -7,16 +15,18 @@ export const name = "doar";
 export const data = new SlashCommandBuilder()
   .setName("doar")
   .setDescription("Doa caracteres para outro usuário.")
-  .addUserOption(option =>
-    option.setName("usuário")
+  .addUserOption((option) =>
+    option
+      .setName("usuário")
       .setDescription("O usuário que vai receber os caracteres")
-      .setRequired(true)
+      .setRequired(true),
   )
-  .addIntegerOption(option =>
-    option.setName("quantidade")
+  .addIntegerOption((option) =>
+    option
+      .setName("quantidade")
       .setDescription("A quantidade de caracteres a doar")
       .setRequired(true)
-      .setMinValue(1)
+      .setMinValue(1),
   );
 
 function parseArgs(data) {
@@ -56,7 +66,7 @@ export async function execute(client, data) {
   if (!targetUser) {
     const p = getBotPrefix();
     return await data.reply(
-      `Você precisa mencionar quem vai receber.\n**Slash:** \`/doar\` (usuário + quantidade)\n**Prefixo:** \`${p}doar @usuário <quantidade>\``
+      `Você precisa mencionar quem vai receber.\n**Slash:** \`/doar\` (usuário + quantidade)\n**Prefixo:** \`${p}doar @usuário <quantidade>\``,
     );
   }
 
@@ -69,13 +79,15 @@ export async function execute(client, data) {
   }
 
   if (!finalAmount || finalAmount <= 0) {
-    return await data.reply("Quantidade inválida. Precisa ser pelo menos 1 char.");
+    return await data.reply(
+      "Quantidade inválida. Precisa ser pelo menos 1 char.",
+    );
   }
 
   const giver = getOrCreateUser(userId, displayName, guildId);
   if ((giver.charLeft || 0) < finalAmount) {
     return await data.reply(
-      `Você não tem ${finalAmount} chars. Seu saldo é **${giver.charLeft ?? 0}**.`
+      `Você não tem ${finalAmount} chars. Seu saldo é **${giver.charLeft ?? 0}**.`,
     );
   }
 
@@ -85,6 +97,8 @@ export async function execute(client, data) {
 
   reduceChars(userId, guildId, finalAmount);
   addChars(targetUser.id, guildId, finalAmount);
+  addUserPropertyByAmount("total_chars_donated", userId, guildId, finalAmount);
+  await awardAchievementInCommand(client, data, "generoso");
 
   const donateReplies = [
     `${displayName} doou **${finalAmount}** chars para ${receiverName}. Que alma bondosa.`,
@@ -94,6 +108,6 @@ export async function execute(client, data) {
   ];
 
   return await data.reply(
-    donateReplies[Math.floor(Math.random() * donateReplies.length)]
+    donateReplies[Math.floor(Math.random() * donateReplies.length)],
   );
 }
