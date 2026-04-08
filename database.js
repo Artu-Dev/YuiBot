@@ -10,12 +10,8 @@ export function getBotPrefix(guildId) {
 export const dbBot = new Low(new JSONFile("./data/dbBot.json"), {
   channels: [],
   configs: {
-    limitChar: 2000,
-    speakMessage: true,
-    generateMessage: true,
+    limitChar: 4000,
     maxSavedAudios: 50,
-    prefix: "$",
-    guildSilenceUntil: {},
   },
   AiConfig: {
     voiceId: "4tRn1lSkEn13EVTuqb0g",
@@ -29,7 +25,7 @@ export const dbBot = new Low(new JSONFile("./data/dbBot.json"), {
 export const db = new Database("./data/data.db");
 const palavrasDb = new Database("./data/palavras_proibidas.db", { readonly: true });
 
-const charLimit = dbBot.data.configs.limitChar;
+const charLimit = dbBot.data?.configs.limitChar;
 
 const USERS_SCHEMA = {
   display_name: "TEXT",
@@ -147,7 +143,7 @@ export const intializeDbBot = async () => {
     `
     CREATE TABLE IF NOT EXISTS server_configs (
       guild_id TEXT PRIMARY KEY,
-      limitChar INTEGER DEFAULT 2000,
+      limitChar INTEGER DEFAULT 4000,
       speakMessage INTEGER DEFAULT 0,
       charLimitEnabled INTEGER DEFAULT 1,
       generateMessage INTEGER DEFAULT 1,
@@ -260,7 +256,7 @@ export const clearUserPenalities = (userId, guildId) => {
 /// ==============================================
 
 const DEFAULT_CONFIGS = {
-  limitChar: 2000,
+  limitChar: 4000,
   speakMessage: false,
   charLimitEnabled: true,
   generateMessage: true,
@@ -642,7 +638,7 @@ export const getGuildUsers = (guildId) => {
 };
 
 export const getPalavrao = (guildId) => {
-  const row = dbBot.data.configs.dailyWord;
+  const row = dbBot.data?.configs.dailyWord;
   return row || null;
 }
 

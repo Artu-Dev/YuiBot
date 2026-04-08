@@ -6,6 +6,7 @@ import {
   dbBot,
   getLastMessageAuthor,
   getProhibitedWords,
+  getServerConfig,
 } from "../database.js";
 import { gerar_conquista } from "./image.js";
 import { parseMessage } from "./utils.js";
@@ -181,7 +182,7 @@ export const handleAchievements = async (message) => {
   setUserProperty("monologo_streak", userId, guildId, newMonologoStreak);
   updates.monologo_streak = true;
 
-  if (message.content.startsWith(dbBot.data.configs.prefix))
+  if (message.content.startsWith(getServerConfig(message.guild?.id, 'prefix') || '$'))
     updates.bot_commands_used = 1;
 
   updateUserStats(userId, guildId, updates);

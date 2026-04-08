@@ -1,11 +1,7 @@
 {
   "configs": {
-    "limitChar": 2000,
-    "speakMessage": false,
-    "charLimitEnabled": true,
-    "generateMessage": true,
+    "limitChar": 4000,
     "maxSavedAudios": 50,
-    "prefix": "$",
     "dailyWord": "clitóris",
     "dailyWordDate": "2026-04-06"
   },

@@ -3,7 +3,7 @@ import { readdirSync } from "fs";
 import dotenv from "dotenv";
 import path from "path";
 import Config from "./config.js";
-import { intializeDbBot, dbBot, getGuildUsers, addChars } from "./database.js";
+import { intializeDbBot, dbBot, getGuildUsers, addChars, getServerConfig } from "./database.js";
 
 dotenv.config();
 Config.setupDirectories();
@@ -73,8 +73,9 @@ function checkMonthlyReset() {
 
   for (const [guildId] of client.guilds.cache) {
     const users = getGuildUsers(guildId);
+    const monthlyChars = getServerConfig(guildId, 'limitChar') || 4000;
     for (const u of users) {
-      addChars(u.id, guildId, 2000);
+      addChars(u.id, guildId, monthlyChars);
     }
   }
 

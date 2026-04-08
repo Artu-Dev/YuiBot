@@ -17,8 +17,8 @@ export async function execute(client, data) {
   try {
     await dbBot.read();
 
-    const dailyWord = dbBot.data.configs.dailyWord || "(nenhuma)";
-    const date = dbBot.data.configs.dailyWordDate || "??";
+    const dailyWord = dbBot.data?.configs.dailyWord || "(nenhuma)";
+    const date = dbBot.data?.configs.dailyWordDate || "??";
 
     await data.reply(
       `A palavra proibida do dia (${date}): **${dailyWord}**`

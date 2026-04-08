@@ -57,7 +57,7 @@ function parseFlag(args, name, shortName = null) {
 }
 
 export function contextFromMessage(message, options = {}) {
-  const { prefix = dbBot.data?.configs?.prefix || '$', schema = null, subcommands = [] } = options;
+  const { prefix = getServerConfig(message.guild?.id, 'prefix') || '$', schema = null, subcommands = [] } = options;
   
   const contentWithoutPrefix = message.content.slice(prefix.length).trim();
   const parts = contentWithoutPrefix.split(/ +/);

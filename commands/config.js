@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { dbBot, getBotPrefix, setServerConfig } from "../database.js";
+import { dbBot, getBotPrefix, getServerConfig, setServerConfig } from "../database.js";
 
 export const name = "config";
 
@@ -128,7 +128,7 @@ function buildConfigEmbed(guildId) {
       {
         name: "`limitChar` — Limite de caracteres (mês)",
         value:
-          `**Atual:** **${c.limitChar ?? 2000}**\n` +
+          `**Atual:** **${c.limitChar ?? 4000}**\n` +
           "Limite inicial de caracteres por usuário por mês.",
         inline: false,
       },
@@ -139,7 +139,7 @@ function buildConfigEmbed(guildId) {
           `\`${p}config prefix !\` — prefixo vira \`!\`\n` +
           `\`${p}config random off\` — desliga respostas IA\n` +
           `\`${p}config speak on\` — liga TTS\n` +
-          `\`${p}config limitChar 3000\` — limite vira 3000`,
+          `\`${p}config limitChar 4000\` — limite vira 4000`,
         inline: false,
       }
     );
