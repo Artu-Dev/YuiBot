@@ -53,10 +53,17 @@ const USERS_SCHEMA = {
   textao_messages: "INTEGER DEFAULT 0",
   monologo_streak: "INTEGER DEFAULT 0",
   bot_commands_used: "INTEGER DEFAULT 0",
+
+  bounty_placer: "TEXT",
+  total_bounty_value: "INTEGER DEFAULT 0",
+  bounties_placed: "INTEGER DEFAULT 0",
+  bounties_claimed: "INTEGER DEFAULT 0",
+  times_bountied: "INTEGER DEFAULT 0",
   
   lastRoubo: "TEXT",
   consecutive_robbery_losses: "INTEGER DEFAULT 0",
   total_robberies: "INTEGER DEFAULT 0",
+  daily_robberies: "INTEGER DEFAULT 0",
   
   luck_stat: "INTEGER DEFAULT 0",
   tiger_pending_double: "INTEGER DEFAULT 0",

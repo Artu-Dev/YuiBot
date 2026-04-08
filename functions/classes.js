@@ -1,7 +1,7 @@
 import { reduceChars, setUserProperty } from "../database.js";
 
-/** Chance base de bloquear roubo quando a vítima tem escudo (somar escudoBonus da classe). */
-export const ESCUDO_BLOCK_BASE = 0.5;
+
+export const ESCUDO_BLOCK_BASE = 0.60;
 
 export const CLASSES = {
   none: {

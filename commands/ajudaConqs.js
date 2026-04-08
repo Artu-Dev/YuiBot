@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { achievements } from "../functions/achievements.js";
+import { achievements } from "../functions/achievmentsData.js";
 import { resolveAvatarFromContext } from "../functions/utils.js";
 
 export const name = "ajudaconqs";

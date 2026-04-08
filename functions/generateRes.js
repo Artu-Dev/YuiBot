@@ -17,18 +17,6 @@ import {
 const DISCORD_MESSAGE_MAX = 2000;
 
 // ==================== UTILITÁRIOS ====================
-/**
- * Executa uma promise com timeout
- */
-function withTimeout(promise, ms, message) {
-  if (!ms || ms <= 0) return promise;
-  let t;
-  const timeoutPromise = new Promise((_, rej) => {
-    t = setTimeout(() => rej(new Error(message)), ms);
-  });
-  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(t));
-}
-
 
 function clipForDiscord(text) {
   const s = String(text ?? "");
@@ -209,7 +197,7 @@ export const generateAiRes = async (message) => {
 
     const systemPrompt = buildSystemPrompt(lastMessages);
 
-    try {
+    const tryOllama = async () => {
       const res = await ollamaGenerateQueued(() =>
         ollama.generate({
           model: dbBot.data.AiConfig.textModel,
@@ -223,32 +211,42 @@ export const generateAiRes = async (message) => {
           },
         }),
       );
-
       return assertNonEmptyModelText(res, "Resposta vazia da IA (Yui)");
-    } catch (ollamaErr) {
-      console.warn("Ollama falhou, tentando Groq:", ollamaErr?.message || ollamaErr);
-    }
+    };
 
-    // ===== Fallback: GROQ =====
-    if (hasGroqApiKey()) {
+    try {
+      return await tryOllama();
+    } catch (ollamaErr1) {
+      console.warn("Primeira tentativa do Ollama falhou, tentando novamente:", ollamaErr1?.message || ollamaErr1);
+      
       try {
-        const groqOut = await chatCompletion({
-          system: systemPrompt,
-          user: promptText,
-          model: resolveGroqChatModel(),
-          maxTokens: 384,
-          temperature: 0.85,
-          topP: 0.92,
-        });
-        const trimmed = String(groqOut ?? "").trim();
-        if (!trimmed) throw new Error("Resposta vazia do Groq");
-        return clipForDiscord(trimmed);
-      } catch (groqErr) {
-        console.error("Groq também falhou:", groqErr?.message || groqErr);
+        return await tryOllama();
+      } catch (ollamaErr2) {
+        console.warn("Segunda tentativa do Ollama falhou. Indo para o Groq:", ollamaErr2?.message || ollamaErr2);
+        
+        if (hasGroqApiKey()) {
+          try {
+            const groqModelToUse = dbBot.data.AiConfig.groqInvertModel || "llama-3.1-8b-instant";
+
+            const groqOut = await chatCompletion({
+              system: systemPrompt,
+              user: promptText,
+              model: groqModelToUse, 
+              maxTokens: 384,
+              temperature: 0.85,
+              topP: 0.92,
+            });
+            const trimmed = String(groqOut ?? "").trim();
+            if (!trimmed) throw new Error("Resposta vazia do Groq");
+            return clipForDiscord(trimmed);
+          } catch (groqErr) {
+            console.error("Groq também falhou:", groqErr?.message || groqErr);
+          }
+        }
+        
+        throw new Error("Ambas IAs (Ollama e Groq) falharam após múltiplas tentativas.");
       }
     }
-
-    throw new Error("Ambas IAs falharam");
   } catch (error) {
     return handleOllamaError(error);
   }
@@ -296,26 +294,26 @@ export const invertMessage = async (text) => {
     "Você recebe uma frase e devolve só outra frase em português do Brasil com o significado invertido (oposto), mantendo estilo e tamanho parecidos. Sem aspas, sem explicação, sem prefixo.";
   const invertUser = `Reescreva invertendo o sentido:\n${safe}`;
 
-  try {
-    if (hasGroqApiKey()) {
-      try {
-        const result = await chatCompletion({
-          system: invertSystem,
-          user: invertUser,
-          model: dbBot.data?.AiConfig?.groqInvertModel,
-          maxTokens: Math.min(512, safe.length + 120),
-          temperature: 0.75,
-          topP: 0.9,
-        });
-        return String(result ?? "").trim() || text;
-      } catch (groqErr) {
-        console.warn("Groq para inverter falhou, tentando Ollama:", groqErr?.message || groqErr);
-      }
+  if (hasGroqApiKey()) {
+    try {
+      const result = await chatCompletion({
+        system: invertSystem,
+        user: invertUser,
+        model: dbBot.data?.AiConfig?.groqInvertModel || "llama-3.1-8b-instant",
+        maxTokens: Math.min(512, safe.length + 120),
+        temperature: 0.75,
+        topP: 0.9,
+      });
+      return String(result ?? "").trim() || text;
+    } catch (groqErr) {
+      console.warn("Groq para inverter falhou, tentando Ollama:", groqErr?.message || groqErr);
     }
+  }
 
+  try {
     const promptText = `Reescreva a mensagem abaixo mantendo estilo e tamanho aproximado, mas invertendo completamente seu significado, envie somente a mensagem com sentido invertido sem aspas, ou nada adicional.\nMensagem: "${safe}"`;
 
-    const modelToUse = dbBot.data?.AiConfig?.fastModels;
+    const modelToUse = dbBot.data?.AiConfig?.fastModels || dbBot.data.AiConfig.textModel;
 
     const res = await ollamaGenerateQueued(() =>
       ollama.generate({

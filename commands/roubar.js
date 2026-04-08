@@ -1,17 +1,17 @@
 import { SlashCommandBuilder } from "discord.js";
 import { addChars, addUserPropertyByAmount, getOrCreateUser, getRandomUserId, getUser, reduceChars, setUserProperty } from "../database.js";
 import { applyClassModifier, getClassModifier, ESCUDO_BLOCK_BASE } from "../functions/classes.js";
-import { sample, random } from 'es-toolkit';
+
+import { awardAchievementInCommand } from "../functions/achievements.js";
+import { sample } from 'es-toolkit';
 
 // ==================== CONFIG ====================
 const STEAL_PERCENTAGE_MIN = 0.05;
 const STEAL_PERCENTAGE_MAX = 0.30;
 const SUCCESS_CHANCE_TARGETED = 0.22;
 const SUCCESS_CHANCE_RANDOM = 0.38;
-const PENALTY_TARGETED = 150;
+const PENALTY_TARGETED = 150; 
 const PENALTY_RANDOM = 100;
-const ESCUDO_SUCCESS_FACTOR_MIN = 0.08;
-const ESCUDO_SUCCESS_FACTOR_SPREAD = 0.14;
 const ROUBO_LIMIT_PER_DAY = 3;
 
 export const name = "roubar";
@@ -27,14 +27,9 @@ export const data = new SlashCommandBuilder()
 
 function parseArgs(data) {
   if (data.fromInteraction) {
-    return {
-      mentionedUser: data.getUser("usuário"),
-    };
+    return { mentionedUser: data.getUser("usuário") };
   }
-
-  return {
-    mentionedUser: data.mentionedUser,
-  };
+  return { mentionedUser: data.mentionedUser };
 }
 
 export async function execute(client, data) {
@@ -45,16 +40,17 @@ export async function execute(client, data) {
   const today = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
 
   const user = getOrCreateUser(userId, displayName, guildId);
+  
   const lastRouboDate = user.lastRoubo;
-  let total_robberies = Number(user.total_robberies) || 0;
+  let daily_robberies = Number(user.daily_robberies) || 0;
 
   if (lastRouboDate !== today) {
-    setUserProperty("total_robberies", userId, guildId, 1);
+    setUserProperty("daily_robberies", userId, guildId, 1);
     setUserProperty("lastRoubo", userId, guildId, today);
-    total_robberies = 1;
-  } else if (total_robberies < ROUBO_LIMIT_PER_DAY) {
-    addUserPropertyByAmount("total_robberies", userId, guildId, 1);
-    total_robberies += 1;
+    daily_robberies = 1;
+  } else if (daily_robberies < ROUBO_LIMIT_PER_DAY) {
+    addUserPropertyByAmount("daily_robberies", userId, guildId, 1);
+    daily_robberies += 1;
   } else {
     await data.reply(`Tu já roubou alguém ${ROUBO_LIMIT_PER_DAY}x nas últimas 24 horas seu maldito!`);
     return;
@@ -63,24 +59,23 @@ export async function execute(client, data) {
   const isTargeted = !!mentionedUser;
 
   if (isTargeted && mentionedUser.id === userId) {
-    await data.reply("Você não pode roubar a si mesmo.");
+    await data.reply("Você não pode roubar a si mesmo seu esquisito");
     return;
   }
 
   let victimId, victimData;
 
   if (isTargeted) {
-    const existingVictim = getUser(mentionedUser.id, guildId);
-    if (!existingVictim) {
-      await data.reply("Esse usuário ainda não está no banco de dados. Ele precisa enviar mensagens antes de ser roubado.");
+    victimData = getUser(mentionedUser.id, guildId);
+    if (!victimData) {
+      await data.reply("Esse usuário ainda não está no banco de dados. Ele precisa mandar mensagem antes.");
       return;
     }
     victimId = mentionedUser.id;
-    victimData = existingVictim;
   } else {
     victimId = getRandomUserId(guildId, userId);
     if (!victimId) {
-      await data.reply("Não há usuários disponíveis para roubar no momento.");
+      await data.reply("Não tem ninguém pra roubar no momento.");
       return;
     }
     victimData = getUser(victimId, guildId);
@@ -103,18 +98,26 @@ export async function execute(client, data) {
   const userClass = user.user_class || 'none';
   const victimClass = victimData.user_class || 'none';
 
-  let successChance = applyClassModifier(isTargeted ? SUCCESS_CHANCE_TARGETED : SUCCESS_CHANCE_RANDOM, isTargeted ? 'singleRobSuccess' : 'robSuccess', userClass);
+  let escudoUserHint = "";
+  let successChance = Math.min(1, applyClassModifier(
+    isTargeted ? SUCCESS_CHANCE_TARGETED : SUCCESS_CHANCE_RANDOM,
+    isTargeted ? 'singleRobSuccess' : 'robSuccess',
+    userClass
+  ));
+
   const penalty = applyClassModifier(isTargeted ? PENALTY_TARGETED : PENALTY_RANDOM, 'robCost', userClass);
   const victimDefense = getClassModifier(victimClass, 'robDefense');
-
   const victimHasEscudo = hasEscudo(victimId, guildId);
-  let escudoUserHint = "";
+
   if (victimHasEscudo) {
     const escudoBonus = getClassModifier(victimClass, 'escudoBonus');
-    const shieldStrength = Math.min(1, Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus));
-    const escudoMult = ESCUDO_SUCCESS_FACTOR_MIN + (1 - shieldStrength) * ESCUDO_SUCCESS_FACTOR_SPREAD;
-    successChance *= escudoMult;
-    escudoUserHint = "\n\n_A vítima tinha **escudo** ativo — sua chance de sucesso foi bem menor._";
+    const blockChance = Math.min(1, Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus));
+    successChance *= (1 - blockChance);
+    escudoUserHint = `\n\n_A vítima tinha **escudo** ativo — bloqueou ${Math.round(blockChance * 100)}% da sua chance._`;
+  
+    // const shieldStrength = Math.min(1, Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus));
+    // const escudoMult = ESCUDO_SUCCESS_FACTOR_MIN + (1 - shieldStrength) * ESCUDO_SUCCESS_FACTOR_SPREAD;
+    // successChance *= escudoMult;
   }
 
   const baseStolen = Math.max(1, Math.floor(victimChars * (Math.random() * (STEAL_PERCENTAGE_MAX - STEAL_PERCENTAGE_MIN) + STEAL_PERCENTAGE_MIN)));
@@ -146,27 +149,40 @@ export async function execute(client, data) {
 
   const randomChance = Math.random();
 
+  
+  addUserPropertyByAmount("total_robberies", userId, guildId, 1);
   if (randomChance < successChance) {
     addChars(userId, guildId, stolenAmount);
     reduceChars(victimId, guildId, stolenAmount);
+    setUserProperty("consecutive_robbery_losses", userId, guildId, 0);
+    
+    
 
-    if (isTargeted) {
-      await data.reply(sample(successTargetedReplies) + escudoUserHint);
-    } else {
-      await data.reply(sample(successRandomReplies) + escudoUserHint);
-    }
+    const replyText = isTargeted 
+      ? sample(successTargetedReplies) 
+      : sample(successRandomReplies);
+
+    await data.reply(replyText + escudoUserHint);
   } else {
     reduceChars(userId, guildId, penalty);
     addChars(victimId, guildId, penalty);
 
-    if (isTargeted) {
-      await data.reply(sample(failTargetedReplies) + escudoUserHint);
-    } else {
-      await data.reply(sample(failRandomReplies) + escudoUserHint);
-    }
+    addUserPropertyByAmount("consecutive_robbery_losses", userId, guildId, 1);
 
-    if (total_robberies >= ROUBO_LIMIT_PER_DAY) {
-      await data.followUp("⚠️ Você atingiu o limite de 3 roubos por dia!");
-    }
+    const replyText = isTargeted 
+      ? sample(failTargetedReplies) 
+      : sample(failRandomReplies);
+
+    await data.reply(replyText + escudoUserHint);
   }
+
+  if (daily_robberies >= ROUBO_LIMIT_PER_DAY) {
+    await data.followUp("⚠️ Você atingiu o limite de 3 roubos por dia!");
+  }
+
+  await awardAchievementInCommand(client, data, "dependente"); 
+  await awardAchievementInCommand(client, data, "apostador"); 
+  await awardAchievementInCommand(client, data, "cacador_de_recompensas");
+  await awardAchievementInCommand(client, data, "cacador_de_cabecas");
+  await awardAchievementInCommand(client, data, "xerife_do_oeste");
 }

@@ -1,5 +1,5 @@
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { achievements } from "../functions/achievements.js";
+import { achievements } from "../functions/achievmentsData.js";
 import {
   getOrCreateUser,
   hasEscudo,
