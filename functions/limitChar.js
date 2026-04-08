@@ -76,6 +76,16 @@ export const limitChar = async (message, userData) => {
     return;
   }
 
+  if ((userData.lastDailyBonus || "") !== hoje) {
+    addChars(userId, guildId, 25);
+    setUserProperty("lastDailyBonus", userId, guildId, hoje);
+    try {
+      await message.react("➕");
+    } catch (err) {
+      if (err.code !== 10008) console.error("Erro ao reagir (bônus diário):", err);
+    }
+  }
+
   const GIF_KEYWORDS = [
     '://tenor.com',
     '://media.tenor.com',
@@ -117,7 +127,6 @@ export const limitChar = async (message, userData) => {
     textSize += 1; // +1 total para todos os GIFs links
   }
 
-  // Verificar embeds (GIFs do Discord Tenor ou outros GIFs aparecem como embeds)
   const gifEmbeds = message.embeds.filter((embed) => {
     const embedUrl = (embed.url || embed.image?.url || embed.thumbnail?.url || embed.video?.url || "").toString();
     return ['image', 'gifv', 'video'].includes(embed.type) && GIF_DETECT_REGEX.test(embedUrl);

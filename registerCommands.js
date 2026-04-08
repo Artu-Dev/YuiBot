@@ -10,7 +10,7 @@ import { data as charsData } from './commands/chars.js';
 import { data as classeData } from './commands/classe.js';
 import { data as configData } from './commands/config.js';
 import { data as conqsData } from './commands/conqs.js';
-import { data as doarData } from './commands/doar.js';
+import { data as doarData } from './commands/pix.js';
 import { data as entrarData } from './commands/entrar.js';
 import { data as escudoData } from './commands/escudo.js';
 import { data as newsData } from './commands/news.js';

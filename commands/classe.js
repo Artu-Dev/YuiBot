@@ -2,6 +2,18 @@ import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import { getOrCreateUser, getBotPrefix } from "../database.js";
 import { unlockClass, CLASSES } from "../functions/classes.js";
 
+const attributeDescriptions = {
+  lucky: "Sorte no tigre",
+  robCost: "Custo de roubo",
+  robDamage: "Dano de roubo",
+  robDefense: "Defesa contra roubo",
+  robSuccess: "Chance de sucesso do roubo",
+  singleRobSuccess: "Chance de sucesso do roubo específico",
+  singleRobDamage: "Dano do roubo específico",
+  escudoBonus: "Bônus de defesa do escudo",
+  escudoCost: "Desconto no custo do escudo",
+};
+
 function parseClasseArgs(data) {
   if (data.fromInteraction) {
     return {
@@ -99,7 +111,6 @@ function handleList(data, userData) {
   const current = CLASSES[userData.user_class ?? "none"];
 
   const classList = Object.entries(CLASSES)
-    .filter(([key]) => key !== "none")
     .map(([key, c]) => {
       const affordable = userData.charLeft >= c.unlockCost;
       const owned = userData.user_class === key;
@@ -145,7 +156,7 @@ function handleInfo(data, className) {
   }
 
   const perks = Object.entries(target.modifiers)
-    .map(([key, value]) => `▸ ${key}: ${value}`)
+    .map(([key, value]) => `▸ ${attributeDescriptions[key] || key}: ${value}`)
     .join("\n") || "Nenhum benefício foda por enquanto.";
 
   const embed = new EmbedBuilder()
@@ -204,7 +215,7 @@ function handleChoose(data, userData, userId, guildId, className) {
       {
         name: "BENEFÍCIOS",
         value: Object.entries(target.modifiers)
-          .map(([key, value]) => `• ${key}: ${value}`)
+          .map(([key, value]) => `• ${attributeDescriptions[key] || key}: ${value}`)
           .join("\n"),
         inline: false,
       },

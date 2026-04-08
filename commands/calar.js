@@ -16,7 +16,7 @@ const CHANCE_SUCESSO = 1 / 3;
 export const data = new SlashCommandBuilder()
   .setName("calar")
   .setDescription(
-    `Gasta ${CALAR_CUSTO} chars: 1 em 3 de calar respostas aleatórias da IA no servidor por 3h (tempo acumula).`
+    `Silencia respostas aleatórias da IA por 3h (acumula), mas tem chance de 1 em 3 de sucesso Silencia`
   );
 
 export async function execute(client, data) {

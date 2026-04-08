@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { getVoiceConnection } from "@discordjs/voice";
 
 export const name = "sair";
@@ -16,9 +16,17 @@ export async function execute(client, data) {
   const connection = getVoiceConnection(data.guildId);
 
   if (!connection) {
-    return data.reply("Não estou em nenhum canal de voz.");
+    const embed = new EmbedBuilder()
+      .setColor("#FF6B6B")
+      .setTitle("❌ Não conectado")
+      .setDescription("Não estou em nenhum canal de voz.");
+    return data.reply({ embeds: [embed] });
   }
 
   connection.destroy();
-  return data.reply("Saí da call! Tchau! 👋");
+  const embed = new EmbedBuilder()
+    .setColor("#4ECDC4")
+    .setTitle("👋 Saindo da call")
+    .setDescription("Tchau! Até a próxima.");
+  return data.reply({ embeds: [embed] });
 }

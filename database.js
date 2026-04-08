@@ -30,6 +30,7 @@ const charLimit = dbBot.data?.configs.limitChar;
 const USERS_SCHEMA = {
   display_name: "TEXT",
   charLeft: `INTEGER DEFAULT ${charLimit}`,
+  lastDailyBonus: "TEXT DEFAULT ''",
   
   messages_sent: "INTEGER DEFAULT 0",
   achievements_unlocked: "TEXT DEFAULT '{}'",
@@ -58,8 +59,6 @@ const USERS_SCHEMA = {
   total_robberies: "INTEGER DEFAULT 0",
   
   luck_stat: "INTEGER DEFAULT 0",
-  tiger_spin_date: "TEXT DEFAULT ''",
-  tiger_spins_count: "INTEGER DEFAULT 0",
   tiger_pending_double: "INTEGER DEFAULT 0",
   lifetime_tiger_spins: "INTEGER DEFAULT 0",
   tiger_jackpots: "INTEGER DEFAULT 0",
@@ -613,7 +612,7 @@ export function addUserPropertyByAmount(prop, userId, guildId, amount) {
 export const reduceChars = (userId, guildId, amount) => {
   const user = getUser(userId, guildId);
   const date = new Date().toISOString();
-  const newValue = Math.max(0, user.charLeft - amount);
+  const newValue = parseInt(Math.max(0, user.charLeft - amount));
   db.prepare(
     "UPDATE users SET charLeft = ?, last_message_time = ? WHERE id = ? AND guild_id = ?"
   ).run(newValue, date, userId, guildId);
@@ -623,7 +622,7 @@ export const reduceChars = (userId, guildId, amount) => {
 export const addChars = (userId, guildId, amount) => {
   db.prepare(
     `UPDATE users SET charLeft = charLeft + ? WHERE id = ? AND guild_id = ?`
-  ).run(amount, userId, guildId);
+  ).run(parseInt(amount), userId, guildId);
 };
 
 export const getRandomUserId = (guildId, excludeUserId) => {

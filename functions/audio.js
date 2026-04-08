@@ -5,6 +5,7 @@ import { opus } from "prism-media";
 import { getRandomTime } from "./utils.js"; 
 import { fileURLToPath } from "url";
 import { dirname, resolve, join } from "path";
+import ms from 'ms';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -95,7 +96,7 @@ export function startRecording(connection, client) {
         const maxDurationTimeout = setTimeout(() => {
             log(`[${guildId}] ⏱️ Tempo máximo atingido (10s)`);
             stopRecording();
-        }, 10_000);
+        }, ms('10s'));
 
         const sizeInterval = setInterval(() => {
             try {
@@ -106,8 +107,8 @@ export function startRecording(connection, client) {
                         stopRecording();
                     }
                 }
-            } catch (e) {} // Ignora erros de statSync se o arquivo for apagado
-        }, 300);
+            } catch (e) {}
+        }, ms('300ms'));
 
         function stopRecording() {
             if (isStopped) return;

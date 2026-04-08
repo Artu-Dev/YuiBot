@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { playRandomAudio, startRecording } from "../functions/audio.js";
 import { joinCall } from "../functions/voice.js";
 import { getVoiceConnection } from "@discordjs/voice";
@@ -18,15 +18,27 @@ export async function execute(client, data) {
   const voiceChannel = data.voiceChannel;
 
   if (!voiceChannel) {
-    return data.reply("Você precisa estar em um canal de voz.");
+    const embed = new EmbedBuilder()
+      .setColor("#FF6B6B")
+      .setTitle("❌ Erro")
+      .setDescription("Você precisa estar em um canal de voz.");
+    return data.reply({ embeds: [embed] });
   }
 
   if (!voiceChannel.joinable) {
-    return data.reply("Não tenho permissão para entrar no canal de voz.");
+    const embed = new EmbedBuilder()
+      .setColor("#FF6B6B")
+      .setTitle("❌ Sem permissão")
+      .setDescription("Não tenho permissão para entrar no canal de voz.");
+    return data.reply({ embeds: [embed] });
   }
 
   if (getVoiceConnection(data.guildId)) {
-    return data.reply("Já estou em um canal de voz.");
+    const embed = new EmbedBuilder()
+      .setColor("#FF6B6B")
+      .setTitle("❌ Já conectado")
+      .setDescription("Já estou em um canal de voz.");
+    return data.reply({ embeds: [embed] });
   }
 
   // Criar um objeto message-like para compatibilidade
@@ -37,10 +49,18 @@ export async function execute(client, data) {
 
   const connection = joinCall(fakeMessage);
   if (!connection) {
-    return data.reply("Não foi possível conectar à call agora. Tente novamente mais tarde.");
+    const embed = new EmbedBuilder()
+      .setColor("#FF6B6B")
+      .setTitle("❌ Falha na conexão")
+      .setDescription("Não foi possível conectar à call agora. Tente novamente mais tarde.");
+    return data.reply({ embeds: [embed] });
   }
 
-  data.reply("Gravando audio...");
+  const embed = new EmbedBuilder()
+    .setColor("#4ECDC4")
+    .setTitle("🎤 Entrando na call")
+    .setDescription("Gravando áudio...");
+  data.reply({ embeds: [embed] });
   startRecording(connection, client);
   playRandomAudio(connection);
 }

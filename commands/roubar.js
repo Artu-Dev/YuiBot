@@ -1,6 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
 import { addChars, addUserPropertyByAmount, getOrCreateUser, getRandomUserId, getUser, reduceChars, setUserProperty } from "../database.js";
 import { applyClassModifier, getClassModifier, ESCUDO_BLOCK_BASE } from "../functions/classes.js";
+import { sample, random } from 'es-toolkit';
 
 // ==================== CONFIG ====================
 const STEAL_PERCENTAGE_MIN = 0.05;
@@ -143,7 +144,6 @@ export async function execute(client, data) {
     `❌ ${displayName} foi burrao e acabou doando ${penalty} chars pra ${victimName} viva a benevolencia.`
   ];
 
-  const getRandom = (list) => list[Math.floor(Math.random() * list.length)];
   const randomChance = Math.random();
 
   if (randomChance < successChance) {
@@ -151,18 +151,18 @@ export async function execute(client, data) {
     reduceChars(victimId, guildId, stolenAmount);
 
     if (isTargeted) {
-      await data.reply(getRandom(successTargetedReplies) + escudoUserHint);
+      await data.reply(sample(successTargetedReplies) + escudoUserHint);
     } else {
-      await data.reply(getRandom(successRandomReplies) + escudoUserHint);
+      await data.reply(sample(successRandomReplies) + escudoUserHint);
     }
   } else {
     reduceChars(userId, guildId, penalty);
     addChars(victimId, guildId, penalty);
 
     if (isTargeted) {
-      await data.reply(getRandom(failTargetedReplies) + escudoUserHint);
+      await data.reply(sample(failTargetedReplies) + escudoUserHint);
     } else {
-      await data.reply(getRandom(failRandomReplies) + escudoUserHint);
+      await data.reply(sample(failRandomReplies) + escudoUserHint);
     }
 
     if (total_robberies >= ROUBO_LIMIT_PER_DAY) {

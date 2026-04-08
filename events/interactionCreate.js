@@ -3,7 +3,7 @@ import { contextFromInteraction } from "../functions/utils.js";
 export const name = "interactionCreate";
 
 export const execute = async (interaction, client) => {
-  if (!interaction.isChatInputCommand?.()) return;
+  if (!interaction.isChatInputCommand?.() || !interaction.guildId ) return;
 
   const command = client.commands.get(interaction.commandName);
   if (!command) return;

@@ -302,7 +302,7 @@ export const invertMessage = async (text) => {
         const result = await chatCompletion({
           system: invertSystem,
           user: invertUser,
-          model: resolveGroqInvertModel(),
+          model: dbBot.data?.AiConfig?.groqInvertModel,
           maxTokens: Math.min(512, safe.length + 120),
           temperature: 0.75,
           topP: 0.9,
@@ -315,17 +315,7 @@ export const invertMessage = async (text) => {
 
     const promptText = `Reescreva a mensagem abaixo mantendo estilo e tamanho aproximado, mas invertendo completamente seu significado, envie somente a mensagem com sentido invertido sem aspas, ou nada adicional.\nMensagem: "${safe}"`;
 
-    let modelToUse = dbBot.data.AiConfig.textModel;
-    const fm = dbBot.data.AiConfig.fastModels;
-    const fastList = Array.isArray(fm)
-      ? fm
-      : typeof fm === "string" && fm.trim()
-        ? [fm.trim()]
-        : [];
-
-    if (fastList.length > 0) {
-      modelToUse = fastList[Math.floor(Math.random() * fastList.length)];
-    }
+    const modelToUse = dbBot.data?.AiConfig?.fastModels;
 
     const res = await ollamaGenerateQueued(() =>
       ollama.generate({

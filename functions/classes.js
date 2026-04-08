@@ -14,93 +14,93 @@ export const CLASSES = {
       robDefense: 0, // afeta quantidade quando é roubado
       robSuccess: 0, // afeta chance de sucesso do roubo
       singleRobSuccess: 0, // roubo especifico
+      singleRobDamage: 0, // dano do roubo especifico
       escudoBonus: 0, // bonus de defesa do escudo
       escudoCost: 0, // desconto no custo do escudo
     },
     unlockCost: 0,
   },
-
   ladrao: {
     name: "Ladrão",
-    description: "Forte no roubo, frágil na defesa e escudo um pouco pior que a média",
+    description: "Chance de roubo maior, frágil na defesa e escudo um pouco pior que a média",
     modifiers: {
       lucky: 0,
       robCost: 0,
-      robDamage: 0.45,
-      robSuccess: 0,
-      robDefense: -0.40,
-      singleRobSuccess: 0.05,
-      escudoBonus: -0.12,
-      escudoCost: 0,
-    },
-    unlockCost: 1000,
-  },
-
-  pobre: {
-    name: "Pobre",
-    description: "Escudo mais barato e bloqueio levemente acima da média; azarado no tigre e roubo mais barato",
-    modifiers: {
-      lucky: -0.25,
-      robCost: -0.45,
-      robDamage: 0,
-      robSuccess: 0,
-      robDefense: 0,
+      robDamage: 0.60,        
+      robSuccess: 0.30,
       singleRobSuccess: 0,
-      escudoBonus: 0.08,
-      escudoCost: -0.45,
-    },
-    unlockCost: 500,
-  },
-
-  agiota: {
-    name: "Agiota",
-    description: "Boa sorte e roubo direcionado; escudo levemente pior (classe de risco)",
-    modifiers: {
-      lucky: 0.15,
-      robCost: 0,
-      robDamage: 0,
-      robSuccess: 0,
-      singleRobSuccess: 0.18,
-      robDefense: 0,
-      escudoBonus: -0.05,
-      escudoCost: 0,
+      singleRobDamage: 0,
+      robDefense: -0.50,   
+      escudoBonus: -0.20,
+      escudoCost: 0.20,
     },
     unlockCost: 1200,
   },
-
+  pobre: {
+    name: "Pobre",
+    description: "Tudo é mais barato e escudo e defesa é acima da média, mas é azarado.",
+    modifiers: {
+      lucky: -0.30,
+      robCost: -0.50, 
+      robDamage: -0.10,
+      robSuccess: 0,
+      singleRobSuccess: 0,
+      singleRobDamage: 0,
+      robDefense: 0.30,
+      escudoBonus: 0.20,
+      escudoCost: -0.50, 
+    },
+    unlockCost: 500,
+  },
+  agiota: {
+    name: "Agiota",
+    description: "Sniper e dono de cassino. Excelente no roubo com alvo e muita sorte no tigre, mas pra roubar custa caro e defesa é péssima.",
+    modifiers: {
+      lucky: 0.40,
+      robCost: 0.30, 
+      robDamage: 0.20,
+      robSuccess: -0.10,  
+      singleRobSuccess: 0.50,
+      singleRobDamage: 0.50,
+      robDefense: -0.30,
+      escudoBonus: 0,
+      escudoCost: 0.20,
+    },
+    unlockCost: 2000,
+  },
   maldito: {
     name: "Maldito",
-    description: "Dano de roubo alto e azar forte; sem foco em escudo",
+    description: "Kamikaze. Dano de roubo insano, defesa e escudo ruins e AZARADO paporra!!",
     modifiers: {
-      lucky: -0.45,
+      lucky: -0.80,
       robCost: 0,
-      robDamage: 0.8,
-      robSuccess: 0,
-      singleRobSuccess: 0.18,
-      robDefense: -0.08,
-      escudoBonus: 0,
+      robDamage: 0.90,
+      robSuccess: 0.20,
+      singleRobDamage: 0.20,
+      singleRobSuccess: 0.20,
+      robDefense: -0.80, 
+      escudoBonus: -0.50,
       escudoCost: 0,
     },
     unlockCost: 1500,
   },
-
   fodao: {
     name: "FODÃO",
-    description: "Classe endgame: vantagens amplas, escudo forte e mais barato (não extremo)",
+    description: "O FODÃO do servidor. Absoluto em tudo.",
     modifiers: {
-      lucky: 0.28,
-      robCost: -0.22,
-      robDamage: 0.22,
-      robSuccess: 0.22,
-      singleRobSuccess: 0.22,
-      robDefense: 0.06,
-      escudoBonus: 0.18,
-      escudoCost: -0.55,
+      lucky: 1,  
+      robCost: -1,
+      robDamage: 1, 
+      robSuccess: 1,
+      singleRobSuccess: 1,
+      singleRobDamage: 1,
+      robDefense: 1,
+      escudoBonus: 1,
+      escudoCost: -1,
     },
-    unlockCost: 15000,
+    unlockCost: 20000,
   }
 };
-
 
 export function getClassModifiers(userClass) {
   return CLASSES[userClass]?.modifiers || {};

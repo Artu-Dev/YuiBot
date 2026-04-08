@@ -1,29 +1,18 @@
-import {
-  dbBot,
-  getChannels,
-  saveMessageContext,
-  getOrCreateUser,
-  isGuildAiSilenced,
-  getServerConfig,
-} from "../database.js";
+import { getChannels, saveMessageContext, getOrCreateUser, isGuildAiSilenced, getServerConfig } from "../database.js";
 import { handleAchievements } from "../functions/achievements.js";
 import { generateAiRes } from "../functions/generateRes.js";
 import { limitChar } from "../functions/limitChar.js";
 import { sayInCall } from "../functions/sayInCall.js";
-import {
-  parseMessage,
-  replaceMentions,
-  contextFromMessage,
-  safeReplyToMessage,
-  messageContainsDailyWord,
-} from "../functions/utils.js";
+import { parseMessage, replaceMentions, contextFromMessage, safeReplyToMessage, messageContainsDailyWord } from "../functions/utils.js";
 import { randomResend } from "../functions/randomActions.js";
 import { ALLOWED_MESSAGE_BOT_ID } from "../constants.js";
+import ms from 'ms';
 
 export const name = "messageCreate";
-const AI_COOLDOWN_MS        = 12_000;
-const COOLDOWN_CLEANUP_MS   = 60_000;
+const AI_COOLDOWN_MS        = ms('12s');
+const COOLDOWN_CLEANUP_MS   = ms('1m');
 const COOLDOWN_TTL_FACTOR   = 5;
+
 const RESEND_CHANCE         = 0.01;
 const MENTION_REPLY_CHANCE  = 0.5;
 const RANDOM_REPLY_CHANCE   = 0.05;
@@ -47,8 +36,9 @@ export const execute = async (message, client) => {
   const { author } = message;
   if (!author || (author.bot && author.id !== ALLOWED_MESSAGE_BOT_ID)) return;
 
-  const { guildId, userId, channelId, displayName, text, mentions } =
-    parseMessage(message, client);
+  const { guildId, userId, channelId, displayName, text, mentions } = parseMessage(message, client);
+
+  if (!guildId || !userId || !channelId) return;
 
   if (await tryHandleCommand(message, client, text)) return;
 

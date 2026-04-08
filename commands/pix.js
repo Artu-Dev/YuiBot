@@ -8,13 +8,14 @@ import {
   addUserPropertyByAmount,
 } from "../database.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
+import { sample } from 'es-toolkit';
 import { ALLOWED_MESSAGE_BOT_ID } from "../constants.js";
 
-export const name = "doar";
+export const name = "pix";
 
 export const data = new SlashCommandBuilder()
-  .setName("doar")
-  .setDescription("Doa caracteres para outro usuário.")
+  .setName("pix")
+  .setDescription("Faz um pix de caracteres para outro usuário.")
   .addUserOption((option) =>
     option
       .setName("usuário")
@@ -66,12 +67,12 @@ export async function execute(client, data) {
   if (!targetUser) {
     const p = getBotPrefix();
     return await data.reply(
-      `Você precisa mencionar quem vai receber.\n**Slash:** \`/doar\` (usuário + quantidade)\n**Prefixo:** \`${p}doar @usuário <quantidade>\``,
+      `Você precisa mencionar quem vai receber.\n**Slash:** \`/pix\` (usuário + quantidade)\n**Prefixo:** \`${p}pix @usuário <quantidade>\``,
     );
   }
 
   if (targetUser.id === userId) {
-    return await data.reply("Você não pode se doar chars.");
+    return await data.reply("Você não pode fazer pix pra si mesmo.");
   }
 
   if (targetUser.bot && targetUser.id !== ALLOWED_MESSAGE_BOT_ID) {
@@ -91,8 +92,7 @@ export async function execute(client, data) {
     );
   }
 
-  // Garante que o receptor existe no banco
-  const receiverName = targetUser.username; // Simplificado para evitar cache issues
+  const receiverName = targetUser.username;
   getOrCreateUser(targetUser.id, receiverName, guildId);
 
   reduceChars(userId, guildId, finalAmount);
@@ -101,13 +101,13 @@ export async function execute(client, data) {
   await awardAchievementInCommand(client, data, "generoso");
 
   const donateReplies = [
-    `${displayName} doou **${finalAmount}** chars para ${receiverName}. Que alma bondosa.`,
-    `${receiverName} ganhou **${finalAmount}** chars de ${displayName}. Deve ter feito muita coisa boa.`,
-    `${displayName} abriu o coração e jogou **${finalAmount}** chars no colo de ${receiverName}.`,
+    `${displayName} fez um pix de **${finalAmount}** chars para ${receiverName}. Que alma bondosa.`,
+    `${receiverName} ganhou **${finalAmount}** chars no pix de ${displayName}. Deve ter feito muita coisa boa.`,
+    `${displayName} abriu o coração e tacou-lhe **${finalAmount}** chars no pix de ${receiverName}.`,
     `Transferência concluída: **${finalAmount}** chars de ${displayName} → ${receiverName}.`,
   ];
 
   return await data.reply(
-    donateReplies[Math.floor(Math.random() * donateReplies.length)],
+    sample(donateReplies),
   );
 }

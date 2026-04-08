@@ -7,11 +7,6 @@ export const data = new SlashCommandBuilder()
   .setName("add-channel")
   .setDescription("Adiciona o canal atual à lista de canais permitidos.");
 
-function parseArgs(data) {
-  // No args for add-channel
-  return {};
-}
-
 export async function execute(client, data) {
   const guild_id = data.guildId;
   const channel_id = data.channelId;

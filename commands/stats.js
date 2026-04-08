@@ -26,7 +26,7 @@ function normalizeModeToken(raw) {
 
 export const data = new SlashCommandBuilder()
   .setName("stats")
-  .setDescription("Estatísticas (padrão: resumo). Use modo “Completo” para o painel inteiro.")
+  .setDescription(`Mostra estatísticas do usuário.`)
   .addStringOption((opt) =>
     opt
       .setName("modo")
@@ -100,13 +100,6 @@ function formatAchievements(unlocked) {
     .join("\n");
 }
 
-function tigerTodayLine(user) {
-  const key = new Date().toISOString().slice(0, 10);
-  if ((user.tiger_spin_date || "") !== key) return "Rodadas no tigre hoje (UTC): **0/3**";
-  const n = Number(user.tiger_spins_count) || 0;
-  return `Rodadas no tigre hoje (UTC): **${n}/3**`;
-}
-
 function maybeEscudoFooter(user, guildId) {
   if (!hasEscudo(user.id, guildId)) return "";
   const today = new Date().toISOString().split("T")[0];
@@ -144,7 +137,7 @@ function embedResumo(user, discordUser, guildId) {
 
   const eb = new EmbedBuilder()
     .setColor("#8A2BE2")
-    .setDescription(`**${user.display_name}** · Estatísticas${escudoExtra}\n\n${getBotPrefix()}\`stats full\` \`stats conquistas\``)
+    .setDescription(`**${user.display_name}** — Estatísticas${escudoExtra}`)
     .addFields(
       {
         name: "💎 Conta",
@@ -165,9 +158,15 @@ function embedResumo(user, discordUser, guildId) {
       {
         name: "🎰 Tigre e Penalidades ⚠️",
         value:
-          `${tigerTodayLine(user)}\n` +
           `**Penalidades ativas:** ${penN}\n` +
           `**Conquistas:** ${achCount}/${totalAch}`,
+        inline: false,
+      },
+      {
+        name: "📋 Variações de comando",
+        value:
+          `**Slash:** \`/stats\` (padrão) | \`/stats full\` | \`/stats conquistas\`\n` +
+          `**Prefixo:** \`${getBotPrefix()}stats\` | \`${getBotPrefix()}stats full\` | \`${getBotPrefix()}stats conqs\``,
         inline: false,
       }
     )
@@ -188,7 +187,21 @@ function embedConquistas(user, discordUser) {
 
   const eb = new EmbedBuilder()
     .setColor("#8A2BE2")
-    .setDescription(`**${label}** · **${n}/${total}** conquistas\n\n${pretty}`)
+    .setDescription(`**${label}** — **${n}/${total}** conquistas`)
+    .addFields(
+      {
+        name: "🏆 Desbloqueadas",
+        value: pretty.length > 2048 ? pretty.slice(0, 2000) + "…" : pretty,
+        inline: false,
+      },
+      {
+        name: "📋 Voltar ao resumo",
+        value:
+          `**Slash:** \`/stats\` | \`/stats full\`\n` +
+          `**Prefixo:** \`${getBotPrefix()}stats\` | \`${getBotPrefix()}stats full\``,
+        inline: false,
+      }
+    )
     .setFooter({ text: `ID: ${discordUser.id}` });
 
   if (icon) eb.setAuthor({ name: `${label} — Conquistas`, iconURL: icon });
@@ -206,18 +219,14 @@ function embedFull(user, discordUser, guildId) {
 
   const eb = new EmbedBuilder()
     .setColor("#8A2BE2")
-    .setDescription(
-      `**${user.display_name}** — painel completo.${escudoExtra}\n` +
-        `**Padrão é resumo:** \`/stats\` ou \`${getBotPrefix()}stats\` · **Completo:** opção *Completo* ou \`${getBotPrefix()}stats full\` · **Conquistas:** \`${getBotPrefix()}stats conquistas\``
-    )
+    .setDescription(`**${user.display_name}** — Painel Completo${escudoExtra}`)
     .addFields(
       {
         name: "💎 Geral",
         value:
           `**Chars restantes (mês):** ${(user.charLeft ?? 0).toLocaleString()}\n` +
           `**Classe:** ${cls?.name ?? "Nenhuma"}\n` +
-          `**Sorte:** ${user.luck_stat > 0 ? "+" : ""}${user.luck_stat ?? 0}\n` +
-          `${tigerTodayLine(user)}`,
+          `**Sorte:** ${user.luck_stat > 0 ? "+" : ""}${user.luck_stat ?? 0}\n`,
         inline: false,
       },
       {
@@ -262,6 +271,13 @@ function embedFull(user, discordUser, guildId) {
       {
         name: "🏆 Conquistas",
         value: achPretty.length > 1024 ? achPretty.slice(0, 1000) + "…" : achPretty,
+        inline: false,
+      },
+      {
+        name: "📋 Variações de comando",
+        value:
+          `**Slash:** \`/stats\` | \`/stats full\` | \`/stats conquistas\`\n` +
+          `**Prefixo:** \`${getBotPrefix()}stats\` | \`${getBotPrefix()}stats full\` | \`${getBotPrefix()}stats conqs\``,
         inline: false,
       }
     )

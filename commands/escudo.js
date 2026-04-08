@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { getOrCreateUser, reduceChars, setEscudo, getEscudoExpiry } from "../database.js";
 import { applyClassModifier, CLASSES, ESCUDO_BLOCK_BASE } from "../functions/classes.js";
+import { sample } from 'es-toolkit';
 
 export const name = "escudo";
 
@@ -24,12 +25,12 @@ export const data = new SlashCommandBuilder()
 function getMode(data) {
   if (data.fromInteraction) {
     const sub = data.getSubcommand(false);
-    return sub === "info" ? "info" : "comprar";
+    return sub === "comprar" ? "comprar" : "info";
   }
   const a = data.args ?? [];
   const head = a[0]?.toLowerCase();
-  if (head === "info" || head === "stats") return "info";
-  return "comprar";
+  if (head === "comprar" || head === "buy") return "comprar";
+  return "info";
 }
 
 function formatCostDelta(costMod) {
@@ -131,8 +132,8 @@ export async function execute(client, data) {
   const activateReplies = [
     `🛡️ ${displayName} ativou um escudo por **${ESCUDO_HOURS}h** por **${classCost} chars**. Tenta roubar agora, playboy.`,
     `🛡️ Escudo ativado! ${displayName} pagou **${classCost} chars** pra ficar intocável por **${ESCUDO_HOURS}h**.`,
-    `🛡️ ${displayName} comprou proteção. Custa **${classCost} chars**, dura **${ESCUDO_HOURS}h**. Quem tentar roubar vai se machucar.`,
+    `🛡️ ${displayName} comprou pagou **${classCost} chars**, para os cara proteger ele por **${ESCUDO_HOURS}h**. Quem tentar roubar vai se machucar.`,
   ];
 
-  await data.reply(activateReplies[Math.floor(Math.random() * activateReplies.length)]);
+  await data.reply(sample(activateReplies));
 }

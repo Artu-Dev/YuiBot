@@ -1,6 +1,7 @@
 import { reduceChars, setUserProperty } from "../database.js";
 import { getOrCreateWebhook } from "./utils.js";
 import { invertMessage } from "./generateRes.js";
+import ms from 'ms';
 
 export const penalities = [
   { nome: "estrangeiro",         description: "Voce agora nao pode usar vogais nas mensagens" },
@@ -18,9 +19,9 @@ export const penalities = [
 ];
 
 // ==================== CONSTANTES ====================
-const INVERT_TIMEOUT_MS = 5000;
-const WARNING_DELETE_TIMEOUT_MS = 30000;
-const ECO_DELETE_TIMEOUT_MS = 5000;
+const INVERT_TIMEOUT_MS = ms('5s');
+const WARNING_DELETE_TIMEOUT_MS = ms('30s');
+const ECO_DELETE_TIMEOUT_MS = ms('5s');
 
 // ==================== UTILITÁRIOS INTERNOS ====================
 async function tryInvertMessage(text) {
@@ -113,8 +114,7 @@ export async function handlePenalities(message, userData) {
     return false;
   }
 
-
-
+  if (Number(userData.charLeft) > 0) return false;
 
   const penalitiesList = JSON.parse(userData.penalities);
   if (!penalitiesList || penalitiesList.length === 0) return false;

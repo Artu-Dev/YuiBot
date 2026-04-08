@@ -1,5 +1,6 @@
 import { dbBot, getRecentMessages, getGuildMembers } from "../database.js";
 import ollama, { ollamaGenerateQueued } from "./ollamaClient.js";
+import { sample } from 'es-toolkit';
 
 // ==================== TEMPLATES ====================
 const newsTemplates = [
@@ -13,30 +14,9 @@ const newsTemplates = [
   "A CASA CAIU: {subject}",
 ];
 
-// ==================== UTILITÁRIOS ====================
-/**
- * Seleciona um modelo rápido da configuração
- * Se não houver, usa textModel
- */
-function selectFastModel() {
-  const fm = dbBot.data.AiConfig.fastModels;
-  const fastList = Array.isArray(fm)
-    ? fm
-    : typeof fm === "string" && fm.trim()
-      ? [fm.trim()]
-      : [];
-  
-  if (fastList.length > 0) {
-    return fastList[Math.floor(Math.random() * fastList.length)];
-  }
-  return dbBot.data.AiConfig.textModel;
-}
 
 // ==================== GERAÇÃO DE NOTÍCIAS ====================
-/**
- * Gera manchete de notícia fake absurda baseada no contexto da guild
- * Usa modelo rápido do Ollama para ser leve
- */
+
 export async function generateFakeNews(guildId, channelId) {
   const recentContext = getRecentMessages(guildId, channelId);
   const membersContext = getGuildMembers(guildId);
@@ -60,7 +40,7 @@ Exemplos do estilo:
 
 Retorne APENAS a manchete, sem aspas ou formatação extra.`;
 
-  const modelToUse = selectFastModel();
+  const modelToUse = dbBot.data.AiConfig.fastModels;
 
   const response = await ollamaGenerateQueued(() =>
     ollama.generate({
@@ -75,15 +55,10 @@ Retorne APENAS a manchete, sem aspas ou formatação extra.`;
   );
 
   const headline = response.response?.trim() || "Notícia indisponível";
-  const template =
-    newsTemplates[Math.floor(Math.random() * newsTemplates.length)];
+  const template = sample(newsTemplates);
   return template.replace("{subject}", headline);
 }
 
-/**
- * Expande uma manchete em um artigo completo
- * Usa modelo padrão do Ollama para mais qualidade
- */
 export async function generateFullArticle(headline) {
   const prompt = `Você é um gerador de artigos de notícias FALSAS e ABSURDAS para um servidor de Discord.
 Expanda esta manchete em uma notícia fake completa (1-2 parágrafos curtos):

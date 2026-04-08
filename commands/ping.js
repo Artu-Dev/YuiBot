@@ -1,5 +1,5 @@
 
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 
 export const name = "ping";
 
@@ -29,10 +29,11 @@ export async function execute(client, data) {
 
   const messageLatency = Date.now() - sent.createdTimestamp;
 
-  const content =
-    `Latência da API: **${apiLatency}ms**\n` +
-    `Latência de resposta: **${messageLatency}ms**`;
+  const embed = new EmbedBuilder()
+    .setColor("#4ECDC4")
+    .setTitle("🏓 Pong!")
+    .setDescription(`Latência da API: **${apiLatency}ms**\nLatência de resposta: **${messageLatency}ms**`);
 
-  await sent.edit(content);
+  await sent.edit({ content: null, embeds: [embed] });
 }
 
