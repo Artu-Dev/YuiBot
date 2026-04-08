@@ -15,9 +15,11 @@ export const achievementsByUpdate = {
   bot_commands_used:    ["bot_addicted"],
   mentions_sent:        ["stalker"],
   mentions_received:    ["popular"],
-  bounties_placed: ["patrocinador_do_caos", "agiota_profissional", "el_capo"],
-  bounties_claimed: ["cacador_de_recompensas", "cacador_de_cabecas", "xerife_do_oeste"],
-  times_bountied: ["alvo_facil", "alvo_procurado", "inimigo_publico_numero_um"],
+  bounties_placed:      ["patrocinador_do_caos", "agiota_profissional", "el_capo"],
+  bounties_claimed:     ["cacador_de_recompensas", "cacador_de_cabecas", "xerife_do_oeste"],
+  times_bountied:       ["alvo_facil", "alvo_procurado", "inimigo_publico_numero_um"],
+  total_robberies:      ["primeiro_roubo", "dependente"],
+  consecutive_robbery_losses: ["apostador"],
 };
 
 export const achievements = {
@@ -263,6 +265,7 @@ export const achievements = {
     description: "Jogou o tigre 100 vezes no total",
     check: (stats) => (stats.lifetime_tiger_spins || 0) >= 100,
   },
+
   cacador_de_recompensas: {
     id: 34,
     name: "CAÇADOR DE RECOMPENSAS",
@@ -289,7 +292,7 @@ export const achievements = {
     description: "Pegou 50 recompensas. A lei é você agora, porra",
     check: (stats) => (stats.bounties_claimed || 0) >= 50,
   },
-  
+
   patrocinador_do_caos: {
     id: 37,
     name: "PATROCINADOR DO CAOS",
@@ -316,7 +319,8 @@ export const achievements = {
     description: "Colocou 50 recompensas. O chefão do submundo",
     check: (stats) => (stats.bounties_placed || 0) >= 50,
   },
-    alvo_facil: {
+
+  alvo_facil: {
     id: 40,
     name: "ALVO FÁCIL",
     charPoints: 800,
@@ -341,5 +345,14 @@ export const achievements = {
     emoji: "🔪",
     description: "Recebeu 50 recompensas em sua cabeça.",
     check: (stats) => (stats.times_bountied || 0) >= 50,
+  },
+
+  primeiro_roubo: {
+    id: 43,
+    charPoints: 100,
+    name: "Iniciante do Crime",
+    emoji: "🦹",
+    description: "Cometeu seu primeiro roubo.",
+    check: (stats) => (stats.total_robberies || 0) >= 1,
   },
 };

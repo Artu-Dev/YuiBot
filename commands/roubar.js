@@ -1,7 +1,6 @@
 import { SlashCommandBuilder } from "discord.js";
 import { addChars, addUserPropertyByAmount, getOrCreateUser, getRandomUserId, getUser, reduceChars, setUserProperty } from "../database.js";
 import { applyClassModifier, getClassModifier, ESCUDO_BLOCK_BASE } from "../functions/classes.js";
-
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { sample } from 'es-toolkit';
 
@@ -10,7 +9,7 @@ const STEAL_PERCENTAGE_MIN = 0.05;
 const STEAL_PERCENTAGE_MAX = 0.30;
 const SUCCESS_CHANCE_TARGETED = 0.22;
 const SUCCESS_CHANCE_RANDOM = 0.38;
-const PENALTY_TARGETED = 150; 
+const PENALTY_TARGETED = 150;
 const PENALTY_RANDOM = 100;
 const ROUBO_LIMIT_PER_DAY = 3;
 
@@ -40,7 +39,7 @@ export async function execute(client, data) {
   const today = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
 
   const user = getOrCreateUser(userId, displayName, guildId);
-  
+
   const lastRouboDate = user.lastRoubo;
   let daily_robberies = Number(user.daily_robberies) || 0;
 
@@ -114,7 +113,7 @@ export async function execute(client, data) {
     const blockChance = Math.min(1, Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus));
     successChance *= (1 - blockChance);
     escudoUserHint = `\n\n_A vítima tinha **escudo** ativo — bloqueou ${Math.round(blockChance * 100)}% da sua chance._`;
-  
+    
     // const shieldStrength = Math.min(1, Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus));
     // const escudoMult = ESCUDO_SUCCESS_FACTOR_MIN + (1 - shieldStrength) * ESCUDO_SUCCESS_FACTOR_SPREAD;
     // successChance *= escudoMult;
@@ -147,30 +146,44 @@ export async function execute(client, data) {
     `❌ ${displayName} foi burrao e acabou doando ${penalty} chars pra ${victimName} viva a benevolencia.`
   ];
 
-  const randomChance = Math.random();
+  const success = Math.random() < successChance;
 
-  
   addUserPropertyByAmount("total_robberies", userId, guildId, 1);
-  if (randomChance < successChance) {
+
+  if (success) {
     addChars(userId, guildId, stolenAmount);
     reduceChars(victimId, guildId, stolenAmount);
     setUserProperty("consecutive_robbery_losses", userId, guildId, 0);
-    
-    
 
-    const replyText = isTargeted 
-      ? sample(successTargetedReplies) 
+    const replyText = isTargeted
+      ? sample(successTargetedReplies)
       : sample(successRandomReplies);
 
     await data.reply(replyText + escudoUserHint);
+
+    if (isTargeted) {
+      const bountyValue = Number(victimData.total_bounty_value) || 0;
+      const bountyPlacer = victimData.bounty_placer;
+
+      if (bountyValue > 0 && bountyPlacer) {
+        addChars(userId, guildId, bountyValue);
+        addUserPropertyByAmount("bounties_claimed", userId, guildId, 1);
+
+        setUserProperty("bounty_placer", victimId, guildId, null);
+        setUserProperty("total_bounty_value", victimId, guildId, 0);
+
+        await data.followUp(
+          `💰 **Recompensa coletada!** ${displayName} pegou os **${bountyValue} chars** que estavam na cabeça de ${victimName}!`
+        );
+      }
+    }
   } else {
     reduceChars(userId, guildId, penalty);
     addChars(victimId, guildId, penalty);
-
     addUserPropertyByAmount("consecutive_robbery_losses", userId, guildId, 1);
 
-    const replyText = isTargeted 
-      ? sample(failTargetedReplies) 
+    const replyText = isTargeted
+      ? sample(failTargetedReplies)
       : sample(failRandomReplies);
 
     await data.reply(replyText + escudoUserHint);
@@ -180,9 +193,8 @@ export async function execute(client, data) {
     await data.followUp("⚠️ Você atingiu o limite de 3 roubos por dia!");
   }
 
-  await awardAchievementInCommand(client, data, "dependente"); 
-  await awardAchievementInCommand(client, data, "apostador"); 
-  await awardAchievementInCommand(client, data, "cacador_de_recompensas");
-  await awardAchievementInCommand(client, data, "cacador_de_cabecas");
-  await awardAchievementInCommand(client, data, "xerife_do_oeste");
+  // ── Conquistas (baseadas nos stats do schema) ────────────────────────────────
+  await awardAchievementInCommand(client, data, "primeiro_roubo");
+  await awardAchievementInCommand(client, data, "dependente");
+  await awardAchievementInCommand(client, data, "apostador");
 }

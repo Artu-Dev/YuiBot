@@ -69,6 +69,9 @@ const USERS_SCHEMA = {
   tiger_pending_double: "INTEGER DEFAULT 0",
   lifetime_tiger_spins: "INTEGER DEFAULT 0",
   tiger_jackpots: "INTEGER DEFAULT 0",
+  tiger_plays: "INTEGER DEFAULT 0",
+  tiger_losses: "INTEGER DEFAULT 0",
+  tiger_wins: "INTEGER DEFAULT 0",
   
   escudo_expiry: "TEXT DEFAULT ''",
   
