@@ -69,12 +69,13 @@ export async function execute(client, data) {
 
   const msg = await data.reply({ embeds: [embed], components: [row], fetchReply: true });
 
-  // ===================== LOOP DO CRASH =====================
+  // ===================== LOOP =====================
   const gameInterval = setInterval(async () => {
     if (!gameActive) return clearInterval(gameInterval);
 
     step++;
 
+    // CRASH
     if (step >= crashStep) {
       gameActive = false;
       clearInterval(gameInterval);
@@ -95,7 +96,7 @@ export async function execute(client, data) {
       return;
     }
 
-    multiplier += 0.08;
+    multiplier += 0.07;
     const lucroAtual = Math.floor(aposta * multiplier) - aposta;
 
     embed.spliceFields(0, 3,
@@ -105,9 +106,9 @@ export async function execute(client, data) {
     );
 
     await msg.edit({ embeds: [embed], components: [row] });
-  }, 1200); // 1.2 segundos por tick
+  }, 1100);
 
-  // ===================== BOTÃO PARAR =====================
+  // ===================== BOTÃO =====================
   const collector = msg.createMessageComponentCollector({
     filter: i => i.user.id === userId && i.customId === `crash_stop_${userId}`,
     max: 1,
