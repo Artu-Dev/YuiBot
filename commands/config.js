@@ -147,6 +147,11 @@ function buildConfigEmbed(guildId) {
 export async function execute(client, data) {
   const parsed = parseArgs(data);
   const guildId = data.guildId;
+  const isAdmin = data.member?.permissions?.has("Administrator");
+
+  if (!isAdmin) {
+    return data.reply({ content: "❌ Apenas administradores podem usar este comando.", ephemeral: true });
+  }
 
   if (parsed.mode === "ver") {
     return data.reply({ embeds: [buildConfigEmbed(guildId)] });

@@ -17,6 +17,11 @@ export async function execute(client, data) {
   const guild_id = data.guildId;
   const channel_id = data.channelId;
   const channels = getChannels(guild_id);
+  const isAdmin = data.member?.permissions?.has("Administrator");
+
+  if (!isAdmin) {
+    return data.reply({ content: "❌ Apenas administradores podem usar este comando.", ephemeral: true });
+  }
 
   if (channels.includes(channel_id)) {
     removeChannel(guild_id, channel_id);

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import {
   getOrCreateUser,
   getUser,
@@ -57,7 +57,6 @@ export async function execute(client, data) {
   const { userId, displayName, guildId, content } = data;
   const { targetUser, amount } = parseArgs(data);
 
-
   if (!targetUser) {
     const p = getBotPrefix();
     return await data.reply(
@@ -102,8 +101,12 @@ export async function execute(client, data) {
     `Transferência concluída: **${amount}** chars de ${displayName} → ${receiverName}.`,
   ];
 
-  await data.reply(
-    sample(donateReplies),
-  );
-  return await data.followUp(`Seu saldo agora: **${newGiverBalance}** chars.`);
+  const pixEmbed = new EmbedBuilder()
+    .setColor(0x33CC99)  
+    .setDescription(sample(donateReplies))
+    .setThumbnail("https://baixarfavicon.com.br/wp-content/themes/baixarfavicon/ferramentas/logos-pix-png/logos/logo-pix-520x520.png")
+    .setFooter({ text: `Seu novo saldo: ${newGiverBalance} chars.` })
+    .setTimestamp();
+
+  return await data.reply({ embeds: [pixEmbed] });
 }

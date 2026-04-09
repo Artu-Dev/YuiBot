@@ -130,7 +130,6 @@ function embedResumo(user, discordUser, guildId) {
   const penN = parsePenalties(user);
   const escudoExtra = maybeEscudoFooter(user, guildId);
   const { name, icon, thumb } = baseAuthor(discordUser);
-
   const unlocked = parseAchievements(user);
   const achCount = Object.keys(unlocked).length;
   const totalAch = Object.keys(achievements).length;
@@ -143,18 +142,15 @@ function embedResumo(user, discordUser, guildId) {
         name: "💎 Conta",
         value:
           `**Chars:** ${(user.charLeft ?? 0).toLocaleString()}\n` +
-          `**Classe:** ${cls?.name ?? "Nenhuma"}\n` +
-          `**Sorte:** ${user.luck_stat > 0 ? "+" : ""}${user.luck_stat ?? 0}`,
+          `**Classe:** ${cls?.name ?? "Nenhuma"}`,
         inline: true,
       },
       {
         name: "🥷 Roubos & Recompensas",
         value:
           `**Roubos hoje:** ${user.daily_robberies ?? 0}/3\n` +
-          `**Total roubos:** ${user.total_robberies ?? 0}\n` +
           `**Derrotas seguidas:** ${user.consecutive_robbery_losses ?? 0}\n` +
-          `**Recompensas caçadas:** ${user.bounties_claimed ?? 0}\n` +
-          `**Recompensas colocadas:** ${user.bounties_placed ?? 0}\n` +
+          `**Recompensas coletadas:** ${user.bounties_claimed ?? 0}\n` +
           `**Vezes como alvo:** ${user.times_bountied ?? 0}`,
         inline: true,
       },
@@ -164,21 +160,16 @@ function embedResumo(user, discordUser, guildId) {
           `**Penalidades ativas:** ${penN}\n` +
           `**Conquistas:** ${achCount}/${totalAch}`,
         inline: false,
-      },
-      {
-        name: "📋 Variações de comando",
-        value:
-          `**Prefixo:** \`${getBotPrefix()}stats\` | \`${getBotPrefix()}stats full\` | \`${getBotPrefix()}stats conqs\``,
-        inline: false,
       }
     )
-    .setFooter({ text: `ID: ${discordUser.id}` });
+    .setFooter({ text: `ID: ${discordUser.id} • ${getBotPrefix()}stats | full | conqs` });
 
   if (icon) eb.setAuthor({ name, iconURL: icon });
   if (thumb) eb.setThumbnail(thumb);
   return eb;
 }
 
+// ====================== EMBED SÓ CONQUISTAS ======================
 function embedConquistas(user, discordUser) {
   const unlocked = parseAchievements(user);
   const pretty = formatAchievements(unlocked);
@@ -190,26 +181,19 @@ function embedConquistas(user, discordUser) {
   const eb = new EmbedBuilder()
     .setColor("#8A2BE2")
     .setDescription(`**${label}** — **${n}/${total}** conquistas`)
-    .addFields(
-      {
-        name: "🏆 Desbloqueadas",
-        value: pretty.length > 2048 ? pretty.slice(0, 2000) + "…" : pretty,
-        inline: false,
-      },
-      {
-        name: "📋 Voltar ao resumo",
-        value:
-          `**Prefixo:** \`${getBotPrefix()}stats\` | \`${getBotPrefix()}stats full\``,
-        inline: false,
-      }
-    )
-    .setFooter({ text: `ID: ${discordUser.id}` });
+    .addFields({
+      name: "🏆 Desbloqueadas",
+      value: pretty.length > 2048 ? pretty.slice(0, 2000) + "…" : pretty,
+      inline: false,
+    })
+    .setFooter({ text: `ID: ${discordUser.id} • ${getBotPrefix()}stats | full` });
 
   if (icon) eb.setAuthor({ name: `${label} — Conquistas`, iconURL: icon });
   if (thumb) eb.setThumbnail(thumb);
   return eb;
 }
 
+// ====================== EMBED FULL ======================
 function embedFull(user, discordUser, guildId) {
   const cls = CLASSES[user.user_class || "none"];
   const penN = parsePenalties(user);
@@ -253,7 +237,7 @@ function embedFull(user, discordUser, guildId) {
         inline: true,
       },
       {
-        name: "🥷 Roubos & defesa",
+        name: "🥷 Roubos & Recompensas",
         value:
           `**Roubos hoje:** ${user.daily_robberies ?? 0}/3\n` +
           `**Total de roubos:** ${user.total_robberies ?? 0}\n` +
@@ -262,13 +246,13 @@ function embedFull(user, discordUser, guildId) {
         inline: true,
       },
       {
-        name: "🏴‍☠️ Sistema de Recompensas",
+        name: "🏴‍☠️ Recompensas",
         value:
+          `**Recompensas coletadas:** ${user.bounties_claimed ?? 0}\n` +
           `**Recompensas colocadas:** ${user.bounties_placed ?? 0}\n` +
-          `**Recompensas caçadas:** ${user.bounties_claimed ?? 0}\n` +
           `**Vezes como alvo:** ${user.times_bountied ?? 0}\n` +
           `**Valor total oferecido:** ${(user.total_bounty_value ?? 0).toLocaleString()} chars\n` +
-          `**Último bounty placer:** ${user.bounty_placer || "—"}`,
+          `**Último colocador:** ${user.bounty_placer || "—"}`,
         inline: true,
       },
       {
@@ -303,7 +287,6 @@ export async function execute(client, data) {
     const mode = resolveMode(data);
     const mentionedUser = parseTarget(data);
     const { userId, guildId, displayName, username } = data;
-
     const targetUserId = mentionedUser ? mentionedUser.id : userId;
     const discordUser = buildDiscordFacade(
       data,
