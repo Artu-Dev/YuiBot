@@ -136,7 +136,6 @@ function handleList(data, userData) {
       {
         name: "💡 COMO USAR MANO",
         value:
-          "**Slash:** `/classe` com opções no menu.\n" +
           `**Prefixo:** \`${p}classe\` lista · \`${p}classe info <classe>\` · \`${p}classe escolher <classe>\` (\`none\` = sem classe)`,
         inline: false,
       }

@@ -61,7 +61,7 @@ export async function execute(client, data) {
   if (!targetUser) {
     const p = getBotPrefix();
     return await data.reply(
-      `Você precisa mencionar quem vai receber.\n**Slash:** \`/pix\` (usuário + quantidade)\n**Prefixo:** \`${p}pix @usuário <quantidade>\``,
+      `Você precisa mencionar quem vai receber.\n**Prefixo:** \`${p}pix @usuário <quantidade>\``,
     );
   }
 

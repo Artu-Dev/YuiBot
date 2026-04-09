@@ -50,7 +50,7 @@ export async function execute(client, data) {
   if (!targetUser || !finalPenalty) {
     const p = getBotPrefix();
     return data.reply(
-      `**Slash:** \`/set-penality\` com opções\n**Prefixo:** \`${p}set-penality @usuário <penalidade>\`\nPenalidades válidas: ${EXISTING.join(", ")}`
+      `**Prefixo:** \`${p}set-penality @usuário <penalidade>\`\nPenalidades válidas: ${EXISTING.join(", ")}`
     );
   }
 

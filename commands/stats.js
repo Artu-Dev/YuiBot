@@ -168,7 +168,6 @@ function embedResumo(user, discordUser, guildId) {
       {
         name: "📋 Variações de comando",
         value:
-          `**Slash:** \`/stats\` (padrão) | \`/stats full\` | \`/stats conquistas\`\n` +
           `**Prefixo:** \`${getBotPrefix()}stats\` | \`${getBotPrefix()}stats full\` | \`${getBotPrefix()}stats conqs\``,
         inline: false,
       }
@@ -200,7 +199,6 @@ function embedConquistas(user, discordUser) {
       {
         name: "📋 Voltar ao resumo",
         value:
-          `**Slash:** \`/stats\` | \`/stats full\`\n` +
           `**Prefixo:** \`${getBotPrefix()}stats\` | \`${getBotPrefix()}stats full\``,
         inline: false,
       }
@@ -289,7 +287,6 @@ function embedFull(user, discordUser, guildId) {
       {
         name: "📋 Variações de comando",
         value:
-          `**Slash:** \`/stats\` | \`/stats full\` | \`/stats conquistas\`\n` +
           `**Prefixo:** \`${getBotPrefix()}stats\` | \`${getBotPrefix()}stats full\` | \`${getBotPrefix()}stats conqs\``,
         inline: false,
       }

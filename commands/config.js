@@ -100,8 +100,7 @@ function buildConfigEmbed(guildId) {
     .setColor("#5865F2")
     .setTitle("⚙️ Configuração do bot")
     .setDescription(
-      "Use **slash** `/config definir` ou no **chat** com prefixo. " +
-        `Prefixo atual: \`${p}\``
+      "Use o comando para ver ou alterar as configurações do bot neste servidor."
     )
     .addFields(
       {

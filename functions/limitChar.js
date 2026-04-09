@@ -109,7 +109,6 @@ export const limitChar = async (message, userData) => {
 
   let textSize = textWithoutUrls.length;
 
-  // Contar attachments (1 por attachment, exceto GIFs que contam como 1 total)
   if (message.attachments.size > 0) {
     const gifAttachments = message.attachments.filter(a =>
       a.name?.toLowerCase().endsWith('.gif') || a.contentType?.includes('image/gif')

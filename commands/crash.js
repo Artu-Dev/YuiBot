@@ -42,11 +42,9 @@ export async function execute(client, data) {
 
   reduceChars(userId, guildId, aposta);
 
-  let multiplier = 1.0;
+  let multiplier = 0.5;
   let step = 0;
-
-  const crashStep = Math.ceil(Math.pow(Math.random(), 1.85) * 22) + 2;
-
+const crashStep = Math.ceil(Math.pow(Math.random(), 1.45) * 28) + 2;
   let gameActive = true;
 
   const row = new ActionRowBuilder().addComponents(
@@ -86,6 +84,7 @@ export async function execute(client, data) {
       embed
         .setColor("#000000")
         .setDescription("💥 **CRASH!** Explodiu tudo, seu azarado do caralho.")
+        .setFooter({ text: `Chars restantes: ${Number(user.charLeft).toLocaleString()}` })
         .spliceFields(0, 3, { 
           name: "Resultado", 
           value: `**- ${aposta.toLocaleString()} chars**`, 
@@ -96,7 +95,7 @@ export async function execute(client, data) {
       return;
     }
 
-    multiplier += 0.07;
+    multiplier += 0.10 ;
     const lucroAtual = Math.floor(aposta * multiplier) - aposta;
 
     embed.spliceFields(0, 3,
@@ -132,6 +131,7 @@ export async function execute(client, data) {
     embed
       .setColor("#00ff00")
       .setDescription(`✅ **PAROU NA HORA CERTA, PORRA!**\nParou em **${multiplier.toFixed(1)}x** e levou **${totalRecebido.toLocaleString()} chars**!`)
+      .setFooter({ text: `Chars restantes: ${(Number(user.charLeft) + totalRecebido).toLocaleString()}` })
       .spliceFields(0, 3, { 
         name: "Resultado", 
         value: `**+${lucroFinal.toLocaleString()} chars**`, 
