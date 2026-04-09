@@ -19,7 +19,11 @@ export const achievementsByUpdate = {
   bounties_claimed:     ["cacador_de_recompensas", "cacador_de_cabecas", "xerife_do_oeste"],
   times_bountied:       ["alvo_facil", "alvo_procurado", "inimigo_publico_numero_um"],
   total_robberies:      ["primeiro_roubo", "dependente"],
-  consecutive_robbery_losses: ["apostador"],
+  lifetime_tiger_spins: ["tigre_centuria"],
+  tiger_jackpots:       ["tigrinho_lenda"],
+  tiger_losses:         ["apostador", "masoquista"],
+  tiger_wins:           ["sortudo_no_tigre", "tigreiro_nato"],
+  consecutive_robbery_losses: ["ladrao_pessimo"]
 };
 
 export const achievements = {
@@ -235,8 +239,8 @@ export const achievements = {
     charPoints: 500,
     name: "Apostador Ruim",
     emoji: "🎲",
-    description: "Perdeu 6 roubos seguidos. Talento natural.",
-    check: (stats) => (stats.consecutive_robbery_losses || 0) >= 6,
+    description: "Perdeu 20 vezes no tigre. Talento natural.",
+    check: (stats) => (stats.tiger_losses || 0) >= 20,
   },
 
   generoso: {
@@ -253,7 +257,7 @@ export const achievements = {
     charPoints: 100,
     name: "CEO do tigrinho",
     emoji: "🎰",
-    description: "Ganhou 2 jackpot's no tigre",
+    description: "Ganhou 2 jackpots no tigre",
     check: (stats) => (stats.tiger_jackpots || 0) >= 2,
   },
 
@@ -273,6 +277,15 @@ export const achievements = {
     emoji: "🏹",
     description: "Pegou 10 recompensas na cabeça de alguém",
     check: (stats) => (stats.bounties_claimed || 0) >= 10,
+  },
+
+  ladrao_pessimo: {
+    id: 47,
+    name: "PIOR LADRÃO",
+    charPoints: 600,
+    emoji: "😭",
+    description: "Falhou 10 roubos consecutivos",
+    check: (stats) => (stats.consecutive_robbery_losses || 0) >= 10,
   },
 
   cacador_de_cabecas: {
@@ -354,5 +367,32 @@ export const achievements = {
     emoji: "🦹",
     description: "Cometeu seu primeiro roubo.",
     check: (stats) => (stats.total_robberies || 0) >= 1,
+  },
+
+  sortudo_no_tigre: {
+    id: 44,
+    charPoints: 600,
+    name: "Sortudo no Tigre",
+    emoji: "🍀",
+    description: "Ganhou no tigre 10 vezes.",
+    check: (stats) => (stats.tiger_wins || 0) >= 10,
+  },
+
+  tigreiro_nato: {
+    id: 45,
+    charPoints: 2000,
+    name: "Tigreiro NATO",
+    emoji: "🐯",
+    description: "Ganhou no tigre 50 vezes.",
+    check: (stats) => (stats.tiger_wins || 0) >= 50,
+  },
+
+  masoquista: {
+    id: 46,
+    charPoints: 1200,
+    name: "Masoquista",
+    emoji: "😭",
+    description: "Perdeu no tigre 100 vezes e continua jogando.",
+    check: (stats) => (stats.tiger_losses || 0) >= 100,
   },
 };

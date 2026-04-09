@@ -113,7 +113,7 @@ export async function execute(client, data) {
     const blockChance = Math.min(1, Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus));
     successChance *= (1 - blockChance);
     escudoUserHint = `\n\n_A vítima tinha **escudo** ativo — bloqueou ${Math.round(blockChance * 100)}% da sua chance._`;
-    
+
     // const shieldStrength = Math.min(1, Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus));
     // const escudoMult = ESCUDO_SUCCESS_FACTOR_MIN + (1 - shieldStrength) * ESCUDO_SUCCESS_FACTOR_SPREAD;
     // successChance *= escudoMult;
@@ -153,11 +153,10 @@ export async function execute(client, data) {
   if (success) {
     addChars(userId, guildId, stolenAmount);
     reduceChars(victimId, guildId, stolenAmount);
-    setUserProperty("consecutive_robbery_losses", userId, guildId, 0);
-
+    
     const replyText = isTargeted
-      ? sample(successTargetedReplies)
-      : sample(successRandomReplies);
+    ? sample(successTargetedReplies)
+    : sample(successRandomReplies);
 
     await data.reply(replyText + escudoUserHint);
 
@@ -180,7 +179,7 @@ export async function execute(client, data) {
   } else {
     reduceChars(userId, guildId, penalty);
     addChars(victimId, guildId, penalty);
-    addUserPropertyByAmount("consecutive_robbery_losses", userId, guildId, 1);
+    setUserProperty("consecutive_robbery_losses", userId, guildId, 0);
 
     const replyText = isTargeted
       ? sample(failTargetedReplies)
@@ -193,8 +192,9 @@ export async function execute(client, data) {
     await data.followUp("⚠️ Você atingiu o limite de 3 roubos por dia!");
   }
 
-  // ── Conquistas (baseadas nos stats do schema) ────────────────────────────────
+  // ── Conquistas ───────────────────────────────────────────────────────────────
   await awardAchievementInCommand(client, data, "primeiro_roubo");
-  await awardAchievementInCommand(client, data, "dependente");
-  await awardAchievementInCommand(client, data, "apostador");
+  await awardAchievementInCommand(client, data, "dependente"); 
+  await awardAchievementInCommand(client, data, "ladrao_pessimo"); 
+  
 }

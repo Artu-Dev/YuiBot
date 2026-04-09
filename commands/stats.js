@@ -148,11 +148,14 @@ function embedResumo(user, discordUser, guildId) {
         inline: true,
       },
       {
-        name: "🥷 Roubos hoje",
+        name: "🥷 Roubos & Recompensas",
         value:
-          `**Usos hoje:** ${user.total_robberies ?? 0}/3\n` +
-          `**Total de roubos:** ${user.total_robberies ?? 0}\n` +
-          `**Derrotas seguidas:** ${user.consecutive_robbery_losses ?? 0}`,
+          `**Roubos hoje:** ${user.daily_robberies ?? 0}/3\n` +
+          `**Total roubos:** ${user.total_robberies ?? 0}\n` +
+          `**Derrotas seguidas:** ${user.consecutive_robbery_losses ?? 0}\n` +
+          `**Recompensas caçadas:** ${user.bounties_claimed ?? 0}\n` +
+          `**Recompensas colocadas:** ${user.bounties_placed ?? 0}\n` +
+          `**Vezes como alvo:** ${user.times_bountied ?? 0}`,
         inline: true,
       },
       {
@@ -254,11 +257,21 @@ function embedFull(user, discordUser, guildId) {
       {
         name: "🥷 Roubos & defesa",
         value:
-          `**Roubos hoje:** ${user.total_robberies ?? 0}/3\n` +
+          `**Roubos hoje:** ${user.daily_robberies ?? 0}/3\n` +
           `**Total de roubos:** ${user.total_robberies ?? 0}\n` +
           `**Derrotas seguidas:** ${user.consecutive_robbery_losses ?? 0}\n` +
           `**Último dia de roubo:** ${user.lastRoubo || "—"}`,
-        inline: false,
+        inline: true,
+      },
+      {
+        name: "🏴‍☠️ Sistema de Recompensas",
+        value:
+          `**Recompensas colocadas:** ${user.bounties_placed ?? 0}\n` +
+          `**Recompensas caçadas:** ${user.bounties_claimed ?? 0}\n` +
+          `**Vezes como alvo:** ${user.times_bountied ?? 0}\n` +
+          `**Valor total oferecido:** ${(user.total_bounty_value ?? 0).toLocaleString()} chars\n` +
+          `**Último bounty placer:** ${user.bounty_placer || "—"}`,
+        inline: true,
       },
       {
         name: "🤖 Bot & sanções",
