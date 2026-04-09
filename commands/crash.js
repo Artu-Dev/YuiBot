@@ -5,7 +5,6 @@ import {
   reduceChars, 
   addUserPropertyByAmount 
 } from "../database.js";
-import { sample } from 'es-toolkit';
 
 export const name = "crash";
 
@@ -23,12 +22,10 @@ export const data = new SlashCommandBuilder()
 export async function execute(client, data) {
   const { userId, guildId, displayName, fromInteraction } = data;
 
-  // ==================== PEGAR A APOSTA (funciona em prefixo e slash) ====================
   let aposta;
   if (fromInteraction) {
     aposta = data.getNumber("aposta");
   } else {
-    // Para comandos com prefixo (mensagem)
     aposta = parseInt(data.args[0] || "0");
   }
 
@@ -43,15 +40,15 @@ export async function execute(client, data) {
     return await data.reply(`**${displayName}**, tu só tem **${charLeft.toLocaleString()}** chars. Aposta algo que tu tem, seu liso!`);
   }
 
-  // Reduz a aposta imediatamente
   reduceChars(userId, guildId, aposta);
 
   let multiplier = 1.0;
   let step = 0;
-  const crashStep = Math.ceil(Math.random() * 12); // 1~12 passos
+
+  const crashStep = Math.ceil(Math.pow(Math.random(), 1.85) * 22) + 2;
+
   let gameActive = true;
 
-  // ===================== EMBED INICIAL =====================
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`crash_stop_${userId}`)
@@ -98,7 +95,7 @@ export async function execute(client, data) {
       return;
     }
 
-    multiplier += 0.20;
+    multiplier += 0.08;
     const lucroAtual = Math.floor(aposta * multiplier) - aposta;
 
     embed.spliceFields(0, 3,
@@ -108,13 +105,13 @@ export async function execute(client, data) {
     );
 
     await msg.edit({ embeds: [embed], components: [row] });
-  }, 2000);
+  }, 1200); // 1.2 segundos por tick
 
-  // ===================== BOTÃO DE PARAR =====================
+  // ===================== BOTÃO PARAR =====================
   const collector = msg.createMessageComponentCollector({
     filter: i => i.user.id === userId && i.customId === `crash_stop_${userId}`,
     max: 1,
-    time: 60000
+    time: 90000
   });
 
   collector.on("collect", async i => {
