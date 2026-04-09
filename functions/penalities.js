@@ -3,6 +3,13 @@ import { getOrCreateWebhook } from "./utils.js";
 import { invertMessage } from "./generateRes.js";
 import ms from 'ms';
 
+
+export const randomWords = [
+  "meu labubu", "papai", "meu xibiuzinho", "amor", "porra", "?",
+  "pneumoultramicroscopicosilicovulcanoconiose", "capeta",
+  "seu merda", "seu bosta", "caralho", "puta","desculpa",
+];
+
 export const penalities = [
   { nome: "estrangeiro",         description: "Voce agora nao pode usar vogais nas mensagens" },
   { nome: "palavra_obrigatoria", description: "Voce agora precisa terminar suas mensagens com: " },

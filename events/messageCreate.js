@@ -1,4 +1,4 @@
-import { getChannels, saveMessageContext, getOrCreateUser, isGuildAiSilenced, getServerConfig } from "../database.js";
+import { getChannels, saveMessageContext, getOrCreateUser, isGuildAiSilenced, getServerConfig, checkAnnouncedEvent } from "../database.js";
 import { handleAchievements } from "../functions/achievements.js";
 import { generateAiRes } from "../functions/generateRes.js";
 import { limitChar } from "../functions/limitChar.js";
@@ -7,6 +7,11 @@ import { parseMessage, replaceMentions, contextFromMessage, safeReplyToMessage, 
 import { randomResend } from "../functions/randomActions.js";
 import { ALLOWED_MESSAGE_BOT_ID } from "../constants.js";
 import ms from 'ms';
+import { getTodaysEvent } from "../functions/getTodaysEvent.js";
+import dayjs from "dayjs";
+import {EmbedBuilder} from "discord.js";
+import 'dayjs/locale/pt-br.js';
+dayjs.locale('pt-br');
 
 export const name = "messageCreate";
 const AI_COOLDOWN_MS        = ms('12s');
@@ -49,6 +54,8 @@ export const execute = async (message, client) => {
   if (!userData) return;
 
   const imageUrl = extractImageUrl(message);
+  
+  await announceEvent(message, guildId);
 
   await limitChar(message, userData);
 
@@ -177,5 +184,23 @@ async function replyWithAi(message) {
     } catch (error) {
       console.error("❌ Erro ao reproduzir áudio no call:", error.message);
     }
+  }
+}
+
+async function announceEvent(message, guildId) {
+  const event = await getTodaysEvent(guildId);
+
+  if (checkAnnouncedEvent(guildId)) return;
+
+  if (event && event.key !== "normal") {
+
+    const embed = new EmbedBuilder()
+      .setColor(0xff00ff)
+      .setTitle(`Evento de ${dayjs().format('dddd')}`)
+      .setDescription(`**${event.name}**\n${event.description}`)
+
+    message.channel.send({ embeds: [embed] }).catch((e) => {
+      console.error("❌ Erro ao anunciar evento:", e.message);
+    });
   }
 }

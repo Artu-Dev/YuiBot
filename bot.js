@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import path from "path";
 import Config from "./config.js";
 import { intializeDbBot, dbBot, getGuildUsers, addChars, getServerConfig } from "./database.js";
+import nodeCron from "node-cron";
 
 dotenv.config();
 Config.setupDirectories();
@@ -87,8 +88,10 @@ function checkMonthlyReset() {
 
 client.once("clientReady", () => {
   log(`Online como ${client.user.tag}`);
-  checkMonthlyReset();
-  setInterval(checkMonthlyReset, 6 * 60 * 60 * 1000);
+
+  nodeCron.schedule("0 0 * * *", checkMonthlyReset, {
+    timezone: "America/Sao_Paulo"
+  });
 });
 
 // === LOGIN COM TRATAMENTO DE ERRO ===

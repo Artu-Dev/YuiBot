@@ -3,10 +3,12 @@ import { getOrCreateUser, getUser, reduceChars, addChars, db } from "../database
 import { getClassModifier } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { randomInt } from 'es-toolkit';
+import { getTodaysEvent } from "../functions/getTodaysEvent.js";
 
 export const name = "tigre";
 
 const TIGRE_CUSTO = 350;
+let TIGRE_SUCCESS_MULTIPLIER = 1.0;
 
 export const data = new SlashCommandBuilder()
   .setName("tigre")
@@ -47,8 +49,16 @@ export async function execute(client, data) {
   let cumulativeChance = 0;
   const rand = Math.random();
   let selectedOutcome;
+  
+  const event = await getTodaysEvent(guildId);
+  if (event && event.tigerSuccess !== null) {
+    TIGRE_SUCCESS_MULTIPLIER = event.tigerSuccess;
+  }
 
   for (const outcome of adjustedOutcomes) {
+    if(outcome.type === "win" || outcome.type === "jackpot") {
+      outcome.chance *= TIGRE_SUCCESS_MULTIPLIER;
+    }
     cumulativeChance += outcome.chance / totalChance;
     if (rand <= cumulativeChance) {
       selectedOutcome = outcome;

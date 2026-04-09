@@ -15,7 +15,7 @@ export const dbBot = new Low(new JSONFile("./data/dbBot.json"), {
   },
   AiConfig: {
     voiceId: "4tRn1lSkEn13EVTuqb0g",
-    textModel: "glm-4.6:cloud",
+    textModel: "qwen3.5:cloud",
     groqInvertModel: "llama-3.1-8b-instant",
     visionModel: "qwen3.5:cloud",
     fastModels: "gemini-3-flash-preview",
@@ -163,6 +163,24 @@ export const intializeDbBot = async () => {
   `
   ).run();
 
+
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS daily_events (
+      guildId TEXT,
+      date TEXT,
+      eventKey TEXT,
+      hasBeenAnnounced INTEGER DEFAULT 0,
+
+      charMultiplier REAL DEFAULT 1.0,
+      casinoMultiplier REAL DEFAULT 1.0,
+      robSuccess REAL DEFAULT NULL,
+
+      name TEXT,
+      description TEXT,
+      PRIMARY KEY (guildId, date)
+    )
+  `).run();
+
   const existingMsgContextColumns = db
     .prepare("PRAGMA table_info(message_context)")
     .all()
@@ -196,6 +214,55 @@ export const intializeDbBot = async () => {
     setServerConfig: db.prepare("INSERT OR REPLACE INTO server_configs (guild_id, limitChar, speakMessage, charLimitEnabled, generateMessage, maxSavedAudios, prefix, guildSilenceUntil) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"),
   };
 };
+
+export const getTodayEvent = (guildId) => {
+  if (!guildId || !isValidGuildId(guildId)) {
+    console.warn(`⚠️  Invalid guildId provided to getTodayEvent: ${guildId}`);
+    return null;
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  return db.prepare(
+    "SELECT * FROM daily_events WHERE guildId = ? AND date = ?",
+  ).get(guildId, today);
+}
+
+export const setTodayEvent = async (guildId, date, eventKey, charMultiplier, casinoMultiplier, robSuccess, name, description) => {
+  if (!guildId || !isValidGuildId(guildId)) {
+    console.warn(`⚠️  Invalid guildId provided to setTodayEvent: ${guildId}`);
+    return null;
+  }
+  db.prepare(
+    `
+    INSERT OR REPLACE INTO daily_events (guildId, date, eventKey, charMultiplier, casinoMultiplier, robSuccess, name, description)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `,
+  ).run(guildId, date, eventKey, charMultiplier, casinoMultiplier, robSuccess, name, description);
+}
+
+export const checkAnnouncedEvent = (guildId) => {
+  if (!guildId || !isValidGuildId(guildId)) {
+    console.warn(`⚠️ Invalid guildId provided: ${guildId}`);
+    return true; 
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  const event = db.prepare("SELECT hasBeenAnnounced FROM daily_events WHERE guildId = ? AND date = ?").get(guildId, today);
+
+  if (event?.hasBeenAnnounced === 1) {
+    return true;
+  }
+
+  const result = db.prepare("UPDATE daily_events SET hasBeenAnnounced = 1 WHERE guildId = ? AND date = ?").run(guildId, today);
+
+  if (result.changes === 0) {
+    console.error(`❌ Falha ao atualizar: Evento de hoje não encontrado no banco para a guilda ${guildId}`);
+    return true;
+  }
+
+  return false;
+}
+
 
 /// ==============================================
 /// USUÁRIOS
@@ -278,11 +345,9 @@ export function getServerConfig(guildId, key) {
   if (!guildId) return DEFAULT_CONFIGS[key];
   const row = db.queries.getServerConfig.get(guildId);
   if (!row) {
-    // insert default
     db.queries.setServerConfig.run(guildId, DEFAULT_CONFIGS.limitChar, DEFAULT_CONFIGS.speakMessage ? 1 : 0, DEFAULT_CONFIGS.charLimitEnabled ? 1 : 0, DEFAULT_CONFIGS.generateMessage ? 1 : 0, DEFAULT_CONFIGS.maxSavedAudios, DEFAULT_CONFIGS.prefix, DEFAULT_CONFIGS.guildSilenceUntil);
     return DEFAULT_CONFIGS[key];
   }
-  // convert back booleans
   if (key === 'speakMessage' || key === 'charLimitEnabled' || key === 'generateMessage') {
     return row[key] === 1;
   }

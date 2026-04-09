@@ -143,6 +143,3 @@ vite.config.ts.timestamp-*
 
 recordings/
 data/data.db
-data/data.db
-.github/copilot-instructions.md
-data/data.db

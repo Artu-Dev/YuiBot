@@ -3,6 +3,7 @@ import { addChars, addUserPropertyByAmount, getOrCreateUser, getRandomUserId, ge
 import { applyClassModifier, getClassModifier, ESCUDO_BLOCK_BASE } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { sample } from 'es-toolkit';
+import { getTodaysEvent } from "../functions/getTodaysEvent.js";
 
 // ==================== CONFIG ====================
 const STEAL_PERCENTAGE_MIN = 0.05;
@@ -12,6 +13,7 @@ const SUCCESS_CHANCE_RANDOM = 0.38;
 const PENALTY_TARGETED = 150;
 const PENALTY_RANDOM = 100;
 const ROUBO_LIMIT_PER_DAY = 3;
+const ROUBO_CHANCE_MULTIPLIER = 1.0;
 
 export const name = "roubar";
 
@@ -96,13 +98,22 @@ export async function execute(client, data) {
 
   const userClass = user.user_class || 'none';
   const victimClass = victimData.user_class || 'none';
+  const event = await getTodaysEvent(guildId);
 
   let escudoUserHint = "";
-  let successChance = Math.min(1, applyClassModifier(
-    isTargeted ? SUCCESS_CHANCE_TARGETED : SUCCESS_CHANCE_RANDOM,
-    isTargeted ? 'singleRobSuccess' : 'robSuccess',
-    userClass
-  ));
+  let successChance = isTargeted ? SUCCESS_CHANCE_TARGETED : SUCCESS_CHANCE_RANDOM;
+  successChance = applyClassModifier(successChance, isTargeted ? 'singleRobSuccess' : 'robSuccess', userClass);
+  successChance *= ROUBO_CHANCE_MULTIPLIER;
+
+  if (event && event.robSuccess !== null) {
+    successChance *= event.robSuccess;
+  }
+
+  if (event.eventKey === "rob_100") {
+    successChance = 1.0;
+  } else if (event.eventKey === "rob_0") {
+    successChance = 0.0;
+  }
 
   const penalty = applyClassModifier(isTargeted ? PENALTY_TARGETED : PENALTY_RANDOM, 'robCost', userClass);
   const victimDefense = getClassModifier(victimClass, 'robDefense');
@@ -113,10 +124,6 @@ export async function execute(client, data) {
     const blockChance = Math.min(1, Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus));
     successChance *= (1 - blockChance);
     escudoUserHint = `\n\n_A vítima tinha **escudo** ativo — bloqueou ${Math.round(blockChance * 100)}% da sua chance._`;
-
-    // const shieldStrength = Math.min(1, Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus));
-    // const escudoMult = ESCUDO_SUCCESS_FACTOR_MIN + (1 - shieldStrength) * ESCUDO_SUCCESS_FACTOR_SPREAD;
-    // successChance *= escudoMult;
   }
 
   const baseStolen = Math.max(1, Math.floor(victimChars * (Math.random() * (STEAL_PERCENTAGE_MAX - STEAL_PERCENTAGE_MIN) + STEAL_PERCENTAGE_MIN)));
@@ -192,7 +199,6 @@ export async function execute(client, data) {
     await data.followUp("⚠️ Você atingiu o limite de 3 roubos por dia!");
   }
 
-  // ── Conquistas ───────────────────────────────────────────────────────────────
   await awardAchievementInCommand(client, data, "primeiro_roubo");
   await awardAchievementInCommand(client, data, "dependente"); 
   await awardAchievementInCommand(client, data, "ladrao_pessimo"); 

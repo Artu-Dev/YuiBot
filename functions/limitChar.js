@@ -1,12 +1,11 @@
 import { dbBot, db, reduceChars, setUserProperty, addChars, getRandomProhibitedWord, getServerConfig } from "../database.js";
 import { parseMessage, safeReplyToMessage } from "./utils.js";
-import { penalities, handlePenalities } from "./penalities.js";
+import { penalities, handlePenalities, randomWords } from "./penalities.js";
+import { getTodaysEvent } from "./getTodaysEvent.js";
+import dayjs from "dayjs"
 
-const randomWords = [
-  "meu labubu", "papai", "meu xibiuzinho", "amor", "porra", "?",
-  "pneumoultramicroscopicosilicovulcanoconiose", "capeta",
-  "seu merda", "seu bosta", "caralho", "puta",
-];
+
+let MULTIPLIER_CHARS = 1.0;
 
 export const limitChar = async (message, userData) => {
   if (!userData || typeof userData !== "object") {
@@ -17,7 +16,9 @@ export const limitChar = async (message, userData) => {
   const { text, guildId, userId, displayName } = parseMessage(message);
   if (!getServerConfig(message.guildId, 'charLimitEnabled')) return;
 
-  const hoje = new Date().toISOString().split("T")[0];
+
+  const hoje = dayjs().format("YYYY-MM-DD");
+  
   let randomWordBanned = dbBot.data.configs.dailyWord;
   let lastUpdate = dbBot.data.configs.dailyWordDate;
 
@@ -86,25 +87,7 @@ export const limitChar = async (message, userData) => {
     }
   }
 
-  const GIF_KEYWORDS = [
-    '://tenor.com',
-    '://media.tenor.com',
-    '://giphy.com',
-    '://klipy.com',
-    '://imgur.com',
-    '://i.imgur.com',
-    '://redgif.com',
-    '.gif'
-  ];
   const GIF_URL_REGEX = /(https?:\/\/[^\s]+)/g;
-
-  const urls = text.match(GIF_URL_REGEX) || [];
-  const gifLinks = urls.filter((link) =>
-    GIF_KEYWORDS.some(keyword => link.toLowerCase().includes(keyword))
-  );
-  const nonGifLinks = urls.filter((link) =>
-    !GIF_KEYWORDS.some(keyword => link.toLowerCase().includes(keyword))
-  );
   const textWithoutUrls = text.replace(GIF_URL_REGEX, "").trim();
 
   let textSize = textWithoutUrls.length;
@@ -114,17 +97,10 @@ export const limitChar = async (message, userData) => {
       a.name?.toLowerCase().endsWith('.gif') || a.contentType?.includes('image/gif')
     );
     const nonGifAttachments = message.attachments.size - gifAttachments.size;
-    textSize += nonGifAttachments; // +1 por attachment não-GIF
-    if (gifAttachments.size > 0) textSize += 1; // +1 total para todos os GIFs attachments
+    textSize += nonGifAttachments;
+    if (gifAttachments.size > 0) textSize += 1; 
   }
 
-  // Contar links (10 por link, exceto GIFs que contam como 1 total)
-  if (nonGifLinks.length > 0) {
-    textSize += nonGifLinks.length * 10; // +10 por link não-GIF
-  }
-  if (gifLinks.length > 0) {
-    textSize += 1; // +1 total para todos os GIFs links
-  }
 
   const gifEmbeds = message.embeds.filter((embed) => {
     const embedUrl = (embed.url || embed.image?.url || embed.thumbnail?.url || embed.video?.url || "").toString();
@@ -132,9 +108,11 @@ export const limitChar = async (message, userData) => {
   });
 
   if (gifEmbeds.length > 0 && textSize === 0) {
-    textSize = 1; // GIF embed sozinho conta como 1 caractere
+    textSize = 1;
   }
 
+
+  textSize = Math.ceil(textSize * MULTIPLIER_CHARS);  
   const oldValue = Number(userData.charLeft) || 0;
   const newValue = reduceChars(userId, guildId, textSize);
 
@@ -168,6 +146,9 @@ export const limitChar = async (message, userData) => {
     }
   }
 
+  const event = await getTodaysEvent(message.guildId);
+  if (event && event.charMultiplier && event.charMultiplier === 0.0) return;
+  
   const wasPunished = await handlePenalities(message, userData);
   if (wasPunished) return;
 
