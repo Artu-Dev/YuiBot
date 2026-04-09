@@ -5,6 +5,7 @@ import {
   reduceChars, 
   addUserPropertyByAmount 
 } from "../database.js";
+import { getClassModifier } from "../functions/classes.js";
 
 export const name = "crash";
 
@@ -42,9 +43,23 @@ export async function execute(client, data) {
 
   reduceChars(userId, guildId, aposta);
 
+  const classLucky = getClassModifier(user.user_class || "none", "lucky");
+
   let multiplier = 0.5;
   let step = 0;
-const crashStep = Math.ceil(Math.pow(Math.random(), 1.45) * 28) + 2;
+
+  const baseExponent = 1.75;
+  const baseScale    = 17;
+  const baseAdd      = 2;
+
+  const luckEffectExponent = classLucky * 0.165;
+  const luckEffectScale    = classLucky * 4.8;
+
+  const exponent = Math.max(1.05, baseExponent - luckEffectExponent);
+  const scale    = Math.max(12, baseScale + luckEffectScale);
+
+  const crashStep = Math.ceil(Math.pow(Math.random(), exponent) * scale) + baseAdd;
+
   let gameActive = true;
 
   const row = new ActionRowBuilder().addComponents(
@@ -73,7 +88,6 @@ const crashStep = Math.ceil(Math.pow(Math.random(), 1.45) * 28) + 2;
 
     step++;
 
-    // CRASH
     if (step >= crashStep) {
       gameActive = false;
       clearInterval(gameInterval);
@@ -95,7 +109,8 @@ const crashStep = Math.ceil(Math.pow(Math.random(), 1.45) * 28) + 2;
       return;
     }
 
-    multiplier += 0.10 ;
+    multiplier += 0.10;
+
     const lucroAtual = Math.floor(aposta * multiplier) - aposta;
 
     embed.spliceFields(0, 3,
@@ -105,7 +120,7 @@ const crashStep = Math.ceil(Math.pow(Math.random(), 1.45) * 28) + 2;
     );
 
     await msg.edit({ embeds: [embed], components: [row] });
-  }, 1100);
+  }, 1000);
 
   // ===================== BOTÃO =====================
   const collector = msg.createMessageComponentCollector({

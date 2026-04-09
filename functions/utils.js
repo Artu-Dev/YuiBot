@@ -482,10 +482,11 @@ export const replaceMentions = async (message, content) => {
 
 export async function getOrCreateWebhook(channel, author) {
   const webhooks = await channel.fetchWebhooks();
+
   let hook = webhooks.find((wh) => wh.owner?.id === author.id);
   if (hook) return hook;
 
-  if (webhooks.size >= 15) {
+  if (webhooks.size >= 10) {
     return webhooks.first();
   }
 
@@ -497,6 +498,10 @@ export async function getOrCreateWebhook(channel, author) {
     return hook;
   } catch (err) {
     console.error("Erro ao criar webhook:", err.message);
+    
+    if (webhooks.size === 0) {
+      throw new Error("Não foi possível criar webhook e não existe nenhum disponível no canal.");
+    }
     return webhooks.first();
   }
 }
