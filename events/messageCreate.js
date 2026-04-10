@@ -190,10 +190,7 @@ async function replyWithAi(message) {
 async function announceEvent(message, guildId) {
   const event = await getTodaysEvent(guildId);
 
-  if (checkAnnouncedEvent(guildId)) return;
-
-  if (event && event.eventkey !== "normal") {
-
+  if (!checkAnnouncedEvent(guildId) && event && event.eventkey !== "normal") {
     const embed = new EmbedBuilder()
       .setColor(0xff00ff)
       .setTitle(`Evento de ${dayjs().format('dddd')}`)
@@ -202,5 +199,6 @@ async function announceEvent(message, guildId) {
     message.channel.send({ embeds: [embed] }).catch((e) => {
       console.error("❌ Erro ao anunciar evento:", e.message);
     });
-  }
+  };
+
 }

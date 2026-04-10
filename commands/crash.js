@@ -47,18 +47,60 @@ export async function execute(client, data) {
 
   let multiplier = 0.5;
   let step = 0;
+  let crashStep;
 
-  const baseExponent = 1.75;
-  const baseScale    = 17;
-  const baseAdd      = 2;
+  if (classLucky === 1) {
+    const r = Math.random();
+    let min, max;
+    
+    if (r < 0.15) {
+      min = 2; max = 6;       // ≤1.0x
+    } else if (r < 0.80) {
+      min = 7; max = 16;      // 1.1x – 2.0x
+    } else if (r < 0.992) {
+      min = 17; max = 46;     // 2.1x – 5.0x
+    } else {
+      min = 47; max = 100;    // >5.0x
+    }
+    
+    const range = max - min + 1;
+    const u = Math.random();
+    const index = Math.floor(Math.pow(u, 1.5) * range);
+    crashStep = min + index;
+    
+  } else if (classLucky === 0) {
+    const r = Math.random();
+    let min, max;
+    
+    if (r < 0.75) {
+      min = 2; max = 16;
+    } else if (r < 0.80) {
+      min = 17; max = 26;
+    } else if (r < 0.90) {
+      min = 27; max = 36;
+    } else {
+      min = 37; max = 100;
+    }
+    
+    const range = max - min + 1;
+    const u = Math.random();
+    const index = Math.floor(Math.pow(u, 1.3) * range);
+    crashStep = min + index;
+    
+  } else {
+    
+    const baseExponent = 1.75;
+    const baseScale    = 17;
+    const baseAdd      = 2;
 
-  const luckEffectExponent = classLucky * 0.165;
-  const luckEffectScale    = classLucky * 4.8;
+    const luckEffectExponent = classLucky * 0.165;
+    const luckEffectScale    = classLucky * 4.8;
 
-  const exponent = Math.max(1.05, baseExponent - luckEffectExponent);
-  const scale    = Math.max(12, baseScale + luckEffectScale);
+    const exponent = Math.max(1.05, baseExponent - luckEffectExponent);
+    const scale    = Math.max(12, baseScale + luckEffectScale);
 
-  const crashStep = Math.ceil(Math.pow(Math.random(), exponent) * scale) + baseAdd;
+    crashStep = Math.ceil(Math.pow(Math.random(), exponent) * scale) + baseAdd;
+  }
 
   // Multiplier exato no momento do crash e maior prêmio possível
   const crashMultiplier = parseFloat((0.5 + (crashStep - 1) * 0.10).toFixed(1));
@@ -90,7 +132,6 @@ export async function execute(client, data) {
 
   // ===================== LOOP =====================
   const gameInterval = setInterval(async () => {
-    // Checagem no início — evita executar se o jogo já acabou
     if (!gameActive) {
       clearInterval(gameInterval);
       return;
@@ -126,7 +167,6 @@ export async function execute(client, data) {
 
     const lucroAtual = Math.floor(aposta * multiplier) - aposta;
 
-    
     if (!gameActive) return;
 
     embed.spliceFields(0, 3,
@@ -148,7 +188,6 @@ export async function execute(client, data) {
   collector.on("collect", async i => {
     if (!gameActive) return;
 
-    
     gameActive = false;
     clearInterval(gameInterval);
 
