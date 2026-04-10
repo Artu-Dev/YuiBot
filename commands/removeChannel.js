@@ -17,7 +17,7 @@ export async function execute(client, data) {
   const guild_id = data.guildId;
   const channel_id = data.channelId;
   const channels = getChannels(guild_id);
-  const isAdmin = data.member?.permissions?.has("Administrator");
+  const isAdmin = data.isAdmin();
 
   if (!isAdmin) {
     return data.reply({ content: "❌ Apenas administradores podem usar este comando.", ephemeral: true });

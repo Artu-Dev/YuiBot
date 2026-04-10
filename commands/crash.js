@@ -60,6 +60,12 @@ export async function execute(client, data) {
 
   const crashStep = Math.ceil(Math.pow(Math.random(), exponent) * scale) + baseAdd;
 
+  // Multiplier exato no momento do crash e maior prêmio possível
+  const crashMultiplier = parseFloat((0.5 + (crashStep - 1) * 0.10).toFixed(1));
+  const maxPayout       = Math.floor(aposta * crashMultiplier);
+  const maxLucro        = maxPayout - aposta;
+
+  // Flag para travar o jogo — usada tanto no interval quanto no collector
   let gameActive = true;
 
   const row = new ActionRowBuilder().addComponents(
@@ -73,7 +79,7 @@ export async function execute(client, data) {
   const embed = new EmbedBuilder()
     .setColor("#ff0000")
     .setTitle(`🚀 CRASH • ${displayName}`)
-    .setDescription("O multiplier tá subindo... **Reaja com 🛑 pra parar antes do BOOM!**")
+    .setDescription("O multiplier tá subindo... **Clica em 🛑 pra parar antes do BOOM!**")
     .addFields(
       { name: "Multiplier", value: `**${multiplier.toFixed(1)}x**`, inline: true },
       { name: "Lucro Atual", value: `**0** chars`, inline: true },
@@ -84,7 +90,11 @@ export async function execute(client, data) {
 
   // ===================== LOOP =====================
   const gameInterval = setInterval(async () => {
-    if (!gameActive) return clearInterval(gameInterval);
+    // Checagem no início — evita executar se o jogo já acabou
+    if (!gameActive) {
+      clearInterval(gameInterval);
+      return;
+    }
 
     step++;
 
@@ -95,15 +105,18 @@ export async function execute(client, data) {
       addUserPropertyByAmount("tiger_plays", userId, guildId, 1);
       addUserPropertyByAmount("tiger_losses", userId, guildId, 1);
 
+      const updatedUser = getOrCreateUser(userId, displayName, guildId);
+
       embed
         .setColor("#000000")
-        .setDescription("💥 **CRASH!** Explodiu tudo, seu azarado do caralho.")
-        .setFooter({ text: `Chars restantes: ${Number(user.charLeft).toLocaleString()}` })
-        .spliceFields(0, 3, { 
-          name: "Resultado", 
-          value: `**- ${aposta.toLocaleString()} chars**`, 
-          inline: false 
-        });
+        .setDescription("💥 **CRASH!** Explodiu tudo mano, que azar! devia ter parado antes.")
+        .setFooter({ text: `Chars restantes: ${Number(updatedUser.charLeft).toLocaleString()}` })
+        .spliceFields(0, 3,
+          { name: "Resultado",         value: `**- ${aposta.toLocaleString()} chars**`,                              inline: false },
+          { name: "💰 Saldo Atual",    value: `**${Number(updatedUser.charLeft).toLocaleString()} chars**`,          inline: true  },
+          { name: "💥 Crashou em",     value: `**${crashMultiplier.toFixed(1)}x**`,                                  inline: true  },
+          { name: "🏆 Máximo Possível",value: `**${maxPayout.toLocaleString()} chars** (+${maxLucro.toLocaleString()})`, inline: true }
+        );
 
       await msg.edit({ embeds: [embed], components: [] });
       return;
@@ -112,6 +125,9 @@ export async function execute(client, data) {
     multiplier += 0.10;
 
     const lucroAtual = Math.floor(aposta * multiplier) - aposta;
+
+    
+    if (!gameActive) return;
 
     embed.spliceFields(0, 3,
       { name: "Multiplier", value: `**${multiplier.toFixed(1)}x**`, inline: true },
@@ -132,26 +148,31 @@ export async function execute(client, data) {
   collector.on("collect", async i => {
     if (!gameActive) return;
 
+    
     gameActive = false;
     clearInterval(gameInterval);
+
+    await i.deferUpdate();
 
     const lucroFinal = Math.floor(aposta * multiplier) - aposta;
     const totalRecebido = aposta + lucroFinal;
 
     addChars(userId, guildId, totalRecebido);
-
     addUserPropertyByAmount("tiger_plays", userId, guildId, 1);
     addUserPropertyByAmount("tiger_wins", userId, guildId, 1);
+
+    const updatedUser = getOrCreateUser(userId, displayName, guildId);
 
     embed
       .setColor("#00ff00")
       .setDescription(`✅ **PAROU NA HORA CERTA, PORRA!**\nParou em **${multiplier.toFixed(1)}x** e levou **${totalRecebido.toLocaleString()} chars**!`)
-      .setFooter({ text: `Chars restantes: ${(Number(user.charLeft) + totalRecebido).toLocaleString()}` })
-      .spliceFields(0, 3, { 
-        name: "Resultado", 
-        value: `**+${lucroFinal.toLocaleString()} chars**`, 
-        inline: false 
-      });
+      .setFooter({ text: `Chars restantes: ${Number(updatedUser.charLeft).toLocaleString()}` })
+      .spliceFields(0, 3,
+        { name: "Resultado",          value: `**+${lucroFinal.toLocaleString()} chars**`,                               inline: false },
+        { name: "💰 Saldo Atual",     value: `**${Number(updatedUser.charLeft).toLocaleString()} chars**`,              inline: true  },
+        { name: "💥 Crasharia em",    value: `**${crashMultiplier.toFixed(1)}x**`,                                      inline: true  },
+        { name: "🏆 Máximo Possível", value: `**${maxPayout.toLocaleString()} chars** (+${maxLucro.toLocaleString()})`, inline: true  }
+      );
 
     const disableRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -162,6 +183,31 @@ export async function execute(client, data) {
         .setDisabled(true)
     );
 
-    await i.update({ embeds: [embed], components: [disableRow] });
+    await msg.edit({ embeds: [embed], components: [disableRow] });
+  });
+
+  collector.on("end", async (collected, reason) => {
+    if (reason !== "time" || !gameActive) return;
+
+    gameActive = false;
+    clearInterval(gameInterval);
+
+    addUserPropertyByAmount("tiger_plays", userId, guildId, 1);
+    addUserPropertyByAmount("tiger_losses", userId, guildId, 1);
+
+    const updatedUser = getOrCreateUser(userId, displayName, guildId);
+
+    embed
+      .setColor("#000000")
+      .setDescription("⏰ **Tempo esgotado!** Você demorou demais pra parar e o crash te pegou.")
+      .setFooter({ text: `Chars restantes: ${Number(updatedUser.charLeft).toLocaleString()}` })
+      .spliceFields(0, 3,
+        { name: "Resultado",          value: `**- ${aposta.toLocaleString()} chars**`,                                  inline: false },
+        { name: "💰 Saldo Atual",     value: `**${Number(updatedUser.charLeft).toLocaleString()} chars**`,              inline: true  },
+        { name: "💥 Crashou em",      value: `**${crashMultiplier.toFixed(1)}x**`,                                      inline: true  },
+        { name: "🏆 Máximo Possível", value: `**${maxPayout.toLocaleString()} chars** (+${maxLucro.toLocaleString()})`, inline: true  }
+      );
+
+    await msg.edit({ embeds: [embed], components: [] });
   });
 }

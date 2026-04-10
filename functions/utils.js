@@ -1,6 +1,7 @@
 import { dbBot, getServerConfig } from "../database.js";
 import ms from 'ms';
 import { random } from 'es-toolkit';
+import { PermissionFlagsBits } from 'discord.js';
 
 export function getRandomTime(minSeconds, maxSeconds) {
   return random(ms(`${minSeconds}s`), ms(`${maxSeconds}s`));
@@ -97,7 +98,7 @@ export function contextFromMessage(message, options = {}) {
     deferReply: null,
 
     hasPermission: (perm) => message.member?.permissions.has(perm) ?? false,
-    isAdmin: () => message.member?.permissions.has('Administrator') ?? false,
+    isAdmin: () => message.member?.permissions.has(PermissionFlagsBits.ManageChannels) ?? false,
 
     getSubcommand: (required = false) => {
       if (required && !detectedSubcommand) {
@@ -298,7 +299,7 @@ export function contextFromInteraction(interaction) {
     deferReply: (opts) => interaction.deferReply(opts),
 
     hasPermission: (perm) => interaction.member?.permissions.has(perm) ?? false,
-    isAdmin: () => interaction.member?.permissions.has('Administrator') ?? false,
+    isAdmin: () => interaction.member?.permissions.has(PermissionFlagsBits.ManageChannels) ?? false,
 
     getSubcommand: (required = false) => {
       const sub = opts.getSubcommand(false);

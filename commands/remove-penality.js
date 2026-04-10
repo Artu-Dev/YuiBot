@@ -4,6 +4,7 @@ import {
   getUserPenalities,
   getOrCreateUser,
 } from "../database.js";
+import { contextFromInteraction } from "../functions/utils.js";
 
 export const name = "remove-penality";
 
@@ -31,7 +32,7 @@ function parseArgs(data) {
 export async function execute(client, data) {
   const { userId, username, guildId } = data;
   const { targetUser } = parseArgs(data);
-  const isAdmin = data.member?.permissions?.has("Administrator");
+  const isAdmin = data.isAdmin();
 
   if (!isAdmin) {
     return data.reply({ content: "❌ Apenas administradores podem usar este comando.", ephemeral: true });

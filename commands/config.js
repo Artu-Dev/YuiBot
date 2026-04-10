@@ -147,7 +147,7 @@ function buildConfigEmbed(guildId) {
 export async function execute(client, data) {
   const parsed = parseArgs(data);
   const guildId = data.guildId;
-  const isAdmin = data.member?.permissions?.has("Administrator");
+  const isAdmin = data.isAdmin();
 
   if (!isAdmin) {
     return data.reply({ content: "❌ Apenas administradores podem usar este comando.", ephemeral: true });

@@ -44,7 +44,7 @@ function parseArgs(data) {
 export async function execute(client, data) {
   const { guildId } = data;
   const { targetUser, penalty } = parseArgs(data);
-  const isAdmin = data.member?.permissions?.has("Administrator");
+  const isAdmin = data.isAdmin();
 
   if (!isAdmin) {
     return data.reply({ content: "❌ Apenas administradores podem usar este comando.", ephemeral: true });
