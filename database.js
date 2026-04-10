@@ -34,8 +34,9 @@ const USERS_SCHEMA = {
   
   messages_sent: "INTEGER DEFAULT 0",
   achievements_unlocked: "TEXT DEFAULT '{}'",
-  penalities: "TEXT DEFAULT '[]'",
+  penalities: "TEXT DEFAULT '[]'", //change to string later
   penalityWord: "TEXT DEFAULT ''",
+  penalityExpires: "TEXT DEFAULT ''",
 
   last_message_time: "TEXT",
   mentions_received: "INTEGER DEFAULT 0",

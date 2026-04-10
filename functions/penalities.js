@@ -118,10 +118,17 @@ export function isGifOnlyMessage(message) {
   return isGifOnly;
 }
 
-export async function handlePenalities(message, userData) {
-  const isGifOnly = isGifOnlyMessage(message);
+function isAttachmentOnly(message) {
+  const content = (message.content || "").trim();
+  const hasAttachments = message.attachments.size > 0;
+  return hasAttachments && content.length === 0;
+}
 
-  if (isGifOnly) {
+export async function handlePenalities(message, userData) {
+  // const isGifOnly = isGifOnlyMessage(message);
+  const isAttachmentOnly = isAttachmentOnly(message);
+
+  if (isAttachmentOnly) {
     return false;
   }
 
