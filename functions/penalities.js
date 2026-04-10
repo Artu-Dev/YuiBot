@@ -52,10 +52,14 @@ async function tryInvertMessage(text) {
 }
 
 async function sendModifiedMessage(message, content) {
+  let newMessage = content;
+  if (content.length > 2000) {
+    newMessage = content.slice(0, 1997) + "...";
+  };
   const myWebHook = await getOrCreateWebhook(message.channel, message.author);
   await message.delete().catch(() => {});
   await myWebHook.send({
-    content,
+    content: newMessage,
     username: message.member?.displayName || message.author.username,
     avatarURL: message.author.displayAvatarURL(),
   });

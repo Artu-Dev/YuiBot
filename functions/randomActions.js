@@ -5,6 +5,7 @@ async function randomResend(message) {
   if (message.author.bot) return false;
 
   const original = message.content || "";
+  if (original.length > 2000) return false;
   if (!original.trim()) return false;
   if (messageContainsDailyWord(original)) return false;
 

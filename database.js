@@ -256,7 +256,6 @@ export const checkAnnouncedEvent = (guildId) => {
   const result = db.prepare("UPDATE daily_events SET hasBeenAnnounced = 1 WHERE guildId = ? AND date = ?").run(guildId, today);
 
   if (result.changes === 0) {
-    console.error(`❌ Falha ao atualizar: Evento de hoje não encontrado no banco para a guilda ${guildId}`);
     return true;
   }
 

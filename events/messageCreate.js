@@ -192,7 +192,7 @@ async function announceEvent(message, guildId) {
 
   if (checkAnnouncedEvent(guildId)) return;
 
-  if (event && event.key !== "normal") {
+  if (event && event.eventkey !== "normal") {
 
     const embed = new EmbedBuilder()
       .setColor(0xff00ff)
