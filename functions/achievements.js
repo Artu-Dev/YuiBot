@@ -33,7 +33,8 @@ const updateUserStats = (userId, guildId, updates) => {
 
 export const giveAchievement = async (message, userId, achievementKey, authorUserObj) => {
   const guildId = message.guild.id;
-  const achievement = achievements[achievementKey];
+  
+  const achievement = achievements.find(ach => ach.key === achievementKey);
 
   if (!achievement) {
     console.error(`Achievement com chave ${achievementKey} não encontrado.`);
@@ -71,7 +72,8 @@ const checkRelevantAchievements = async (message, userId, stats, authorUserObj, 
   }
   
   for (const key of keysToCheck) {
-    if (achievements[key] && achievements[key].check(stats)) {
+    const achievement = achievements.find(ach => ach.key === key);
+    if (achievement && achievement.check(stats)) {
       await giveAchievement(message, userId, key, authorUserObj);
     }
   }
@@ -80,6 +82,9 @@ const checkRelevantAchievements = async (message, userId, stats, authorUserObj, 
 const handleMentions = async (message, guildId, userId, displayName, stats) => {
   if (!message.mentions.users.size) return;
   const mentions = Array.from(message.mentions.users.keys());
+
+  const stalkerAch = achievements.find((ach) => ach.key === "stalker");
+  const popularAch = achievements.find((ach) => ach.key === "popular");
 
   for (const mentionedId of mentions) {
     const mentionedUser = message.mentions.users.get(mentionedId);
@@ -91,7 +96,7 @@ const handleMentions = async (message, guildId, userId, displayName, stats) => {
 
     if (!mentionedUser.bot) {
       addUserProperty("mentions_sent", userId, guildId);
-      if (achievements.stalker.check(stats)) {
+      if (stalkerAch && stalkerAch.check(stats)) {
         await giveAchievement(message, userId, "stalker", message.author);
       }
     }
@@ -103,7 +108,7 @@ const handleMentions = async (message, guildId, userId, displayName, stats) => {
         mentionedDisplayName,
         guildId
       );
-      if (achievements.popular.check(mentionedStats)) {
+      if (popularAch && popularAch.check(mentionedStats)) {
         await giveAchievement(message, mentionedId, "popular", mentionedUser);
       }
     }
@@ -197,7 +202,7 @@ export const handleAchievements = async (message) => {
 };
 
 export async function awardAchievementInCommand(client, data, achievementKey) {
-  const achievement = achievements[achievementKey];
+  const achievement = achievements.find(ach => ach.key === achievementKey);
   if (!achievement || typeof achievement.check !== "function") return;
 
   const stats = getOrCreateUser(data.userId, data.displayName, data.guildId);
