@@ -1,16 +1,10 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { getGuildUsers } from "../database.js";
 
 export const name = "rank";
-
 export const data = new SlashCommandBuilder()
   .setName("rank")
   .setDescription("Mostra o ranking de caracteres do servidor.");
-
-function parseArgs(data) {
-  // No args for rank
-  return {};
-}
 
 export async function execute(client, data) {
   const guildId = data.guildId;
@@ -23,10 +17,30 @@ export async function execute(client, data) {
   const sortedUsers = usersData.sort((a, b) => b.charLeft - a.charLeft);
   const top10 = sortedUsers.slice(0, 10);
 
-  let rankMessage = "**Rank do servidor**\n\n";
+  const embed = new EmbedBuilder()
+    .setColor("#FFD700")
+    .setTitle("🏆 Rank do Servidor")
+    .setDescription("Top 10 usuários com mais caracteres")
+    .setTimestamp();
+
+  let description = "";
+
   top10.forEach((user, index) => {
-    rankMessage += `**#${index + 1}** - ${user.display_name} » ${user.charLeft} caracteres\n`;
+    const position = index + 1;
+    let medal = "";
+
+    if (position === 1) medal = "🥇 ";
+    else if (position === 2) medal = "🥈 ";
+    else if (position === 3) medal = "🥉 ";
+
+    description += `${medal}**#${position}** ${user.display_name} — **${user.charLeft.toLocaleString()}** chars\n`;
   });
 
-  return await data.reply(rankMessage);
+  embed.setDescription(description);
+
+  embed.setFooter({ 
+    text: `Total de usuários: ${usersData.length}` 
+  });
+
+  return await data.reply({ embeds: [embed] });
 }

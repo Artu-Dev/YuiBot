@@ -1,5 +1,5 @@
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { achievements } from "../functions/achievmentsData.js";
+import { achievements, getAchievementByKey } from "../functions/achievmentsData.js";
 import { getOrCreateUser } from "../database.js";
 import { resolveDisplayAvatarURL, discordDisplayLabel } from "../functions/utils.js";
 
@@ -20,7 +20,6 @@ function parseArgs(data) {
       mentionedUser: data.getUser("usuário"),
     };
   }
-
   return {
     mentionedUser: data.mentionedUser,
   };
@@ -46,20 +45,22 @@ export async function execute(client, data) {
 
   function generateMessage(user, discordUser) {
     const unlocked = JSON.parse(user.achievements_unlocked || "{}");
+    const unlockedKeys = Object.keys(unlocked);
+    
+    const unlockedAchievements = achievements.filter(ach => unlockedKeys.includes(ach.key));
 
-    const achievementsPretty = Object.keys(unlocked).length
-      ? Object.keys(unlocked)
-        .map((key) => {
-          const ach = achievements[key];
-          return ach ? `ㅤ•ㅤ${ach.emoji} ${ach.name}` : `ㅤ•ㅤ🏆 ${key}`;
-        })
-        .join("\n")
+    const achievementsPretty = unlockedAchievements.length
+      ? unlockedAchievements
+          .map(ach => `ㅤ•ㅤ${ach.icon} ${ach.title}`)
+          .join("\n")
       : "_Nenhuma ainda_";
 
     const icon = resolveDisplayAvatarURL(discordUser);
     const lbl = discordDisplayLabel(discordUser);
     const thumb = resolveDisplayAvatarURL(discordUser, { size: 256 });
+
     const eb = new EmbedBuilder().setColor("#8A2BE2");
+
     if (icon) {
       eb.setAuthor({
         name: `${lbl} — CONQUISTAS FODAS`,
@@ -68,7 +69,9 @@ export async function execute(client, data) {
     } else {
       eb.setAuthor({ name: `${lbl} — CONQUISTAS FODAS` });
     }
+
     if (thumb) eb.setThumbnail(thumb);
+
     return eb
       .setDescription(
         `
@@ -77,7 +80,7 @@ ${achievementsPretty}
       `
       )
       .setFooter({
-        text: `ID: ${discordUser.id} • Dados atualizados`,
+        text: `ID: ${discordUser.id} • Total: ${unlockedAchievements.length} conquistas`,
       });
   }
 

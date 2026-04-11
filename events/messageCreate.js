@@ -95,6 +95,9 @@ async function tryHandleCommand(message, client, text) {
   }
 
   try {
+    if (command.name === "entrar" || command.name === "sair") {
+      command.execute(client, message);
+    }
     await command.execute(client, contextFromMessage(message));
   } catch (error) {
     console.error(`❌ Erro ao executar comando "${cmdName}":`, error);

@@ -1,218 +1,241 @@
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { dbBot, getBotPrefix, getServerConfig, setServerConfig } from "../database.js";
+import { 
+  SlashCommandBuilder, 
+  EmbedBuilder, 
+  ActionRowBuilder, 
+  StringSelectMenuBuilder, 
+  ButtonBuilder, 
+  ButtonStyle,
+  ComponentType 
+} from "discord.js";
+
+import { getBotPrefix, getServerConfig, setServerConfig } from "../database.js";
 
 export const name = "config";
-
 export const data = new SlashCommandBuilder()
   .setName("config")
-  .setDescription("Ver ou alterar configurações do bot (admin).")
-  .addSubcommand((sc) =>
-    sc.setName("ver").setDescription("Mostra todas as opções e os valores atuais")
-  )
-  .addSubcommand((sc) =>
-    sc
-      .setName("definir")
-      .setDescription("Altera uma opção")
-      .addStringOption((opt) =>
-        opt
-          .setName("campo")
-          .setDescription("O que você quer mudar")
-          .setRequired(true)
-          .addChoices(
-            {
-              name: "Prefixo dos comandos por mensagem",
-              value: "prefix",
-            },
-            {
-              name: "Respostas aleatórias com IA no chat",
-              value: "random",
-            },
-            {
-              name: "Limite de caracteres (mês)",
-              value: "limitChar",
-            },
-          )
-      )
-      .addStringOption((opt) =>
-        opt
-          .setName("valor")
-          .setDescription("Novo valor (texto para prefixo; on/off para as outras)")
-          .setRequired(true)
-      )
-  );
+  .setDescription("Configurações do bot (apenas administradores)");
 
 const boolize = (raw) => {
   if (!raw) return null;
-  const text = raw.toString().toLowerCase();
-  if (["true", "on", "1", "yes", "sim"].includes(text)) return true;
-  if (["false", "off", "0", "no", "não", "nao"].includes(text)) return false;
+  const text = raw.toString().toLowerCase().trim();
+  if (["true", "on", "1", "yes", "sim", "ligado"].includes(text)) return true;
+  if (["false", "off", "0", "no", "não", "nao", "desligado"].includes(text)) return false;
   return null;
 };
 
-function parseArgs(data) {
-  if (data.fromInteraction) {
-    const sub = data.getSubcommand(false);
-    if (sub === "definir") {
-      return {
-        mode: "definir",
-        field: data.getString("campo"),
-        value: data.getString("valor"),
-      };
-    }
-    return { mode: "ver" };
+const configOptions = [
+  {
+    label: "Prefixo dos comandos",
+    value: "prefix",
+    description: "Ex: ! ou $",
+    type: "text"
+  },
+  {
+    label: "Respostas aleatórias com IA",
+    value: "generateMessage",
+    description: "IA responde mensagens no chat",
+    type: "boolean"
+  },
+  {
+    label: "Fala no Voice (TTS)",
+    value: "speakMessage",
+    description: "Respostas lidas em call",
+    type: "boolean"
+  },
+  {
+    label: "Limite de caracteres (mês)",
+    value: "limitChar",
+    description: "Limite inicial por usuário",
+    type: "number"
   }
+];
 
-  const args = data.args ?? [];
-  if (args.length === 0) return { mode: "ver" };
-
-  const head = args[0]?.toLowerCase();
-  if (head === "ver" || head === "ajuda" || head === "help" || head === "lista") {
-    return { mode: "ver" };
-  }
-
-  if (args[0]?.toLowerCase() === "definir") {
-    const [, field, ...valueParts] = args;
-    return {
-      mode: "definir",
-      field: field ?? null,
-      value: valueParts.join(" ").trim() || null,
-    };
-  }
-
-  const [field, ...valueParts] = args;
-  return {
-    mode: "definir",
-    field: field ?? null,
-    value: valueParts.join(" ").trim() || null,
-  };
-}
-
-function buildConfigEmbed(guildId) {
-  const c = {
-    prefix: getServerConfig(guildId, 'prefix'),
-    generateMessage: getServerConfig(guildId, 'generateMessage'),
-    speakMessage: getServerConfig(guildId, 'speakMessage'),
-    limitChar: getServerConfig(guildId, 'limitChar')
-  };
-  const p = c.prefix;
+function buildMainEmbed(guildId) {
+  const prefix = getServerConfig(guildId, 'prefix') || "!";
+  const generate = getServerConfig(guildId, 'generateMessage') ?? false;
+  const speak = getServerConfig(guildId, 'speakMessage') ?? false;
+  const limit = getServerConfig(guildId, 'limitChar') ?? 4000;
 
   return new EmbedBuilder()
     .setColor("#5865F2")
-    .setTitle("⚙️ Configuração do bot")
-    .setDescription(
-      "Use o comando para ver ou alterar as configurações do bot neste servidor."
-    )
+    .setTitle("⚙️ Configurações do Servidor")
+    .setDescription("Escolha uma opção abaixo para alterar:")
     .addFields(
-      {
-        name: "`prefix` — Prefixo",
-        value:
-          `**Atual:** \`${c.prefix}\`\n` +
-          "Comandos no canal começam com esse caractere (ex.: `$stats`).",
-        inline: false,
-      },
-      {
-        name: "`random` / `generate` — IA no chat",
-        value:
-          `**Atual:** **${c.generateMessage ? "ligado" : "desligado"}**\n` +
-          "Se ligado, o bot pode responder mensagens aleatórias com IA em canais permitidos.",
-        inline: false,
-      },
-      {
-        name: "`speak` — Voz (TTS)",
-        value:
-          `**Atual:** **${c.speakMessage ? "ligado" : "desligado"}**\n` +
-          "Se ligado, respostas da IA podem ser lidas em call (quando configurado).",
-        inline: false,
-      },
-      {
-        name: "`limitChar` — Limite de caracteres (mês)",
-        value:
-          `**Atual:** **${c.limitChar ?? 4000}**\n` +
-          "Limite inicial de caracteres por usuário por mês.",
-        inline: false,
-      },
-      {
-        name: "Exemplos (prefixo)",
-        value:
-          `\`${p}config\` — abre este resumo\n` +
-          `\`${p}config prefix !\` — prefixo vira \`!\`\n` +
-          `\`${p}config random off\` — desliga respostas IA\n` +
-          `\`${p}config speak on\` — liga TTS\n` +
-          `\`${p}config limitChar 4000\` — limite vira 4000`,
-        inline: false,
-      }
-    );
+      { name: "Prefixo", value: `\`${prefix}\``, inline: true },
+      { name: "IA no Chat", value: generate ? "✅ Ligado" : "❌ Desligado", inline: true },
+      { name: "TTS no Voice", value: speak ? "✅ Ligado" : "❌ Desligado", inline: true },
+      { name: "Limite de Chars", value: `${limit}`, inline: true }
+    )
+    .setFooter({ text: "Apenas administradores podem alterar • Expira em 60 segundos" });
 }
 
 export async function execute(client, data) {
-  const parsed = parseArgs(data);
   const guildId = data.guildId;
+  const userId = data.userId;
   const isAdmin = data.isAdmin();
 
   if (!isAdmin) {
-    return data.reply({ content: "❌ Apenas administradores podem usar este comando.", ephemeral: true });
+    return data.reply({ 
+      content: "❌ Apenas administradores podem usar este comando.", 
+      ephemeral: true 
+    });
   }
 
-  if (parsed.mode === "ver") {
-    return data.reply({ embeds: [buildConfigEmbed(guildId)] });
-  }
+  const embed = buildMainEmbed(guildId);
 
-  const { field, value } = parsed;
-
-  if (!field) {
-    return data.reply({ embeds: [buildConfigEmbed(guildId)] });
-  }
-
-  if (!value && field.toLowerCase() !== "prefix") {
-    return data.reply(
-      `Informe o valor. Ex.: \`${getBotPrefix(guildId)}config random on\` ou \`/config definir\`.`
+  const selectMenu = new StringSelectMenuBuilder()
+    .setCustomId(`config_select_${userId}`)
+    .setPlaceholder("Escolha uma configuração para alterar...")
+    .addOptions(
+      configOptions.map(opt => ({
+        label: opt.label,
+        description: opt.description,
+        value: opt.value
+      }))
     );
-  }
 
-  const normalizedField = field.toLowerCase();
-  const normalizedValue = value?.trim();
+  const cancelButton = new ButtonBuilder()
+    .setCustomId(`config_cancel_${userId}`)
+    .setLabel("Cancelar")
+    .setStyle(ButtonStyle.Danger);
 
-  if (normalizedField === "prefix") {
-    if (!normalizedValue) {
-      return data.reply("Forneça o novo prefixo. Ex.: `$config prefix !`");
+  const row1 = new ActionRowBuilder().addComponents(selectMenu);
+  const row2 = new ActionRowBuilder().addComponents(cancelButton);
+
+  const response = await data.reply({
+    embeds: [embed],
+    components: [row1, row2],
+    ephemeral: true 
+  });
+
+  // Coletor unificado para Menu e Botões
+  const collector = response.createMessageComponentCollector({
+    time: 120000, // 2 minutos
+    filter: i => i.user.id === userId
+  });
+
+  collector.on('collect', async (interaction) => {
+    
+    // Tratamento para o Menu de Seleção
+    if (interaction.isStringSelectMenu()) {
+      const selectedValue = interaction.values[0];
+      const option = configOptions.find(o => o.value === selectedValue);
+
+      await interaction.deferUpdate();
+
+      if (option.type === "boolean") {
+        const yesBtn = new ButtonBuilder()
+          .setCustomId(`config_set_${selectedValue}_true_${userId}`)
+          .setLabel("Ligar ✅")
+          .setStyle(ButtonStyle.Success);
+
+        const noBtn = new ButtonBuilder()
+          .setCustomId(`config_set_${selectedValue}_false_${userId}`)
+          .setLabel("Desligar ❌")
+          .setStyle(ButtonStyle.Danger);
+
+        const backBtn = new ButtonBuilder()
+          .setCustomId(`config_back_${userId}`)
+          .setLabel("Voltar")
+          .setStyle(ButtonStyle.Secondary);
+
+        const btnRow = new ActionRowBuilder().addComponents(yesBtn, noBtn, backBtn);
+
+        await interaction.editReply({
+          content: `**${option.label}**\nEscolha o novo estado:`,
+          embeds: [],
+          components: [btnRow]
+        });
+
+      } else {
+        await interaction.editReply({
+          content: `Digite o novo valor para **${option.label}**:\nExemplo: \`!\` ou \`5000\``,
+          embeds: [],
+          components: []
+        });
+
+        const msgCollector = interaction.channel.createMessageCollector({
+          filter: m => m.author.id === userId,
+          time: 30000,
+          max: 1
+        });
+
+        msgCollector.on('collect', async (msg) => {
+          let newValue = msg.content.trim();
+
+          if (option.type === "number") {
+            const num = parseInt(newValue);
+            if (isNaN(num) || num < 0) {
+              return msg.reply("❌ Valor inválido. Use um número positivo.");
+            }
+            newValue = num;
+          }
+
+          setServerConfig(guildId, selectedValue, newValue);
+          await msg.delete().catch(() => {});
+
+          const successEmbed = buildMainEmbed(guildId);
+          await interaction.editReply({
+            content: `✅ **${option.label}** atualizado com sucesso!`,
+            embeds: [successEmbed],
+            components: [new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId(`config_back_${userId}`).setLabel("Voltar ao Menu").setStyle(ButtonStyle.Secondary)
+            )]
+          });
+        });
+      }
+    } 
+    
+    // Tratamento para os Botões
+    else if (interaction.isButton()) {
+      const customId = interaction.customId;
+
+      await interaction.deferUpdate();
+
+      // Botão Cancelar
+      if (customId === `config_cancel_${userId}`) {
+        collector.stop();
+        await interaction.editReply({
+          content: "❌ Configuração cancelada.",
+          embeds: [],
+          components: []
+        });
+        return;
+      }
+
+      // Botão Voltar
+      if (customId === `config_back_${userId}`) {
+        const mainEmbed = buildMainEmbed(guildId);
+        await interaction.editReply({
+          content: null,
+          embeds: [mainEmbed],
+          components: [row1, row2]
+        });
+        return;
+      }
+
+      if (customId.startsWith("config_set_")) {
+        const parts = customId.split("_");
+        const settingName = parts[2]; // ex: generateMessage
+        const newValueStr = parts[3]; // 'true' ou 'false'
+        const newValue = newValueStr === "true";
+
+        setServerConfig(guildId, settingName, newValue);
+
+        const successEmbed = buildMainEmbed(guildId);
+        
+        await interaction.editReply({
+          content: `✅ Configuração atualizada com sucesso!`,
+          embeds: [successEmbed],
+          components: [new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`config_back_${userId}`).setLabel("Voltar ao Menu").setStyle(ButtonStyle.Secondary)
+          )]
+        });
+      }
     }
-    setServerConfig(guildId, 'prefix', normalizedValue);
-    return data.reply(`Prefixo atualizado para: \`${normalizedValue}\``);
-  }
+  });
 
-  if (normalizedField === "random" || normalizedField === "generate") {
-    const bool = boolize(normalizedValue);
-    if (bool === null) {
-      return data.reply("Valor inválido para **random**. Use **on**, **off**, **sim**, **não**.");
-    }
-    setServerConfig(guildId, 'generateMessage', bool);
-    return data.reply(
-      `Respostas aleatórias com IA (**generateMessage**): **${bool ? "ligado" : "desligado"}**.`
-    );
-  }
-
-  if (normalizedField === "speak" || normalizedField === "speakmessage") {
-    const bool = boolize(normalizedValue);
-    if (bool === null) {
-      return data.reply("Valor inválido para **speak**. Use **on** ou **off**.");
-    }
-    setServerConfig(guildId, 'speakMessage', bool);
-    return data.reply(
-      `Fala no voice (**speakMessage**): **${bool ? "ligado" : "desligado"}**.`
-    );
-  }
-
-  if (normalizedField === "limit" || normalizedField === "limitChar" || normalizedField === "limitchar") {
-    const num = parseInt(normalizedValue);
-    if (isNaN(num) || num < 0) {
-      return data.reply("Valor inválido para **limitChar**. Use um número positivo.");
-    }
-    setServerConfig(guildId, 'limitChar', num);
-    return data.reply(`Limite de caracteres atualizado para: **${num}**.`);
-  }
-
-  return data.reply({
-    embeds: [buildConfigEmbed(guildId)],
-    content: "❌ Campo não reconhecido. Veja a lista acima.",
+  collector.on('end', () => {
+    response.edit({ components: [] }).catch(() => {});
   });
 }

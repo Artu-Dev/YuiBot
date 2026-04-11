@@ -1,30 +1,76 @@
-import { SlashCommandBuilder } from "discord.js";
-import { addChars, addUserPropertyByAmount, getOrCreateUser, getRandomUserId, getUser, reduceChars, setUserProperty } from "../database.js";
-import { applyClassModifier, getClassModifier, ESCUDO_BLOCK_BASE } from "../functions/classes.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import {
+  addChars,
+  addUserPropertyByAmount,
+  getOrCreateUser,
+  getRandomUserId,
+  getUser,
+  reduceChars,
+  setUserProperty,
+  hasEscudo,
+} from "../database.js";
+import {
+  applyClassModifier,
+  getClassModifier,
+  ESCUDO_BLOCK_BASE,
+} from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
-import { sample } from 'es-toolkit';
+import { sample } from "es-toolkit";
 import { getTodaysEvent } from "../functions/getTodaysEvent.js";
 
 // ==================== CONFIG ====================
 const STEAL_PERCENTAGE_MIN = 0.05;
-const STEAL_PERCENTAGE_MAX = 0.30;
+const STEAL_PERCENTAGE_MAX = 0.3;
 const SUCCESS_CHANCE_TARGETED = 0.22;
 const SUCCESS_CHANCE_RANDOM = 0.38;
 const PENALTY_TARGETED = 150;
 const PENALTY_RANDOM = 100;
 const ROUBO_LIMIT_PER_DAY = 3;
 const ROUBO_CHANCE_MULTIPLIER = 1.0;
+const LOADING_TIME = 5000;
 
 export const name = "roubar";
-
 export const data = new SlashCommandBuilder()
   .setName("roubar")
-  .setDescription("Rouba caracteres de outro usuário (ou aleatório se não especificar).")
-  .addUserOption(option =>
-    option.setName("usuário")
-      .setDescription("O usuário para roubar (opcional, aleatório se não especificar)")
-      .setRequired(false)
+  .setDescription(
+    "Rouba caracteres de outro usuário (ou aleatório se não especificar).",
+  )
+  .addUserOption((option) =>
+    option
+      .setName("usuário")
+      .setDescription(
+        "O usuário para roubar (opcional, aleatório se não especificar)",
+      )
+      .setRequired(false),
   );
+
+const loadingPhrases = {
+  random: [
+    "Amolando o facão pra peitar alguém aleatório...",
+    "Olhando pros lados pra ver quem tá moscando...",
+    "Correndo pelo servidor atrás de vítima fácil...",
+    "Se infiltrando no meio da galera pra escolher o otário...",
+    "Preparando o golpe do século em alguém aleatório...",
+    "Afando a faca e escolhendo o próximo otário do dia...",
+  ],
+  targeted: [
+    "Amolando o facão pra peitar <user>...",
+    "Preparando o plano perfeito pra roubar <user>...",
+    "Chegando de mansinho por trás de <user>...",
+    "Marcando <user> como alvo principal...",
+    "Mirando no <user> sem piedade...",
+    "Aquecendo as mãos pra foder (nao sexualmente) <user>...",
+  ],
+};
+
+function getRandomLoadingPhrase(isTargeted, victimName) {
+  const list = isTargeted ? loadingPhrases.targeted : loadingPhrases.random;
+  let phrase = sample(list);
+  if (isTargeted) {
+    phrase = phrase.replace("<user>", `**${victimName}**`);
+  }
+  return phrase;
+}
 
 function parseArgs(data) {
   if (data.fromInteraction) {
@@ -53,154 +99,175 @@ export async function execute(client, data) {
     addUserPropertyByAmount("daily_robberies", userId, guildId, 1);
     daily_robberies += 1;
   } else {
-    await data.reply(`Tu já roubou alguém ${ROUBO_LIMIT_PER_DAY}x nas últimas 24 horas seu maldito!`);
-    return;
+    return data.reply(
+      `Tu já roubou alguém ${ROUBO_LIMIT_PER_DAY}x hoje, seu maldito!`,
+    );
   }
 
+  if (mentionedUser && mentionedUser.id === userId) {
+    return data.reply("Você não pode roubar a si mesmo seu esquisito.");
+  }
+
+  let victimId, victimData, victimName;
   const isTargeted = !!mentionedUser;
-
-  if (isTargeted && mentionedUser.id === userId) {
-    await data.reply("Você não pode roubar a si mesmo seu esquisito");
-    return;
-  }
-
-  let victimId, victimData;
 
   if (isTargeted) {
     victimData = getUser(mentionedUser.id, guildId);
-    if (!victimData) {
-      await data.reply("Esse usuário ainda não está no banco de dados. Ele precisa mandar mensagem antes.");
-      return;
-    }
+    if (!victimData)
+      return data.reply("Esse usuário ainda não está no banco de dados.");
     victimId = mentionedUser.id;
+    victimName = victimData.display_name || mentionedUser.username;
   } else {
     victimId = getRandomUserId(guildId, userId);
-    if (!victimId) {
-      await data.reply("Não tem ninguém pra roubar no momento.");
-      return;
-    }
+    if (!victimId) return data.reply("Não tem ninguém pra roubar no momento.");
     victimData = getUser(victimId, guildId);
-    if (!victimData) {
-      await data.reply("Erro interno: não foi possível encontrar a vítima.");
-      return;
-    }
+    victimName = victimData.display_name || "um usuário misterioso";
   }
 
   const victimChars = Number(victimData.charLeft) || 0;
-  const victimName = victimData.display_name || mentionedUser?.username || "um usuário desconhecido";
-
   if (victimChars <= 0) {
-    await data.reply(`${displayName} tentou roubar ${victimName}, mas ele não tem caracteres para roubar.`);
-    return;
+    return data.reply(
+      `${displayName} tentou roubar ${victimName}, mas ele tá liso (0 chars).`,
+    );
   }
 
-  const { hasEscudo } = await import("../database.js");
+  const loadingEmbed = new EmbedBuilder()
+    .setColor("#FF0000")
+    .setTitle("🔴 Iniciando Roubo...")
+    .setDescription(getRandomLoadingPhrase(isTargeted, victimName))
+    .setFooter({ text: "Isso pode levar alguns segundos..." });
 
-  const userClass = user.user_class || 'none';
-  const victimClass = victimData.user_class || 'none';
+  const loadingMsg = await data.reply({ embeds: [loadingEmbed] });
+
+  await new Promise((resolve) => setTimeout(resolve, LOADING_TIME));
+
+  const userClass = user.user_class || "none";
+  const victimClass = victimData.user_class || "none";
   const event = await getTodaysEvent(guildId);
 
-  let escudoUserHint = "";
-  let successChance = isTargeted ? SUCCESS_CHANCE_TARGETED : SUCCESS_CHANCE_RANDOM;
-  successChance = applyClassModifier(successChance, isTargeted ? 'singleRobSuccess' : 'robSuccess', userClass);
+  let successChance = isTargeted
+    ? SUCCESS_CHANCE_TARGETED
+    : SUCCESS_CHANCE_RANDOM;
+  successChance = applyClassModifier(
+    successChance,
+    isTargeted ? "singleRobSuccess" : "robSuccess",
+    userClass,
+  );
   successChance *= ROUBO_CHANCE_MULTIPLIER;
 
-  if (event && event.robSuccess !== null) {
-    successChance *= event.robSuccess;
+  if (event) {
+    if (event.robSuccess !== null) successChance *= event.robSuccess;
+    if (event.eventKey === "rob_100") successChance = 1.0;
+    if (event.eventKey === "rob_0") successChance = 0.0;
   }
 
-  if (event.eventKey === "rob_100") {
-    successChance = 1.0;
-  } else if (event.eventKey === "rob_0") {
-    successChance = 0.0;
+  const penalty = applyClassModifier(
+    isTargeted ? PENALTY_TARGETED : PENALTY_RANDOM,
+    "robCost",
+    userClass,
+  );
+  const victimDefense = getClassModifier(victimClass, "robDefense");
+  let escudoHint = "";
+
+  if (hasEscudo(victimId, guildId)) {
+    const escudoBonus = getClassModifier(victimClass, "escudoBonus");
+    const blockChance = Math.min(
+      1,
+      Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus),
+    );
+    successChance *= 1 - blockChance;
+    escudoHint = `\n\n_🛡️ A vítima tinha escudo ativo — bloqueou ${Math.round(blockChance * 100)}% da sua chance._`;
   }
 
-  const penalty = applyClassModifier(isTargeted ? PENALTY_TARGETED : PENALTY_RANDOM, 'robCost', userClass);
-  const victimDefense = getClassModifier(victimClass, 'robDefense');
-  const victimHasEscudo = hasEscudo(victimId, guildId);
+  const baseStolen = Math.max(
+    1,
+    Math.floor(
+      victimChars *
+        (Math.random() * (STEAL_PERCENTAGE_MAX - STEAL_PERCENTAGE_MIN) +
+          STEAL_PERCENTAGE_MIN),
+    ),
+  );
+  const stolenAmount = Math.max(
+    1,
+    Math.floor(
+      baseStolen *
+        (1 + getClassModifier(userClass, "robDamage") - victimDefense),
+    ),
+  );
 
-  if (victimHasEscudo) {
-    const escudoBonus = getClassModifier(victimClass, 'escudoBonus');
-    const blockChance = Math.min(1, Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus));
-    successChance *= (1 - blockChance);
-    escudoUserHint = `\n\n_A vítima tinha **escudo** ativo — bloqueou ${Math.round(blockChance * 100)}% da sua chance._`;
-  }
-
-  const baseStolen = Math.max(1, Math.floor(victimChars * (Math.random() * (STEAL_PERCENTAGE_MAX - STEAL_PERCENTAGE_MIN) + STEAL_PERCENTAGE_MIN)));
-  const stolenAmount = Math.max(1, Math.floor(baseStolen * (1 + getClassModifier(userClass, 'robDamage') - victimDefense)));
-
-  const successTargetedReplies = [
-    `✅ ${displayName} foi direto atrás de ${victimName} e conseguiu roubar ${stolenAmount} caracteres...`,
-    `✅ ${displayName} foi sem dó em ${victimName} e saiu com ${stolenAmount} caracteres no cu, sem ser visto.`,
-    `✅ ${displayName} sacou o brinquedo de furar moletom e pediu a ${victimName}, ${stolenAmount} caracteres, ele aceitou numa boa.`
-  ];
-
-  const successRandomReplies = [
-    `✅ ${displayName} roubou ${stolenAmount} caracteres de ${victimName} na covardia!`,
-    `✅ ${victimName} moscou feiao e ${displayName} sem piedade alguma levou ${stolenAmount} chars de seu patrimonio.`,
-    `✅ ${displayName} foi safado e roubou ${stolenAmount} caracteres de ${victimName}. (sem ele perceber rsrs)`
-  ];
-
-  const failTargetedReplies = [
-    `❌ ${displayName} tentou roubar ${victimName} na surdina... mas ${victimName} pegou com a mao na jaca. ${displayName} perdeu pra ele ${penalty} caracteres igual um betinha.`,
-    `❌ ${victimName} estava paranoico com os cara no teto, viu ${displayName} chegando, pegou a makita e passou a mao em ${penalty} caracteres.`,
-    `❌ deu ruim menó! ${displayName} foi pego ao tentar roubar ${victimName} e teve que fazer um pix ${penalty} chars pra ele.`
-  ];
-
-  const failRandomReplies = [
-    `❌ ${displayName} foi roubar e se fodeu, foi pego no flagra e perdeu ${penalty} caracteres para ${victimName}!`,
-    `❌ ${displayName} se deu mal na ação e acabou doando contra sua vontade ${penalty} caracteres para ${victimName}.`,
-    `❌ ${displayName} foi burrao e acabou doando ${penalty} chars pra ${victimName} viva a benevolencia.`
-  ];
-
+  // ====================== RESULTADO ======================
   const success = Math.random() < successChance;
 
   addUserPropertyByAmount("total_robberies", userId, guildId, 1);
 
+  let finalReply = "";
+
   if (success) {
     addChars(userId, guildId, stolenAmount);
     reduceChars(victimId, guildId, stolenAmount);
-    
-    const replyText = isTargeted
-    ? sample(successTargetedReplies)
-    : sample(successRandomReplies);
 
-    await data.reply(replyText + escudoUserHint);
+    const successReplies = isTargeted
+      ? [
+          `✅ ${displayName} foi direto atrás de ${victimName} e conseguiu roubar ${stolenAmount} caracteres...`,
+          `✅ ${displayName} foi sem dó em ${victimName} e saiu com ${stolenAmount} caracteres no cu, sem ser visto.`,
+          `✅ ${displayName} sacou o brinquedo de furar moletom e pediu a ${victimName}, ${stolenAmount} caracteres, ele aceitou numa boa.`,
+        ]
+      : [
+          `✅ ${displayName} roubou ${stolenAmount} caracteres de ${victimName} na covardia!`,
+          `✅ ${victimName} moscou feiao e ${displayName} sem piedade alguma levou ${stolenAmount} chars de seu patrimonio.`,
+          `✅ ${displayName} foi safado e roubou ${stolenAmount} caracteres de ${victimName}. (sem ele perceber rsrs)`,
+        ];
 
-    if (isTargeted) {
-      const bountyValue = Number(victimData.total_bounty_value) || 0;
-      const bountyPlacer = victimData.bounty_placer;
-
-      if (bountyValue > 0 && bountyPlacer) {
-        addChars(userId, guildId, bountyValue);
-        addUserPropertyByAmount("bounties_claimed", userId, guildId, 1);
-
-        setUserProperty("bounty_placer", victimId, guildId, null);
-        setUserProperty("total_bounty_value", victimId, guildId, 0);
-
-        await data.followUp(
-          `💰 **Recompensa coletada!** ${displayName} pegou os **${bountyValue} chars** que estavam na cabeça de ${victimName}!`
-        );
-      }
-    }
+    finalReply = sample(successReplies) + escudoHint;
   } else {
     reduceChars(userId, guildId, penalty);
     addChars(victimId, guildId, penalty);
     setUserProperty("consecutive_robbery_losses", userId, guildId, 0);
 
-    const replyText = isTargeted
-      ? sample(failTargetedReplies)
-      : sample(failRandomReplies);
+    const failReplies = isTargeted
+      ? [
+          `❌ ${displayName} tentou roubar ${victimName} na surdina... mas ${victimName} pegou com a mao na jaca. ${displayName} perdeu pra ele ${penalty} caracteres igual um betinha.`,
+          `❌ ${victimName} estava paranoico com os cara no teto, viu ${displayName} chegando, pegou a makita e passou a mao em ${penalty} caracteres.`,
+          `❌ deu ruim menó! ${displayName} foi pego ao tentar roubar ${victimName} e teve que fazer um pix ${penalty} chars pra ele.`,
+        ]
+      : [
+          `❌ ${displayName} foi roubar um aleatorio e se fodeu, foi pego no flagra e perdeu ${penalty} caracteres para ${victimName}!`,
+          `❌ ${displayName} se deu mal na ação e acabou doando contra sua vontade ${penalty} caracteres para ${victimName}.`,
+          `❌ ${displayName} foi burrao e acabou doando ${penalty} chars pra ${victimName} viva a benevolencia.`,
+        ];
 
-    await data.reply(replyText + escudoUserHint);
+    finalReply = sample(failReplies) + escudoHint;
   }
 
-  if (daily_robberies >= ROUBO_LIMIT_PER_DAY) {
-    await data.followUp("⚠️ Você atingiu o limite de 3 roubos por dia!");
-  }
+  const resultEmbed = new EmbedBuilder()
+    .setColor(success ? "#00FF00" : "#FF0000")
+    .setTitle(success ? "Roubo deu bom!" : "Roubo deu B.O!")
+    .setDescription(finalReply);
 
-  await awardAchievementInCommand(client, data, "primeiro_roubo");
-  await awardAchievementInCommand(client, data, "dependente"); 
-  await awardAchievementInCommand(client, data, "ladrao_pessimo"); 
-  
+  await loadingMsg.edit({ embeds: [resultEmbed] });
+
+  if (success && isTargeted) {
+    const bountyValue = Number(victimData.total_bounty_value) || 0;
+    const bountyPlacer = victimData.bounty_placer;
+
+    if (bountyValue > 0 && bountyPlacer) {
+      addChars(userId, guildId, bountyValue);
+      addUserPropertyByAmount("bounties_claimed", userId, guildId, 1);
+
+      setUserProperty("bounty_placer", victimId, guildId, null);
+      setUserProperty("total_bounty_value", victimId, guildId, 0);
+
+      await data.followUp(
+        `💰 **Recompensa coletada!** ${displayName} pegou os **${bountyValue} chars** que estavam na cabeça de ${victimName}!`,
+      );
+    }
+
+    if (daily_robberies >= ROUBO_LIMIT_PER_DAY) {
+      await data.followUp("⚠️ Você atingiu o limite de 3 roubos por dia!");
+    }
+
+    await awardAchievementInCommand(client, data, "primeiro_roubo");
+    await awardAchievementInCommand(client, data, "dependente");
+    await awardAchievementInCommand(client, data, "ladrao_pessimo");
+  }
 }

@@ -41,13 +41,8 @@ export async function execute(client, data) {
     return data.reply({ embeds: [embed] });
   }
 
-  // Criar um objeto message-like para compatibilidade
-  const fakeMessage = {
-    guild: { id: data.guildId },
-    member: { voice: { channel: voiceChannel } }
-  };
 
-  const connection = joinCall(fakeMessage);
+  const connection = joinCall(data);
   if (!connection) {
     const embed = new EmbedBuilder()
       .setColor("#FF6B6B")

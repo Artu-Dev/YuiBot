@@ -33,65 +33,52 @@ function getMode(data) {
   return "info";
 }
 
-function formatCostDelta(costMod) {
-  const pct = Math.round(costMod * 100);
-  if (pct === 0) return "sua classe não altera o preço base.";
-  const dir = pct > 0 ? "aumenta" : "reduz";
-  return `sua classe **${dir}** o preço em **${Math.abs(pct)}%** em relação aos **${ESCUDO_COST_BASE}** chars base (só custo, não afeta bloqueio).`;
-}
-
 function escudoInfoEmbed(user) {
   const clsKey = user.user_class || "none";
   const cls = CLASSES[clsKey] ?? CLASSES.none;
+
   const finalCost = applyClassModifier(ESCUDO_COST_BASE, "escudoCost", clsKey);
   const bonusMod = cls.modifiers?.escudoBonus ?? 0;
   const costMod = cls.modifiers?.escudoCost ?? 0;
 
   const blockRate = ESCUDO_BLOCK_BASE + bonusMod;
   const blockPct = Math.min(100, Math.max(0, Math.round(blockRate * 100)));
-  const deltaPp = Math.round(bonusMod * 100);
-  const deltaLine =
-    deltaPp === 0
-      ? "sua classe **não** altera a chance (fica na base)."
-      : deltaPp > 0
-        ? `sua classe **soma +${deltaPp} p.p.** na base (**+** = mais chance de bloquear).`
-        : `sua classe **soma ${deltaPp} p.p.** na base (**−** = menos chance de bloquear).`;
+
+  const pctCost = Math.round(costMod * 100);
+  const costText = pctCost === 0 
+    ? "preço normal" 
+    : pctCost > 0 
+      ? `+${pctCost}% mais caro` 
+      : `${pctCost}% mais barato`;
+
+  const defenseText = bonusMod === 0 
+    ? "chance normal" 
+    : bonusMod > 0 
+      ? `+${Math.round(bonusMod * 100)}% de defesa` 
+      : `${Math.round(bonusMod * 100)}% menos defesa`;
 
   return new EmbedBuilder()
     .setColor("#3BA55D")
-    .setTitle("🛡️ Escudo — informações")
-    .setDescription(
-      "Com **escudo ativo**, cada tentativa de roubo contra você pode ser **bloqueada** (você não perde chars nessa tentativa).\n\n" +
-        "**Preço** e **bloqueio** são coisas diferentes: o desconto no preço **não** muda a % de bloqueio."
-    )
+    .setTitle("🛡️ Escudo — Informações")
+    .setDescription("Com o escudo ativo, a chance de ser roubado é reduzida drasticamente.")
     .addFields(
       {
-        name: "💰 Quanto você paga",
-        value:
-          `**${finalCost.toLocaleString()}** chars para ativar\n` +
-          `(${formatCostDelta(costMod)})`,
-        inline: false,
+        name: "💰 Quanto custa",
+        value: `**${finalCost.toLocaleString()} chars**\n_${costText}_`,
+        inline: true,
+      },
+      {
+        name: "🛡️ Quanto defende",
+        value: `**${blockPct}%** de chance de bloquear roubo\n_${defenseText}_`,
+        inline: true,
       },
       {
         name: "⏱️ Duração",
-        value: `**${ESCUDO_HOURS} horas** após comprar`,
-        inline: true,
-      },
-      {
-        name: "🚫 Chance de bloquear o roubo",
-        value:
-          `**~${blockPct}%** com escudo ativo\n` +
-          `• Base do bot: **${Math.round(ESCUDO_BLOCK_BASE * 100)}%**\n` +
-          `• ${deltaLine}\n` +
-          `_p.p. = pontos percentuais somados à base (não é “% de desconto” do escudo)._`,
-        inline: false,
-      },
-      {
-        name: "Classe",
-        value: `**${cls.name}**`,
+        value: "**24 horas**",
         inline: true,
       }
-    );
+    )
+    .setFooter({ text: "Preço e defesa são alterados pela sua classe" });
 }
 
 export async function execute(client, data) {

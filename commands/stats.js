@@ -90,12 +90,15 @@ function parseAchievements(user) {
 }
 
 function formatAchievements(unlocked) {
-  const keys = Object.keys(unlocked);
-  if (!keys.length) return "_Nenhuma ainda_";
-  return keys
-    .map((key) => {
-      const ach = achievements[key];
-      return ach ? `• ${ach.emoji} **${ach.name}**` : `• 🏆 ${key}`;
+  const unlockedKeys = Object.keys(unlocked);
+  if (!unlockedKeys.length) return "_Nenhuma ainda_";
+
+  const achMap = new Map(achievements.map(ach => [ach.key, ach]));
+
+  return unlockedKeys
+    .map(key => {
+      const ach = achMap.get(key);
+      return ach ? `• ${ach.icon} **${ach.title}**` : `• 🏆 ${key}`;
     })
     .join("\n");
 }
@@ -132,7 +135,7 @@ function embedResumo(user, discordUser, guildId) {
   const { name, icon, thumb } = baseAuthor(discordUser);
   const unlocked = parseAchievements(user);
   const achCount = Object.keys(unlocked).length;
-  const totalAch = Object.keys(achievements).length;
+  const totalAch = achievements.length;
 
   const eb = new EmbedBuilder()
     .setColor("#8A2BE2")
@@ -142,7 +145,7 @@ function embedResumo(user, discordUser, guildId) {
         name: "💎 Conta",
         value:
           `**Chars:** ${(user.charLeft ?? 0).toLocaleString()}\n` +
-          `**Classe:** ${cls?.name ?? "Nenhuma"}`,
+          `**Classe:** ${cls?.name ?? "Nenhum"}`,
         inline: true,
       },
       {
@@ -174,7 +177,7 @@ function embedConquistas(user, discordUser) {
   const unlocked = parseAchievements(user);
   const pretty = formatAchievements(unlocked);
   const { icon, thumb } = baseAuthor(discordUser);
-  const total = Object.keys(achievements).length;
+  const total = achievements.length;
   const n = Object.keys(unlocked).length;
   const label = discordDisplayLabel(discordUser);
 

@@ -26,373 +26,555 @@ export const achievementsByUpdate = {
   consecutive_robbery_losses: ["ladrao_pessimo"]
 };
 
-export const achievements = {
-  ghost: {
+
+export const achievements = [
+  {
     id: 1,
-    name: "Fantasma",
-    charPoints: 5000,
-    emoji: "👻",
+    key: "ghost",
+    title: "Fantasma",
+    icon: "👻",
     description: "30 dias sem mensagens e voltou",
+    charPoints: 5000,
+    category: "special",
+    secret: false,
+    hiddenDescription: null,
     check: () => false,
   },
-
-  caps_addict: {
+  {
+    id: 2,
+    key: "archaeologist",
+    title: "O Arqueólogo",
+    icon: "🏺",
+    description: "Desenterre o passado...",
+    hiddenDescription: "Respondeu a uma mensagem de mais de 1 ano atrás",
+    charPoints: 3000,
+    category: "special",
+    secret: true,
+    check: () => false,
+  },
+  {
     id: 3,
-    charPoints: 800,
-    name: "VICIADO EM CAPS LOCK",
-    emoji: "📢",
+    key: "the_chosen_one",
+    title: "O Escolhido",
+    icon: "✨",
+    description: "Você tem 0.01% de sorte",
+    hiddenDescription: "chance aleatoria de ao usar um comando ganhar essa conquista",
+    charPoints: 10000,
+    category: "special",
+    secret: true,
+    check: () => false,
+  },
+  {
+    id: 4,
+    key: "speedrun",
+    title: "Flash",
+    icon: "⚡",
+    description: "Digitou e enviou uma mensagem em menos de 1 segundo",
+    charPoints: 1500,
+    category: "action",
+    secret: false,
+    hiddenDescription: null,
+    check: () => false,
+  },
+  {
+    id: 3,
+    key: "caps_addict",
+    title: "VICIADO EM CAPS LOCK",
+    icon: "📢",
     description: "50 mensagens gritando",
+    charPoints: 800,
+    category: "activity",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.caps_lock_messages >= 50,
   },
-
-  night_owl: {
+  {
     id: 5,
-    charPoints: 1000,
-    name: "Coruja Noturna",
-    emoji: "🦉",
+    key: "night_owl",
+    title: "Coruja Noturna",
+    icon: "🦉",
     description: "Mandou 100 mensagens na madrugada (2h-6h)",
+    charPoints: 1000,
+    category: "activity",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.night_owl_messages >= 100,
   },
-
-  popular: {
+  {
     id: 6,
-    charPoints: 2000,
-    name: "Popularzinho",
-    emoji: "⭐",
+    key: "popular",
+    title: "Popularzinho",
+    icon: "⭐",
     description: "200 menções recebidas",
+    charPoints: 2000,
+    category: "social",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.mentions_received >= 200,
   },
-
-  stalker: {
+  {
     id: 7,
-    charPoints: 1500,
-    name: "Stalker",
-    emoji: "👀",
+    key: "stalker",
+    title: "Stalker",
+    icon: "👀",
     description: "Mencionou os outros 300 vezes",
+    charPoints: 1500,
+    category: "social",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.mentions_sent >= 300,
   },
-
-  question_everything: {
+  {
     id: 8,
-    charPoints: 2000,
-    name: "Curioso",
-    emoji: "❓",
+    key: "question_everything",
+    title: "Curioso",
+    icon: "❓",
     description: "Fez 150 perguntas no chat",
+    charPoints: 2000,
+    category: "activity",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.question_marks >= 150,
   },
-
-  chatterbox: {
+  {
     id: 11,
-    charPoints: 1850,
-    name: "Tagarela",
-    emoji: "💬",
+    key: "chatterbox",
+    title: "Tagarela",
+    icon: "💬",
     description: "1.000 mensagens enviadas",
+    charPoints: 1850,
+    category: "activity",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.messages_sent >= 1000,
   },
-
-  first_message: {
+  {
     id: 12,
-    charPoints: 100,
-    name: "Primeiro Passo",
-    emoji: "👣",
+    key: "first_message",
+    title: "Primeiro Passo",
+    icon: "👣",
     description: "Enviou sua primeira mensagem",
+    charPoints: 100,
+    category: "activity",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.messages_sent >= 1,
   },
-
-  good_morning: {
+  {
     id: 13,
-    charPoints: 400,
-    name: "Acorda!!!",
-    emoji: "☀️",
+    key: "good_morning",
+    title: "Acorda!!!",
+    icon: "☀️",
     description: "Mandou 'bom dia' no chat",
+    charPoints: 400,
+    category: "activity",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.morning_messages >= 1,
   },
-
-  monologo: {
+  {
     id: 14,
-    charPoints: 400,
-    name: "Esquizofrenico",
-    emoji: "🗣️",
+    key: "monologo",
+    title: "Esquizofrenico",
+    icon: "🗣️",
     description: "10 mensagens seguidas falando sozinho",
+    charPoints: 400,
+    category: "activity",
     check: (stats) => stats.monologo_streak >= 10,
+    secret: false,
+    hiddenDescription: null,
   },
-
-  devil_message: {
+  {
     id: 15,
-    charPoints: 1500,
-    name: "DIABOLICO",
-    emoji: "😈",
+    key: "devil_message",
+    title: "DIABOLICO",
+    icon: "😈",
     description: "Mandou mensagem exatamente às 03:33",
+    charPoints: 1500,
+    category: "activity",
+    secret: true,
+    hiddenDescription: null,
     check: (stats) => stats.specific_time_messages >= 1,
   },
-
-  reincarnation: {
+  {
     id: 16,
-    charPoints: 50000,
-    name: "Reencarnou",
-    emoji: "🧟‍♂️",
+    key: "reincarnation",
+    title: "Reencarnou",
+    icon: "🧟‍♂️",
     description: "Voltou depois de 1 ano sem mandar mensagem",
+    charPoints: 50000,
+    category: "special",
+    secret: false,
+    hiddenDescription: null,
     check: () => false,
   },
-
-  chat_legend: {
+  {
     id: 17,
-    charPoints: 10000,
-    name: "Inimigo da Vida Social",
-    emoji: "🌱",
+    key: "chat_legend",
+    title: "Inimigo da Vida Social",
+    icon: "🌱",
     description: "Enviou 10.000 mensagens",
+    charPoints: 10000,
+    category: "activity",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.messages_sent >= 10000,
   },
-
-  urgency: {
+  {
     id: 18,
-    charPoints: 100,
-    name: "Calma Calabreso",
-    emoji: "🚨",
+    key: "urgency",
+    title: "Calma Calabreso",
+    icon: "🚨",
     description: "3 mensagens seguidas em CAPS",
+    charPoints: 100,
+    category: "activity",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.caps_streak >= 3,
   },
-
-  philosopher: {
+  {
     id: 19,
-    charPoints: 150,
-    name: "Filósofo",
-    emoji: "🧠",
+    key: "philosopher",
+    title: "Filósofo",
+    icon: "🧠",
     description: "Pergunta com mais de 100 caracteres",
+    charPoints: 150,
+    category: "activity",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.long_questions >= 1,
   },
-
-  funny_today: {
+  {
     id: 20,
-    charPoints: 200,
-    name: "paliasso",
-    emoji: "🤡",
+    key: "funny_today",
+    title: "paliasso",
+    icon: "🤡",
     description: "Deu uma risada muito longa (kkkkkk)",
+    charPoints: 200,
+    category: "activity",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.laught_messages >= 1,
   },
-
-  dirty_mouth: {
+  {
     id: 21,
-    charPoints: 300,
-    name: "Boca Suja",
-    emoji: "🧼",
+    key: "dirty_mouth",
+    title: "Boca Suja",
+    icon: "🧼",
     description: "Falou palavrao 50 vezes",
+    charPoints: 300,
+    category: "verbal",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.swears_count >= 50,
   },
-
-  bot_addicted: {
+  {
     id: 22,
-    charPoints: 400,
-    name: "Entusiasta do Bot",
-    emoji: "🤖",
+    key: "bot_addicted",
+    title: "Entusiasta do Bot",
+    icon: "🤖",
     description: "50 comandos usados",
+    charPoints: 400,
+    category: "activity",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.bot_commands_used >= 50,
   },
-
-  misterioso: {
+  {
     id: 25,
-    charPoints: 150,
-    name: "Misterioso",
-    emoji: "🌫️",
+    key: "misterioso",
+    title: "Misterioso",
+    icon: "🌫️",
     description: "15 Mensagens com reticências...",
+    charPoints: 150,
+    category: "activity",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.suspense_messages >= 15,
   },
-
-  textao_enem: {
+  {
     id: 26,
-    charPoints: 800,
-    name: "Escritor maldito",
-    emoji: "📝",
+    key: "textao_enem",
+    title: "Escritor maldito",
+    icon: "📝",
     description: "Mandou um textão com mais de 600 caracteres",
+    charPoints: 800,
+    category: "activity",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.textao_messages >= 1,
   },
-
-  insone: {
+  {
     id: 27,
-    charPoints: 1500,
-    name: "Insonia PLUS",
-    emoji: "🌑",
+    key: "insone",
+    title: "Insonia PLUS",
+    icon: "🌑",
     description: "500 mensagens de madrugada (2h-6h).",
+    charPoints: 1500,
+    category: "activity",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.night_owl_messages >= 500,
   },
-
-  vocabulario_rico: {
+  {
     id: 28,
-    charPoints: 1000,
-    name: "Vocabulário Rico",
-    emoji: "🤬",
+    key: "vocabulario_rico",
+    title: "Vocabulário Rico",
+    icon: "🤬",
     description: "200 palavrões ditos",
+    charPoints: 1000,
+    category: "verbal",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => stats.swears_count >= 200,
   },
-
-  dependente: {
+  {
     id: 29,
-    charPoints: 700,
-    name: "Ladrão profissional",
-    emoji: "🔪",
+    key: "dependente",
+    title: "Ladrão profissional",
+    icon: "🔪",
     description: "Roubou 30 vezes no total.",
+    charPoints: 700,
+    category: "robbery",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.total_robberies || 0) >= 30,
   },
-
-  apostador: {
+  {
     id: 30,
-    charPoints: 500,
-    name: "Apostador Ruim",
-    emoji: "🎲",
+    key: "apostador",
+    title: "Apostador Ruim",
+    icon: "🎲",
     description: "Perdeu 20 vezes no tigre. Talento natural.",
+    charPoints: 500,
+    category: "tiger",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.tiger_losses || 0) >= 20,
   },
-
-  generoso: {
+  {
     id: 31,
-    charPoints: 2500,
-    name: "Filantropo",
-    emoji: "🤲",
+    key: "generoso",
+    title: "Filantropo",
+    icon: "🤲",
     description: "Doou 10.000 caracteres no total",
+    charPoints: 2500,
+    category: "special",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.total_chars_donated || 0) >= 10000,
   },
-
-  tigrinho_lenda: {
+  {
     id: 32,
-    charPoints: 100,
-    name: "CEO do tigrinho",
-    emoji: "🎰",
+    key: "tigrinho_lenda",
+    title: "CEO do tigrinho",
+    icon: "🎰",
     description: "Ganhou 2 jackpots no tigre",
+    charPoints: 100,
+    category: "tiger",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.tiger_jackpots || 0) >= 2,
   },
-
-  tigre_centuria: {
+  {
     id: 33,
-    charPoints: 1500,
-    name: "Viciado no Tigrinho",
-    emoji: "🐯",
+    key: "tigre_centuria",
+    title: "Viciado no Tigrinho",
+    icon: "🐯",
     description: "Jogou o tigre 100 vezes no total",
+    charPoints: 1500,
+    category: "tiger",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.lifetime_tiger_spins || 0) >= 100,
   },
-
-  cacador_de_recompensas: {
+  {
     id: 34,
-    name: "CAÇADOR DE RECOMPENSAS",
-    charPoints: 1200,
-    emoji: "🏹",
+    key: "cacador_de_recompensas",
+    title: "CAÇADOR DE RECOMPENSAS",
+    icon: "🏹",
     description: "Pegou 10 recompensas na cabeça de alguém",
+    charPoints: 1200,
+    category: "bounty",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.bounties_claimed || 0) >= 10,
   },
-
-  ladrao_pessimo: {
-    id: 47,
-    name: "PIOR LADRÃO",
-    charPoints: 600,
-    emoji: "😭",
-    description: "Falhou 10 roubos consecutivos",
-    check: (stats) => (stats.consecutive_robbery_losses || 0) >= 10,
-  },
-
-  cacador_de_cabecas: {
+  {
     id: 35,
-    name: "CAÇADOR DE CABEÇAS",
-    charPoints: 2800,
-    emoji: "💀",
+    key: "cacador_de_cabecas",
+    title: "CAÇADOR DE CABEÇAS",
+    icon: "💀",
     description: "Pegou 20 recompensas como um verdadeiro carniceiro",
+    charPoints: 2800,
+    category: "bounty",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.bounties_claimed || 0) >= 20,
   },
-
-  xerife_do_oeste: {
+  {
     id: 36,
-    name: "XERIFE DO OESTE",
-    charPoints: 6000,
-    emoji: "⭐",
+    key: "xerife_do_oeste",
+    title: "XERIFE DO OESTE",
+    icon: "⭐",
     description: "Pegou 50 recompensas. A lei é você agora, porra",
+    charPoints: 6000,
+    category: "bounty",
+    secret: false,
+    hiddenDescription: null,
+
     check: (stats) => (stats.bounties_claimed || 0) >= 50,
   },
-
-  patrocinador_do_caos: {
+  {
     id: 37,
-    name: "PATROCINADOR DO CAOS",
+    key: "patrocinador_do_caos",
+    title: "PATROCINADOR DO CAOS",
+    icon: "🔥",
+    description: "Pagou 10 recompensas na cabeça dos outros",
     charPoints: 1000,
-    emoji: "🔥",
-    description: "Colocou 10 recompensas na cabeça dos outros",
+    category: "bounty",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.bounties_placed || 0) >= 10,
   },
-
-  agiota_profissional: {
+  {
     id: 38,
-    name: "AGIOTA PROFISSIONAL",
+    key: "agiota_profissional",
+    title: "AGIOTA PROFISSIONAL",
+    icon: "💰",
+    description: "Pagou 20 recompensas.",
     charPoints: 2500,
-    emoji: "💰",
-    description: "Colocou 20 recompensas. Seu dinheiro fala mais alto",
+    category: "bounty",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.bounties_placed || 0) >= 20,
   },
-
-  el_capo: {
+  {
     id: 39,
-    name: "EL CAPO",
+    key: "el_capo",
+    title: "EL CAPO",
+    icon: "👑",
+    description: "Pagou 50 recompensas. O chefão do submundo",
     charPoints: 6500,
-    emoji: "👑",
-    description: "Colocou 50 recompensas. O chefão do submundo",
+    category: "bounty",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.bounties_placed || 0) >= 50,
   },
-
-  alvo_facil: {
+  {
     id: 40,
-    name: "ALVO FÁCIL",
-    charPoints: 800,
-    emoji: "🐑",
+    key: "alvo_facil",
+    title: "ALVO FÁCIL",
+    icon: "🐑",
     description: "Recebeu 10 recompensas em sua cabeça.",
+    charPoints: 800,
+    category: "bounty",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.times_bountied || 0) >= 10,
   },
-
-  alvo_procurado: {
+  {
     id: 41,
-    name: "ALVO PROCURADO",
-    charPoints: 2200,
-    emoji: "💸",
+    key: "alvo_procurado",
+    title: "ALVO PROCURADO",
+    icon: "💸",
     description: "Recebeu 25 recompensas em sua cabeça.",
+    charPoints: 2200,
+    category: "bounty",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.times_bountied || 0) >= 25,
   },
-
-  inimigo_publico_numero_um: {
+  {
     id: 42,
-    name: "INIMIGO PÚBLICO Nº 1",
-    charPoints: 5500,
-    emoji: "🔪",
+    key: "inimigo_publico_numero_um",
+    title: "INIMIGO PÚBLICO Nº 1",
+    icon: "🔪",
     description: "Recebeu 50 recompensas em sua cabeça.",
+    charPoints: 5500,
+    category: "bounty",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.times_bountied || 0) >= 50,
   },
-
-  primeiro_roubo: {
+  {
     id: 43,
-    charPoints: 100,
-    name: "Iniciante do Crime",
-    emoji: "🦹",
+    key: "primeiro_roubo",
+    title: "Iniciante do Crime",
+    icon: "🦹",
     description: "Cometeu seu primeiro roubo.",
+    charPoints: 100,
+    category: "robbery",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.total_robberies || 0) >= 1,
   },
-
-  sortudo_no_tigre: {
+  {
     id: 44,
-    charPoints: 600,
-    name: "Sortudo no Tigre",
-    emoji: "🍀",
+    key: "sortudo_no_tigre",
+    title: "Sortudo no Tigre",
+    icon: "🍀",
     description: "Ganhou no tigre 10 vezes.",
+    charPoints: 600,
+    category: "tiger",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.tiger_wins || 0) >= 10,
   },
-
-  tigreiro_nato: {
+  {
     id: 45,
-    charPoints: 2000,
-    name: "Tigreiro NATO",
-    emoji: "🐯",
+    key: "tigreiro_nato",
+    title: "Tigreiro NATO",
+    icon: "🐯",
     description: "Ganhou no tigre 50 vezes.",
+    charPoints: 2000,
+    category: "tiger",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.tiger_wins || 0) >= 50,
   },
-
-  masoquista: {
+  {
     id: 46,
-    charPoints: 1200,
-    name: "Masoquista",
-    emoji: "😭",
+    key: "masoquista",
+    title: "Masoquista",
+    icon: "😭",
     description: "Perdeu no tigre 100 vezes e continua jogando.",
+    charPoints: 1200,
+    category: "tiger",
+    secret: false,
+    hiddenDescription: null,
     check: (stats) => (stats.tiger_losses || 0) >= 100,
   },
+  {
+    id: 47,
+    key: "ladrao_pessimo",
+    title: "PIOR LADRÃO",
+    icon: "😭",
+    description: "Falhou 10 roubos consecutivos",
+    charPoints: 600,
+    category: "robbery",
+    secret: false,
+    hiddenDescription: null,
+    check: (stats) => (stats.consecutive_robbery_losses || 0) >= 10,
+  },
+];
+
+export const getAchievementByKey = (key) =>
+  achievements.find((ach) => ach.key === key);
+
+export const getAchievementById = (id) =>
+  achievements.find((ach) => ach.id === id);
+
+export const getUnlockedAchievements = (stats) =>
+  achievements.filter((ach) => ach.check(stats));
+
+export const getAchievementsByCategory = (category) =>
+  achievements.filter((ach) => ach.category === category);
+
+export const checkAllAchievements = (stats) => {
+  const unlocked = [];
+  for (const ach of achievements) {
+    if (ach.check(stats)) unlocked.push(ach);
+  }
+  return unlocked;
 };

@@ -3,17 +3,19 @@ import { getVoiceConnection, joinVoiceChannel } from "@discordjs/voice";
 export function joinCall(message) {
   const voiceChannel = message.member?.voice.channel;
   if (!voiceChannel) {
-    // message.reply("Você precisa estar em um canal de voz.");
+    message.reply("Você precisa estar em um canal de voz.");
     return null;
   }
   if (!voiceChannel.joinable) {
-    // message.reply("Não tenho permissão para entrar no canal de voz.");
+    message.reply("Não tenho permissão para entrar no canal de voz.");
     return null;
   }
   if (getVoiceConnection(message.guild.id)) {
-    // message.reply("Já estou gravando.");
-    // return null;
+     message.reply("Já estou gravando.");
+    return null;
   }
+
+  console.log("Entrando no canal de voz:", voiceChannel.name);
 
   return joinVoiceChannel({
     channelId: voiceChannel.id,

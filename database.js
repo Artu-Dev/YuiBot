@@ -276,6 +276,15 @@ export const getUser = (userId, guildId) => {
   return db.queries.getUserById.get(userId, guildId);
 };
 
+export const deleteUser = (userId, guildId) => {
+  if (!userId || !guildId || !isValidUserId(userId) || !isValidGuildId(guildId)) {
+    console.warn(`⚠️  Invalid IDs provided to deleteUser: userId=${userId}, guildId=${guildId}`);
+    return false;
+  }
+  const result = db.prepare("DELETE FROM users WHERE id = ? AND guild_id = ?").run(userId, guildId);
+  return result.changes > 0;
+}
+
 export const getUserPenalities = (userId, guildId) => {
   const user = getUser(userId, guildId);
   if (!user?.penalities) return [];

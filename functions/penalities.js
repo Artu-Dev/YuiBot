@@ -42,7 +42,6 @@ async function tryInvertMessage(text) {
       timeoutPromise,
     ]);
   } catch (error) {
-    // Fallback: inverte palavras simples
     const simple = text.split(" ").reverse().join(" ");
     if (error.message !== "timeout") {
       console.error("Erro ao inverter mensagem:", error.message);
@@ -98,22 +97,9 @@ export function isGifOnlyMessage(message) {
   const textWithoutUrls = content.replace(GIF_URL_REGEX, "").trim();
   const hasNonUrlText = textWithoutUrls.length > 0;
 
-  const hasGifAttachment = message.attachments.some(a =>
-    a.name?.toLowerCase().endsWith('.gif') || a.contentType?.includes('image/gif')
-  );
-
   const hasGifLink = urls.some(hasGifKeyword);
 
-  const hasGifEmbed = message.embeds.some(embed => {
-    const embedUrl = (embed.url || embed.image?.url || embed.thumbnail?.url || embed.video?.url || "").toString();
-    return (
-      ['image', 'gifv', 'video'].includes(embed.type) &&
-      hasGifKeyword(embedUrl)
-    );
-  });
-
-  const hasGif = hasGifAttachment || hasGifLink || hasGifEmbed;
-  const isGifOnly = hasGif && !hasNonUrlText;
+  const isGifOnly = hasGifLink && !hasNonUrlText;
 
   return isGifOnly;
 }
@@ -125,10 +111,10 @@ function isAttachmentOnly(message) {
 }
 
 export async function handlePenalities(message, userData) {
-  // const isGifOnly = isGifOnlyMessage(message);
-  const isAttachmentOnly = isAttachmentOnly(message);
+  const isGifOnly = isGifOnlyMessage(message);
+  const isMediaOnly = isAttachmentOnly(message);
 
-  if (isAttachmentOnly) {
+  if (isMediaOnly || isGifOnly) {
     return false;
   }
 
