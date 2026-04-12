@@ -17,7 +17,7 @@ import {
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { sample } from "es-toolkit";
 import { getTodaysEvent } from "../functions/getTodaysEvent.js";
-
+import { emoji } from "../functions/utils.js";  
 // ==================== CONFIG ====================
 const STEAL_PERCENTAGE_MIN = 0.05;
 const STEAL_PERCENTAGE_MAX = 0.3;
@@ -100,12 +100,12 @@ export async function execute(client, data) {
     daily_robberies += 1;
   } else {
     return data.reply(
-      `Tu já roubou alguém ${ROUBO_LIMIT_PER_DAY}x hoje, seu maldito!`,
+      `${emoji("pepeAngry")} Tu já roubou alguém ${ROUBO_LIMIT_PER_DAY}x hoje, seu maldito!`,
     );
   }
 
   if (mentionedUser && mentionedUser.id === userId) {
-    return data.reply("Você não pode roubar a si mesmo seu esquisito.");
+    return data.reply(`${emoji("pepeCry")} Você não pode roubar a si mesmo seu esquisito.`);
   }
 
   let victimId, victimData, victimName;
@@ -114,12 +114,12 @@ export async function execute(client, data) {
   if (isTargeted) {
     victimData = getUser(mentionedUser.id, guildId);
     if (!victimData)
-      return data.reply("Esse usuário ainda não está no banco de dados.");
+      return data.reply(`${emoji("pepeHmm")} Esse usuário ainda não está no banco de dados.`);
     victimId = mentionedUser.id;
     victimName = victimData.display_name || mentionedUser.username;
   } else {
     victimId = getRandomUserId(guildId, userId);
-    if (!victimId) return data.reply("Não tem ninguém pra roubar no momento.");
+    if (!victimId) return data.reply(`${emoji("poor")} Não tem ninguém pra roubar no momento.`);
     victimData = getUser(victimId, guildId);
     victimName = victimData.display_name || "um usuário misterioso";
   }
@@ -127,13 +127,14 @@ export async function execute(client, data) {
   const victimChars = Number(victimData.charLeft) || 0;
   if (victimChars <= 0) {
     return data.reply(
-      `${displayName} tentou roubar ${victimName}, mas ele tá liso (0 chars).`,
+      `${emoji("poor")} ${displayName} tentou roubar ${victimName}, mas ele tá liso (0 chars).`,
     );
   }
 
+  // Loading com emoji customizado
   const loadingEmbed = new EmbedBuilder()
     .setColor("#FF0000")
-    .setTitle("🔴 Iniciando Roubo...")
+    .setTitle(`${emoji("loading")} Iniciando Roubo...`)
     .setDescription(getRandomLoadingPhrase(isTargeted, victimName))
     .setFooter({ text: "Isso pode levar alguns segundos..." });
 
@@ -176,7 +177,7 @@ export async function execute(client, data) {
       Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus),
     );
     successChance *= 1 - blockChance;
-    escudoHint = `\n\n_🛡️ A vítima tinha escudo ativo — bloqueou ${Math.round(blockChance * 100)}% da sua chance._`;
+    escudoHint = `\n\n${emoji("shield")} A vítima tinha escudo ativo — bloqueou ${Math.round(blockChance * 100)}% da sua chance.`;
   }
 
   const baseStolen = Math.max(
@@ -241,7 +242,7 @@ export async function execute(client, data) {
 
   const resultEmbed = new EmbedBuilder()
     .setColor(success ? "#00FF00" : "#FF0000")
-    .setTitle(success ? "Roubo deu bom!" : "Roubo deu B.O!")
+    .setTitle(success ? `${emoji("pointingGun")} Roubo deu bom!` : `${emoji("pepeCry")} Roubo deu B.O!`)
     .setDescription(finalReply);
 
   await loadingMsg.edit({ embeds: [resultEmbed] });
@@ -258,12 +259,12 @@ export async function execute(client, data) {
       setUserProperty("total_bounty_value", victimId, guildId, 0);
 
       await data.followUp(
-        `💰 **Recompensa coletada!** ${displayName} pegou os **${bountyValue} chars** que estavam na cabeça de ${victimName}!`,
+        `${emoji("skullAndRoses")} **Recompensa coletada!** ${displayName} pegou os **${bountyValue} chars** que estavam na cabeça de ${victimName}!`,
       );
     }
 
     if (daily_robberies >= ROUBO_LIMIT_PER_DAY) {
-      await data.followUp("⚠️ Você atingiu o limite de 3 roubos por dia!");
+      await data.followUp(`${emoji("pepeAngry")} Você atingiu o limite de 3 roubos por dia!`);
     }
 
     await awardAchievementInCommand(client, data, "primeiro_roubo");

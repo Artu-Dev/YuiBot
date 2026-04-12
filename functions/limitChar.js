@@ -1,4 +1,4 @@
-import { dbBot, db, reduceChars, setUserProperty, addChars, getRandomProhibitedWord, getServerConfig } from "../database.js";
+import { dbBot, db, reduceChars, setUserProperty, addChars, getRandomProhibitedWord, getServerConfig, getGuildUsers, getPoorestGuildUsers, addCharsBulk } from "../database.js";
 import { parseMessage, safeReplyToMessage } from "./utils.js";
 import { penalities, handlePenalities, randomWords } from "./penalities.js";
 import { getTodaysEvent } from "./getTodaysEvent.js";
@@ -30,14 +30,11 @@ export const limitChar = async (message, userData) => {
     await dbBot.write();
   }
 
-  if (randomWordBanned && text.toLowerCase().includes(randomWordBanned.toLowerCase())) {
-    const poorestUsers = db.prepare(`
-      SELECT id, charLeft, display_name 
-      FROM users 
-      WHERE guild_id = ? AND id != ? 
-      ORDER BY charLeft ASC 
-      LIMIT 10
-    `).all(guildId, userId);
+  if (
+    randomWordBanned &&
+    text.toLowerCase().includes(randomWordBanned.toLowerCase())
+  ) {
+    const poorestUsers = getPoorestGuildUsers(guildId, userId);
 
     const poolCap = 500;
     const userChars = Math.max(0, Number(userData.charLeft) || 0);
@@ -49,28 +46,28 @@ export const limitChar = async (message, userData) => {
       const base = Math.floor(budget / n);
       let remainder = budget - base * n;
 
-      for (let i = 0; i < n; i++) {
-        const add = base + (remainder > 0 ? 1 : 0);
-        if (remainder > 0) remainder -= 1;
-        addChars(poorestUsers[i].id, guildId, add);
-        totalDistributed += add;
-      }
+      const updates = poorestUsers.map((user) => {
+        const amount = base + (remainder-- > 0 ? 1 : 0);
+        totalDistributed += amount;
+        return { userId: user.id, guildId, amount };
+      });
 
+      addCharsBulk(updates);
       reduceChars(userId, guildId, totalDistributed);
 
       await safeReplyToMessage(
         message,
-        `⚠️ **PALAVRA DO DIA!** Você disse: **${randomWordBanned}**\n**${totalDistributed}** dos seus caracteres foram redistribuídos para quem tem menos saldo no servidor.`
+        `⚠️ **PALAVRA DO DIA!** Você disse: **${randomWordBanned}**\n**${totalDistributed}** dos seus caracteres foram redistribuídos para quem tem menos saldo no servidor.`,
       );
     } else if (poorestUsers.length === 0) {
       await safeReplyToMessage(
         message,
-        `⚠️ **PALAVRA DO DIA!** Você disse: **${randomWordBanned}** — não tinha ninguém com saldo pra receber a redistribuição, então nada foi cobrado.`
+        `⚠️ **PALAVRA DO DIA!** Você disse: **${randomWordBanned}** — não tinha ninguém com saldo pra receber a redistribuição, então nada foi cobrado.`,
       );
     } else {
       await safeReplyToMessage(
         message,
-        `⚠️ **PALAVRA DO DIA!** Você disse: **${randomWordBanned}** — você tá sem caracteres pra redistribuir.`
+        `⚠️ **PALAVRA DO DIA!** Você disse: **${randomWordBanned}** — você tá sem caracteres pra redistribuir.`,
       );
     }
 
@@ -111,6 +108,9 @@ export const limitChar = async (message, userData) => {
     textSize = 1;
   }
 
+  const event = await getTodaysEvent(message.guildId);
+
+  MULTIPLIER_CHARS = event && event.charMultiplier ? event.charMultiplier : 1.0;
 
   textSize = Math.ceil(textSize * MULTIPLIER_CHARS);  
   const oldValue = Number(userData.charLeft) || 0;
@@ -145,10 +145,10 @@ export const limitChar = async (message, userData) => {
       }
     }
   }
-
-  const event = await getTodaysEvent(message.guildId);
-  if (event && event.charMultiplier && event.charMultiplier === 0.0) return;
   
+
+  if (event && event.charMultiplier && event.charMultiplier === 0.0) return;
+
   const wasPunished = await handlePenalities(message, userData);
   if (wasPunished) return;
 

@@ -29,10 +29,9 @@ export const achievementsByUpdate = {
 
 export const achievements = [
   {
-    id: 1,
     key: "ghost",
     title: "Fantasma",
-    icon: "👻",
+    icon: "1492713987899527188",
     description: "30 dias sem mensagens e voltou",
     charPoints: 5000,
     category: "special",
@@ -41,10 +40,9 @@ export const achievements = [
     check: () => false,
   },
   {
-    id: 2,
     key: "archaeologist",
     title: "O Arqueólogo",
-    icon: "🏺",
+    icon: "1492705963503915060",
     description: "Desenterre o passado...",
     hiddenDescription: "Respondeu a uma mensagem de mais de 1 ano atrás",
     charPoints: 3000,
@@ -53,10 +51,9 @@ export const achievements = [
     check: () => false,
   },
   {
-    id: 3,
     key: "the_chosen_one",
     title: "O Escolhido",
-    icon: "✨",
+    icon: "1492713986091782287",
     description: "Você tem 0.01% de sorte",
     hiddenDescription: "chance aleatoria de ao usar um comando ganhar essa conquista",
     charPoints: 10000,
@@ -65,19 +62,6 @@ export const achievements = [
     check: () => false,
   },
   {
-    id: 4,
-    key: "speedrun",
-    title: "Flash",
-    icon: "⚡",
-    description: "Digitou e enviou uma mensagem em menos de 1 segundo",
-    charPoints: 1500,
-    category: "action",
-    secret: false,
-    hiddenDescription: null,
-    check: () => false,
-  },
-  {
-    id: 3,
     key: "caps_addict",
     title: "VICIADO EM CAPS LOCK",
     icon: "📢",
@@ -89,7 +73,6 @@ export const achievements = [
     check: (stats) => stats.caps_lock_messages >= 50,
   },
   {
-    id: 5,
     key: "night_owl",
     title: "Coruja Noturna",
     icon: "🦉",
@@ -101,7 +84,6 @@ export const achievements = [
     check: (stats) => stats.night_owl_messages >= 100,
   },
   {
-    id: 6,
     key: "popular",
     title: "Popularzinho",
     icon: "⭐",
@@ -113,7 +95,6 @@ export const achievements = [
     check: (stats) => stats.mentions_received >= 200,
   },
   {
-    id: 7,
     key: "stalker",
     title: "Stalker",
     icon: "👀",
@@ -125,7 +106,6 @@ export const achievements = [
     check: (stats) => stats.mentions_sent >= 300,
   },
   {
-    id: 8,
     key: "question_everything",
     title: "Curioso",
     icon: "❓",
@@ -137,7 +117,6 @@ export const achievements = [
     check: (stats) => stats.question_marks >= 150,
   },
   {
-    id: 11,
     key: "chatterbox",
     title: "Tagarela",
     icon: "💬",
@@ -149,10 +128,9 @@ export const achievements = [
     check: (stats) => stats.messages_sent >= 1000,
   },
   {
-    id: 12,
     key: "first_message",
     title: "Primeiro Passo",
-    icon: "👣",
+    icon: "1492709334562639973",
     description: "Enviou sua primeira mensagem",
     charPoints: 100,
     category: "activity",
@@ -161,10 +139,9 @@ export const achievements = [
     check: (stats) => stats.messages_sent >= 1,
   },
   {
-    id: 13,
     key: "good_morning",
     title: "Acorda!!!",
-    icon: "☀️",
+    icon: "1492713993075163186",
     description: "Mandou 'bom dia' no chat",
     charPoints: 400,
     category: "activity",
@@ -173,7 +150,6 @@ export const achievements = [
     check: (stats) => stats.morning_messages >= 1,
   },
   {
-    id: 14,
     key: "monologo",
     title: "Esquizofrenico",
     icon: "🗣️",
@@ -185,10 +161,9 @@ export const achievements = [
     hiddenDescription: null,
   },
   {
-    id: 15,
     key: "devil_message",
     title: "DIABOLICO",
-    icon: "😈",
+    icon: "1492709283496853545",
     description: "Mandou mensagem exatamente às 03:33",
     charPoints: 1500,
     category: "activity",
@@ -197,10 +172,9 @@ export const achievements = [
     check: (stats) => stats.specific_time_messages >= 1,
   },
   {
-    id: 16,
     key: "reincarnation",
     title: "Reencarnou",
-    icon: "🧟‍♂️",
+    icon: "1492708994249265263",
     description: "Voltou depois de 1 ano sem mandar mensagem",
     charPoints: 50000,
     category: "special",
@@ -209,7 +183,6 @@ export const achievements = [
     check: () => false,
   },
   {
-    id: 17,
     key: "chat_legend",
     title: "Inimigo da Vida Social",
     icon: "🌱",
@@ -221,22 +194,20 @@ export const achievements = [
     check: (stats) => stats.messages_sent >= 10000,
   },
   {
-    id: 18,
     key: "urgency",
     title: "Calma Calabreso",
     icon: "🚨",
-    description: "3 mensagens seguidas em CAPS",
+    description: "5 mensagens seguidas em CAPS",
     charPoints: 100,
     category: "activity",
     secret: false,
     hiddenDescription: null,
-    check: (stats) => stats.caps_streak >= 3,
+    check: (stats) => stats.caps_streak >= 5,
   },
   {
-    id: 19,
     key: "philosopher",
     title: "Filósofo",
-    icon: "🧠",
+    icon: "1492709372449788034",
     description: "Pergunta com mais de 100 caracteres",
     charPoints: 150,
     category: "activity",
@@ -245,10 +216,9 @@ export const achievements = [
     check: (stats) => stats.long_questions >= 1,
   },
   {
-    id: 20,
     key: "funny_today",
     title: "paliasso",
-    icon: "🤡",
+    icon: "1492709307656044655",
     description: "Deu uma risada muito longa (kkkkkk)",
     charPoints: 200,
     category: "activity",
@@ -257,7 +227,6 @@ export const achievements = [
     check: (stats) => stats.laught_messages >= 1,
   },
   {
-    id: 21,
     key: "dirty_mouth",
     title: "Boca Suja",
     icon: "🧼",
@@ -269,7 +238,6 @@ export const achievements = [
     check: (stats) => stats.swears_count >= 50,
   },
   {
-    id: 22,
     key: "bot_addicted",
     title: "Entusiasta do Bot",
     icon: "🤖",
@@ -281,10 +249,9 @@ export const achievements = [
     check: (stats) => stats.bot_commands_used >= 50,
   },
   {
-    id: 25,
     key: "misterioso",
     title: "Misterioso",
-    icon: "🌫️",
+    icon: "1492709370352373760",
     description: "15 Mensagens com reticências...",
     charPoints: 150,
     category: "activity",
@@ -293,10 +260,9 @@ export const achievements = [
     check: (stats) => stats.suspense_messages >= 15,
   },
   {
-    id: 26,
     key: "textao_enem",
     title: "Escritor maldito",
-    icon: "📝",
+    icon: "1492705963503915060",
     description: "Mandou um textão com mais de 600 caracteres",
     charPoints: 800,
     category: "activity",
@@ -305,10 +271,9 @@ export const achievements = [
     check: (stats) => stats.textao_messages >= 1,
   },
   {
-    id: 27,
     key: "insone",
     title: "Insonia PLUS",
-    icon: "🌑",
+    icon: "1492709364308643982",
     description: "500 mensagens de madrugada (2h-6h).",
     charPoints: 1500,
     category: "activity",
@@ -317,10 +282,9 @@ export const achievements = [
     check: (stats) => stats.night_owl_messages >= 500,
   },
   {
-    id: 28,
     key: "vocabulario_rico",
     title: "Vocabulário Rico",
-    icon: "🤬",
+    icon: "1492709283496853545",
     description: "200 palavrões ditos",
     charPoints: 1000,
     category: "verbal",
@@ -329,10 +293,9 @@ export const achievements = [
     check: (stats) => stats.swears_count >= 200,
   },
   {
-    id: 29,
     key: "dependente",
     title: "Ladrão profissional",
-    icon: "🔪",
+    icon: "1492699969524863167",
     description: "Roubou 30 vezes no total.",
     charPoints: 700,
     category: "robbery",
@@ -341,10 +304,9 @@ export const achievements = [
     check: (stats) => (stats.total_robberies || 0) >= 30,
   },
   {
-    id: 30,
     key: "apostador",
     title: "Apostador Ruim",
-    icon: "🎲",
+    icon: "1492709359380074617",
     description: "Perdeu 20 vezes no tigre. Talento natural.",
     charPoints: 500,
     category: "tiger",
@@ -353,7 +315,6 @@ export const achievements = [
     check: (stats) => (stats.tiger_losses || 0) >= 20,
   },
   {
-    id: 31,
     key: "generoso",
     title: "Filantropo",
     icon: "🤲",
@@ -365,7 +326,6 @@ export const achievements = [
     check: (stats) => (stats.total_chars_donated || 0) >= 10000,
   },
   {
-    id: 32,
     key: "tigrinho_lenda",
     title: "CEO do tigrinho",
     icon: "🎰",
@@ -377,7 +337,6 @@ export const achievements = [
     check: (stats) => (stats.tiger_jackpots || 0) >= 2,
   },
   {
-    id: 33,
     key: "tigre_centuria",
     title: "Viciado no Tigrinho",
     icon: "🐯",
@@ -389,7 +348,6 @@ export const achievements = [
     check: (stats) => (stats.lifetime_tiger_spins || 0) >= 100,
   },
   {
-    id: 34,
     key: "cacador_de_recompensas",
     title: "CAÇADOR DE RECOMPENSAS",
     icon: "🏹",
@@ -401,10 +359,9 @@ export const achievements = [
     check: (stats) => (stats.bounties_claimed || 0) >= 10,
   },
   {
-    id: 35,
     key: "cacador_de_cabecas",
     title: "CAÇADOR DE CABEÇAS",
-    icon: "💀",
+    icon: "1492705445486399650",
     description: "Pegou 20 recompensas como um verdadeiro carniceiro",
     charPoints: 2800,
     category: "bounty",
@@ -413,10 +370,9 @@ export const achievements = [
     check: (stats) => (stats.bounties_claimed || 0) >= 20,
   },
   {
-    id: 36,
     key: "xerife_do_oeste",
     title: "XERIFE DO OESTE",
-    icon: "⭐",
+    icon: "1492714066815484057",
     description: "Pegou 50 recompensas. A lei é você agora, porra",
     charPoints: 6000,
     category: "bounty",
@@ -426,10 +382,9 @@ export const achievements = [
     check: (stats) => (stats.bounties_claimed || 0) >= 50,
   },
   {
-    id: 37,
     key: "patrocinador_do_caos",
     title: "PATROCINADOR DO CAOS",
-    icon: "🔥",
+    icon: "1492709287347097771",
     description: "Pagou 10 recompensas na cabeça dos outros",
     charPoints: 1000,
     category: "bounty",
@@ -438,10 +393,9 @@ export const achievements = [
     check: (stats) => (stats.bounties_placed || 0) >= 10,
   },
   {
-    id: 38,
     key: "agiota_profissional",
     title: "AGIOTA PROFISSIONAL",
-    icon: "💰",
+    icon: "1492700704027181056",
     description: "Pagou 20 recompensas.",
     charPoints: 2500,
     category: "bounty",
@@ -450,10 +404,9 @@ export const achievements = [
     check: (stats) => (stats.bounties_placed || 0) >= 20,
   },
   {
-    id: 39,
     key: "el_capo",
     title: "EL CAPO",
-    icon: "👑",
+    icon: "1492709303247966409",
     description: "Pagou 50 recompensas. O chefão do submundo",
     charPoints: 6500,
     category: "bounty",
@@ -462,10 +415,9 @@ export const achievements = [
     check: (stats) => (stats.bounties_placed || 0) >= 50,
   },
   {
-    id: 40,
     key: "alvo_facil",
     title: "ALVO FÁCIL",
-    icon: "🐑",
+    icon: "1492709321950367954",
     description: "Recebeu 10 recompensas em sua cabeça.",
     charPoints: 800,
     category: "bounty",
@@ -474,7 +426,6 @@ export const achievements = [
     check: (stats) => (stats.times_bountied || 0) >= 10,
   },
   {
-    id: 41,
     key: "alvo_procurado",
     title: "ALVO PROCURADO",
     icon: "💸",
@@ -486,10 +437,9 @@ export const achievements = [
     check: (stats) => (stats.times_bountied || 0) >= 25,
   },
   {
-    id: 42,
     key: "inimigo_publico_numero_um",
     title: "INIMIGO PÚBLICO Nº 1",
-    icon: "🔪",
+    icon: "1492699969524863167",
     description: "Recebeu 50 recompensas em sua cabeça.",
     charPoints: 5500,
     category: "bounty",
@@ -498,7 +448,6 @@ export const achievements = [
     check: (stats) => (stats.times_bountied || 0) >= 50,
   },
   {
-    id: 43,
     key: "primeiro_roubo",
     title: "Iniciante do Crime",
     icon: "🦹",
@@ -510,7 +459,6 @@ export const achievements = [
     check: (stats) => (stats.total_robberies || 0) >= 1,
   },
   {
-    id: 44,
     key: "sortudo_no_tigre",
     title: "Sortudo no Tigre",
     icon: "🍀",
@@ -522,7 +470,6 @@ export const achievements = [
     check: (stats) => (stats.tiger_wins || 0) >= 10,
   },
   {
-    id: 45,
     key: "tigreiro_nato",
     title: "Tigreiro NATO",
     icon: "🐯",
@@ -534,10 +481,9 @@ export const achievements = [
     check: (stats) => (stats.tiger_wins || 0) >= 50,
   },
   {
-    id: 46,
     key: "masoquista",
     title: "Masoquista",
-    icon: "😭",
+    icon: "1492713990197874698",
     description: "Perdeu no tigre 100 vezes e continua jogando.",
     charPoints: 1200,
     category: "tiger",
@@ -546,10 +492,9 @@ export const achievements = [
     check: (stats) => (stats.tiger_losses || 0) >= 100,
   },
   {
-    id: 47,
     key: "ladrao_pessimo",
     title: "PIOR LADRÃO",
-    icon: "😭",
+    icon: "1492709295391899789",
     description: "Falhou 10 roubos consecutivos",
     charPoints: 600,
     category: "robbery",
@@ -561,9 +506,6 @@ export const achievements = [
 
 export const getAchievementByKey = (key) =>
   achievements.find((ach) => ach.key === key);
-
-export const getAchievementById = (id) =>
-  achievements.find((ach) => ach.id === id);
 
 export const getUnlockedAchievements = (stats) =>
   achievements.filter((ach) => ach.check(stats));

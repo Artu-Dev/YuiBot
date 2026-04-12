@@ -1,17 +1,37 @@
 import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from "discord.js";
 import { achievements } from "../functions/achievmentsData.js";
 import { resolveAvatarFromContext } from "../functions/utils.js";
-
+import { emoji, customEmojis } from "../functions/utils.js";
 export const name = "ajudaconqs";
 export const data = new SlashCommandBuilder()
   .setName("ajudaconqs")
   .setDescription("Mostra a lista de todas as conquistas disponíveis.");
 
-const ITEMS_PER_PAGE = 8; 
+const ITEMS_PER_PAGE = 8;
+
+// Função auxiliar para converter o icon do achievement em emoji real
+function getAchievementIcon(a) {
+  // Se for um número (string longa), é emoji customizado
+  if (a.icon && /^\d{17,20}$/.test(a.icon)) {
+    // Tenta encontrar o nome correspondente no customEmojis
+    const emojiName = Object.keys(customEmojis).find(
+      key => customEmojis[key] === a.icon
+    );
+    
+    if (emojiName) {
+      return `<:${emojiName}:${a.icon}>`;
+    }
+    
+    // Fallback caso não encontre o nome (ainda funciona)
+    return `<:emoji:${a.icon}>`;
+  }
+  
+  // Se já for um emoji normal (Unicode), usa ele
+  return a.icon || "🏅";
+}
 
 function createAchievementEmbed(page, totalPages, userAvatar) {
   const allAchievements = Object.values(achievements);
-
   const visibleAchievements = allAchievements.filter(a => !a.secret);
 
   const start = page * ITEMS_PER_PAGE;
@@ -22,9 +42,13 @@ function createAchievementEmbed(page, totalPages, userAvatar) {
 
   currentPageItems.forEach(a => {
     const points = a.charPoints ? ` (+${a.charPoints.toLocaleString()} chars)` : "";
-    const categoryEmoji = a.category === "special" ? "✨" : "🏆";
-    
-    description += `${a.icon || "🏅"} **${a.title || a.name}**\n`;
+    const categoryEmoji = a.category === "special" 
+      ? emoji("mineLegendHero") 
+      : "🏆";
+
+    const icon = getAchievementIcon(a);
+
+    description += `${icon} **${a.title}**\n`;
     description += `> ${a.description}\n`;
     if (points) description += `> ${points}\n`;
     description += "\n";
@@ -33,7 +57,7 @@ function createAchievementEmbed(page, totalPages, userAvatar) {
   const embed = new EmbedBuilder()
     .setColor("#5865F2")
     .setAuthor({
-      name: "📘 Lista de Conquistas",
+      name: `${emoji("writingGOOD")} Lista de Conquistas`,
       iconURL: userAvatar
     })
     .setTitle(`Conquistas Disponíveis (${visibleAchievements.length} no total)`)
@@ -61,7 +85,6 @@ export async function execute(client, data) {
 
   const embed = createAchievementEmbed(currentPage, totalPages, userAvatar);
 
-  // Botões de paginação
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("prev")
@@ -94,7 +117,7 @@ export async function execute(client, data) {
 
   const collector = response.createMessageComponentCollector({
     componentType: ComponentType.Button,
-    time: 120000, 
+    time: 120000,
     filter: i => i.user.id === data.userId
   });
 

@@ -149,10 +149,10 @@ export const handleAchievements = async (message) => {
 
   if (text.endsWith("?") && text.length >= 100) updates.long_questions = 1;
 
-  const prevCapsStreak = Number(stats.caps_streak) || 0;
-  const newCapsStreak = /^[A-Z\s]+$/.test(text) ? prevCapsStreak + 1 : 0;
-  setUserProperty("caps_streak", userId, guildId, newCapsStreak);
-  updates.caps_streak = true;
+  const lastMessages = getLastMessages(channelId, guildId, 5);
+  const capsStreak = lastMessages.every(msg => msg.authorId === userId && /^[A-Z\s]+$/.test(msg.text)) ? lastMessages.length : 0;
+  setUserProperty("caps_streak", userId, guildId, capsStreak);
+  if (capsStreak >= 5) updates.caps_streak = true;
 
   const date = new Date();
   if (date.getHours() === 3 && date.getMinutes() === 33)

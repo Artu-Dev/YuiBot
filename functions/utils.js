@@ -508,3 +508,58 @@
       return webhooks.first();
     }
   }
+
+
+  export const customEmojis = {
+  loading: "1492698884621860914",
+  mineLegendHero: "1492713986091782287",
+  infested: "1492708994249265263",
+  parrot: "1492709330091376792",
+  pepePolice: "1492714066815484057",
+  skullGlowing: "1492713987899527188",
+  hello: "1492713993075163186",
+  rainbowSheep: "1492709321950367954",
+  haste: "1492714122708521104",
+  pepeVibin: "1492709377139015893",
+  pepeMysticCape: "1492709370352373760",
+  mineNightVision: "1492709364308643982",
+  mineWeakness: "1492714094409679040",
+  dolphin: "1492709353474752644",
+  monkaS: "1492713988574810132",
+  agiotaFedora: "1492700704027181056",
+  shield: "1492699657661452308",
+  skullAndRoses: "1492705445486399650",
+  poor: "1492700767554109521",
+  pepeCry: "1492713990197874698",        // o mais usado para choro/tristeza
+  writingGOOD: "1492705963503915060",
+  pointingGun: "1492699969524863167",
+  minecraftDog: "1492709326123438241",
+  minecraftPaintBust: "1492713985596723200",
+  world: "1492709310008922262",
+  pepeClown: "1492709307656044655",
+  pepeThinking: "1492709372449788034",
+  verifiedCyan: "1492709327973253350",
+  verifiedGolden: "1492709303247966409",
+  verifiedPurple: "1492709297430200370",
+  verifiedGreen: "1492709290413260933",
+  sadge: "1492709295391899789",
+  pepePray: "1492709285782618172",
+  pepeSeenExplosion: "1492709287347097771",
+  pepeAngry: "1492709283496853545",
+  pepehmm: "1492709282087702650",
+  ironIngot: "1492714001250123938",
+  hearts: "1492709334562639973",
+  pepeJail: "1492709337301520567",
+  verifiedBlue: "1492713999496773734",
+  VerifiedWhite: "1492709218359447622",
+  redstone: "1492709345538871356",
+  pepepog: "1492709214814998568",
+  lapislazuli: "1492709347040690368",
+  enchantedBook: "1492709349276123317",
+  pepeCruz: "1492709280644595782",
+  pepeSus: "1492709359380074617",
+};
+
+export function emoji(key, fallback = "❓") {
+  return customEmojis[key] ? `<:${key}:${customEmojis[key]}>` : fallback;
+}

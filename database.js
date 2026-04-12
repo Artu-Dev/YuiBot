@@ -709,6 +709,20 @@ export const addChars = (userId, guildId, amount) => {
   ).run(parseInt(amount), userId, guildId);
 };
 
+export const addCharsBulk = (updates) => {
+  const stmt = db.prepare(
+    `UPDATE users SET charLeft = charLeft + ? WHERE id = ? AND guild_id = ?`
+  );
+
+  const runAll = db.transaction((updates) => {
+    for (const { userId, guildId, amount } of updates) {
+      stmt.run(parseInt(amount), userId, guildId);
+    }
+  });
+
+  runAll(updates);
+};
+
 export const getRandomUserId = (guildId, excludeUserId) => {
   if (!guildId) return null;
   const row = db.queries.getGuildRandomUser.get(guildId, excludeUserId || "");
@@ -719,6 +733,17 @@ export const getGuildUsers = (guildId) => {
   if (!guildId) return [];
   return db.queries.getGuildAllUsers.all(guildId);
 };
+
+export const getPoorestGuildUsers = (guildId, excludeUserId, limit = 10) => {
+  if (!guildId) return [];
+  return db.prepare(`
+    SELECT id, charLeft, display_name
+    FROM users
+    WHERE guild_id = ? AND id != ?
+    ORDER BY charLeft ASC
+    LIMIT ?
+  `).all(guildId, excludeUserId || "", limit);
+}
 
 export const getPalavrao = (guildId) => {
   const row = dbBot.data?.configs.dailyWord;

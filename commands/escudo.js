@@ -2,6 +2,7 @@ import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { getOrCreateUser, reduceChars, setEscudo, getEscudoExpiry } from "../database.js";
 import { applyClassModifier, CLASSES, ESCUDO_BLOCK_BASE } from "../functions/classes.js";
 import { sample } from 'es-toolkit';
+import { emoji } from "../functions/utils.js"; 
 
 export const name = "escudo";
 
@@ -59,7 +60,7 @@ function escudoInfoEmbed(user) {
 
   return new EmbedBuilder()
     .setColor("#3BA55D")
-    .setTitle("🛡️ Escudo — Informações")
+    .setTitle(`${emoji("shield")} Escudo — Informações`)
     .setDescription("Com o escudo ativo, a chance de ser roubado é reduzida drasticamente.")
     .addFields(
       {
@@ -99,7 +100,7 @@ export async function execute(client, data) {
       (currentExpiry.getTime() - Date.now()) / (1000 * 60 * 60)
     );
     await data.reply(
-      `Você já tem um escudo ativo! Expira em **${horasRestantes}h**. Para que comprar dois?`
+      `${emoji("shield")} Você já tem um escudo ativo! Expira em **${horasRestantes}h**. Para que comprar dois?`
     );
     return;
   }
@@ -108,7 +109,7 @@ export async function execute(client, data) {
 
   if ((user.charLeft || 0) < classCost) {
     await data.reply(
-      `O escudo custa **${classCost} chars** e você só tem **${user.charLeft ?? 0}**. Junta dinheiro antes.`
+      `${emoji("poor")} O escudo custa **${classCost} chars** e você só tem **${user.charLeft ?? 0}**. Junta dinheiro antes.`
     );
     return;
   }
@@ -117,9 +118,9 @@ export async function execute(client, data) {
   setEscudo(userId, guildId, ESCUDO_HOURS);
 
   const activateReplies = [
-    `🛡️ ${displayName} ativou um escudo por **${ESCUDO_HOURS}h** por **${classCost} chars**. Tenta roubar agora, playboy.`,
-    `🛡️ Escudo ativado! ${displayName} pagou **${classCost} chars** pra ficar intocável por **${ESCUDO_HOURS}h**.`,
-    `🛡️ ${displayName} comprou pagou **${classCost} chars**, para os cara proteger ele por **${ESCUDO_HOURS}h**. Quem tentar roubar vai se machucar.`,
+    `${emoji("shield")} ${displayName} ativou um escudo por **${ESCUDO_HOURS}h** por **${classCost} chars**. Tenta roubar agora, playboy.`,
+    `${emoji("shield")} Escudo ativado! ${displayName} pagou **${classCost} chars** pra ficar intocável por **${ESCUDO_HOURS}h**.`,
+    `${emoji("shield")} ${displayName} comprou escudo por **${classCost} chars** e vai ficar protegido por **${ESCUDO_HOURS}h**.`,
   ];
 
   await data.reply(sample(activateReplies));
