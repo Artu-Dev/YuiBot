@@ -154,7 +154,7 @@ export const limitChar = async (message, userData) => {
   if (wasPunished) return;
 
   if (newValue <= 0) {   
-    if (userData.penality) {
+    if (!userData.penality) {
       const randomPenality = penalities[Math.floor(Math.random() * penalities.length)];
       let randomWord = "";
 
