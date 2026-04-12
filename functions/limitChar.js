@@ -153,13 +153,12 @@ export const limitChar = async (message, userData) => {
   const wasPunished = await handlePenalities(message, userData);
   if (wasPunished) return;
 
-  if (newValue <= 0 ) {   
+  if (newValue <= 0) {   
     if (userData.penality) {
-      const randomPenality =
-        penalities[Math.floor(Math.random() * penalities.length)];
+      const randomPenality = penalities[Math.floor(Math.random() * penalities.length)];
       let randomWord = "";
 
-      setUserProperty("penality", userId, guildId, JSON.stringify([randomPenality.nome]));
+      setUserProperty("penality", userId, guildId, randomPenality.nome);
 
       if (randomPenality.nome === "palavra_obrigatoria") {
         randomWord = randomWords[Math.floor(Math.random() * randomWords.length)];
