@@ -1,10 +1,9 @@
 import { SlashCommandBuilder } from "discord.js";
 import {
-  clearUserPenalities,
-  getUserPenalities,
+  removeUserPenality,
   getOrCreateUser,
+  getUserPenality,
 } from "../database.js";
-import { contextFromInteraction } from "../functions/utils.js";
 
 export const name = "remove-penality";
 
@@ -42,13 +41,13 @@ export async function execute(client, data) {
 
   getOrCreateUser(finalTargetUser.id, finalTargetUser.username, guildId);
 
-  const existing = getUserPenalities(finalTargetUser.id, guildId);
+  const penality = getUserPenality(finalTargetUser.id, guildId);
 
-  if (existing.length === 0) {
+  if (!penality) {
     return data.reply(`${finalTargetUser.username} não possui penalidades.`);
   }
 
-  clearUserPenalities(finalTargetUser.id, guildId);
+  removeUserPenality(finalTargetUser.id, guildId);
 
   return data.reply(
     `✅ A penalidade de **${finalTargetUser.username}** foi removida com sucesso.`

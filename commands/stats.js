@@ -130,7 +130,7 @@ function baseAuthor(discordUser) {
 
 function embedResumo(user, discordUser, guildId) {
   const cls = CLASSES[user.user_class || "none"];
-  const penN = parsePenalties(user);
+  const penalityName = user && user.penality ? user.penality : "Nenhuma";
   const escudoExtra = maybeEscudoFooter(user, guildId);
   const { name, icon, thumb } = baseAuthor(discordUser);
   const unlocked = parseAchievements(user);
@@ -158,9 +158,9 @@ function embedResumo(user, discordUser, guildId) {
         inline: true,
       },
       {
-        name: "🎰 Tigre e Penalidades ⚠️",
+        name: "⚠️Conquistas e Penalidades",
         value:
-          `**Penalidades ativas:** ${penN}\n` +
+          `**Penalidade:** ${penalityName}\n` +
           `**Conquistas:** ${achCount}/${totalAch}`,
         inline: false,
       }

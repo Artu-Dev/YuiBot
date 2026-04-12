@@ -25,6 +25,8 @@ import { data as sairData } from './commands/sair.js';
 import { data as setPenalityData } from './commands/set-penality.js';
 import { data as statsData } from './commands/stats.js';
 import { data as tigreData } from './commands/tigre.js';
+import { data as crashData } from './commands/crash.js';
+import { data as eventoData } from './commands/evento.js';
 
 const commands = [
   addChannelData,
@@ -49,6 +51,9 @@ const commands = [
   setPenalityData,
   statsData,
   tigreData,
+  crashData,
+  eventoData,
+  
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

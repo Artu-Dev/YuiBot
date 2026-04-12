@@ -109,7 +109,7 @@ export async function getTodaysEvent(guildId) {
     } else {
       if (Math.random() < 0.8) {
         newEvent = {
-          eventKey: "normal",
+          key: "normal",
           name: "Dia Normal",
           charMultiplier: 1.0,
           casinoMultiplier: 1.0,

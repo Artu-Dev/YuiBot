@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from "discord.js";
-import { addUserPenality, getOrCreateUser, getBotPrefix } from "../database.js";
+import { getOrCreateUser, getBotPrefix, setUserPenality } from "../database.js";
 import { penalities } from "../functions/penalities.js";
 
 export const name = "set-penality";
@@ -68,7 +68,7 @@ export async function execute(client, data) {
 
   getOrCreateUser(targetUser.id, targetUser.username, guildId);
 
-  const added = addUserPenality(targetUser.id, guildId, normalizedPenalty);
+  const added = setUserPenality(targetUser.id, guildId, normalizedPenalty, true);
   if (!added) {
     return data.reply(`${targetUser.username} já tem a penalidade: ${normalizedPenalty}.`);
   }

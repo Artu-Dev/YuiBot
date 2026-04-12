@@ -1,8 +1,9 @@
-import { dbBot, db, reduceChars, setUserProperty, addChars, getRandomProhibitedWord, getServerConfig, getGuildUsers, getPoorestGuildUsers, addCharsBulk } from "../database.js";
+import { dbBot, db, reduceChars, setUserProperty, addChars, getRandomProhibitedWord, getServerConfig, getGuildUsers, getPoorestGuildUsers, addCharsBulk, removeUserPenality } from "../database.js";
 import { parseMessage, safeReplyToMessage } from "./utils.js";
 import { penalities, handlePenalities, randomWords } from "./penalities.js";
 import { getTodaysEvent } from "./getTodaysEvent.js";
 import dayjs from "dayjs"
+import { user } from "@elevenlabs/elevenlabs-js/api/index.js";
 
 
 let MULTIPLIER_CHARS = 1.0;
@@ -152,15 +153,13 @@ export const limitChar = async (message, userData) => {
   const wasPunished = await handlePenalities(message, userData);
   if (wasPunished) return;
 
-  if (newValue <= 0 ) {
-    const penalitiesList = JSON.parse(userData.penalities);
-   
-    if (penalitiesList.length === 0) {
+  if (newValue <= 0 ) {   
+    if (userData.penality) {
       const randomPenality =
         penalities[Math.floor(Math.random() * penalities.length)];
       let randomWord = "";
 
-      setUserProperty("penalities", userId, guildId, JSON.stringify([randomPenality.nome]));
+      setUserProperty("penality", userId, guildId, JSON.stringify([randomPenality.nome]));
 
       if (randomPenality.nome === "palavra_obrigatoria") {
         randomWord = randomWords[Math.floor(Math.random() * randomWords.length)];
@@ -174,9 +173,8 @@ export const limitChar = async (message, userData) => {
       await message.channel.send(`${randomPenality.description}${randomWord}`);
     }
   } else {
-    const penalitiesList = JSON.parse(userData.penalities);
-    if (penalitiesList.length > 0) {
-      setUserProperty("penalities", userId, guildId, JSON.stringify([]));
+    if (userData.penality && userData.penalitySetByAdmin !== "1") {
+      removeUserPenality(userId, guildId);
       setUserProperty("penalityWord", userId, guildId, "");
       await safeReplyToMessage(
         message,

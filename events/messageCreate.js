@@ -193,7 +193,7 @@ async function replyWithAi(message) {
 async function announceEvent(message, guildId) {
   const event = await getTodaysEvent(guildId);
 
-  if (!checkAnnouncedEvent(guildId) && event && event.eventkey !== "normal") {
+  if (!checkAnnouncedEvent(guildId) && event && event.key !== "normal") {
     const embed = new EmbedBuilder()
       .setColor(0xff00ff)
       .setTitle(`Evento de ${dayjs().format('dddd')}`)

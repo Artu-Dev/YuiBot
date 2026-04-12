@@ -120,7 +120,7 @@ export async function handlePenalities(message, userData) {
 
   if (Number(userData.charLeft) > 0) return false;
 
-  const penalitiesList = JSON.parse(userData.penalities);
+  const penalitiesList = JSON.parse(userData.penality);
   if (!penalitiesList || penalitiesList.length === 0) return false;
 
   const content = message.content;

@@ -34,7 +34,8 @@ const USERS_SCHEMA = {
   
   messages_sent: "INTEGER DEFAULT 0",
   achievements_unlocked: "TEXT DEFAULT '{}'",
-  penalities: "TEXT DEFAULT '[]'", //change to string later
+  penality: "TEXT",
+  penalitySetByAdmin: "INTENGER DEFAULT 0",
   penalityWord: "TEXT DEFAULT ''",
   penalityExpires: "TEXT DEFAULT ''",
 
@@ -199,7 +200,8 @@ export const intializeDbBot = async () => {
 
   db.queries = {
     getUserById: db.prepare("SELECT * FROM users WHERE id = ? AND guild_id = ?"),
-    addUserPenalty: db.prepare("UPDATE users SET penalities = ? WHERE id = ? AND guild_id = ?"),
+    addUserPenalty: db.prepare("UPDATE users SET penality = ?, penalitySetByAdmin = ? WHERE id = ? AND guild_id = ?"),
+    removeUserPenalty: db.prepare("UPDATE users SET penality = NULL, penalitySetByAdmin = 0 WHERE id = ? AND guild_id = ?"),
     getEscudoExpiry: db.prepare("SELECT escudo_expiry FROM users WHERE id = ? AND guild_id = ?"),
     getGuildRandomUser: db.prepare("SELECT id FROM users WHERE guild_id = ? AND id != ? ORDER BY RANDOM() LIMIT 1"),
     getGuildAllUsers: db.prepare("SELECT * FROM users WHERE guild_id = ?"),
@@ -285,55 +287,41 @@ export const deleteUser = (userId, guildId) => {
   return result.changes > 0;
 }
 
-export const getUserPenalities = (userId, guildId) => {
+export const getUserPenality = (userId, guildId) => {
+  if (!userId || !guildId || !isValidUserId(userId) || !isValidGuildId(guildId)) {
+    console.warn(`⚠️  Invalid IDs provided to getUserPenality: userId=${userId}, guildId=${guildId}`);
+    return null;
+  }
   const user = getUser(userId, guildId);
-  if (!user?.penalities) return [];
-  try {
-    const list = JSON.parse(user.penalities);
-    return Array.isArray(list) ? list : [];
-  } catch (error) {
-    console.error(`❌ Erro ao parsear penalidades para ${userId}:`, error);
-    return [];
-  }
+  return user?.penality || null;
 };
 
-export const setUserPenalities = (userId, guildId, penalities) => {
+export const setUserPenality = (userId, guildId, penality, penalitySetByAdmin = false) => {
   if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
-    console.warn(`⚠️  Invalid IDs in setUserPenalities`);
+    console.warn(`⚠️  Invalid IDs in setUserPenality`);
     return false;
   }
-  const normalized = Array.isArray(penalities) ? penalities : [];
   try {
-    db.queries.addUserPenalty.run(JSON.stringify(normalized), userId, guildId);
+    db.queries.addUserPenalty.run(penality, penalitySetByAdmin ? 1 : 0, userId, guildId);
     return true;
   } catch (error) {
-    console.error(`❌ Erro ao atualizar penalidades:`, error);
+    console.error(`❌ Erro ao atualizar penalidade:`, error);
     return false;
   }
 };
 
-export const addUserPenality = (userId, guildId, penality) => {
-  const current = getUserPenalities(userId, guildId);
-  const normalized = penality.trim().toLowerCase();
-  if (!normalized) return false;
-  if (!current.includes(normalized)) {
-    current.push(normalized);
-    setUserPenalities(userId, guildId, current);
-    return true;
+export const removeUserPenality = (userId, guildId) => {  
+  if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
+    console.warn(`⚠️  Invalid IDs in removeUserPenality`);
+    return false;
   }
-  return false;
-};
-
-export const removeUserPenality = (userId, guildId, penality) => {
-  const current = getUserPenalities(userId, guildId);
-  const normalized = penality.trim().toLowerCase();
-  const filtered = current.filter((p) => p !== normalized);
-  setUserPenalities(userId, guildId, filtered);
-  return current.length !== filtered.length;
-};
-
-export const clearUserPenalities = (userId, guildId) => {
-  setUserPenalities(userId, guildId, []);
+  try {
+    db.queries.removeUserPenalty.run(userId, guildId);
+    return true;
+  } catch (error) {
+    console.error(`❌ Erro ao remover penalidade:`, error);
+    return false;
+  }
 };
 
 /// ==============================================
@@ -528,6 +516,23 @@ export function getRecentMessages(channelId, guildId, limit = 20) {
     })
     .join("\n");
 }
+
+export const getRecentMessagesArray = (channelId, guildId, limit = 20) => {
+  const rows = db
+    .prepare(
+      `
+    SELECT author, content, timestamp, message_id, image_url, image_analysis
+    FROM message_context
+    WHERE channel_id = ? AND guild_id = ?
+    ORDER BY timestamp DESC
+    LIMIT ?
+  `
+    )
+    .all(channelId, guildId, limit);
+
+  return rows.reverse();
+};
+
 
 export function getMessageContextByMessageId(messageId, guildId) {
   return db

@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from "discord.js";
-import { getOrCreateUser, getUserPenalities } from "../database.js";
+import { getOrCreateUser, getUserPenality } from "../database.js";
 
 export const name = "penality";
 
@@ -37,13 +37,13 @@ export async function execute(client, data) {
   const displayName = targetUser.username;
   getOrCreateUser(targetUser.id, displayName, guildId);
 
-  const penalities = getUserPenalities(targetUser.id, guildId);
+  const penality = getUserPenality(targetUser.id, guildId);
 
-  if (penalities.length === 0) {
+  if (!penality) {
     return data.reply(`${displayName} não tem penalidades.`);
   }
 
   return data.reply(
-    `Penalidades de ${displayName}:\n${formatPenaltyList(penalities)}`
+    `Penalidades de ${displayName}:\n${formatPenaltyList(penality)}`
   );
 }

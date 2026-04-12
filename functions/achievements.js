@@ -7,10 +7,14 @@ import {
   getLastMessageAuthor,
   getProhibitedWords,
   getServerConfig,
+  getRecentMessages,
+  getRecentMessagesArray,
 } from "../database.js";
 import { gerar_conquista } from "./image.js";
 import { parseMessage } from "./utils.js";
 import { achievements, achievementsByUpdate } from "../functions/achievmentsData.js";
+
+// mostrar progresso igual em stats para cada player, quando desbloqueia conquista secreta, aparece aqui pro player 
 
 const setPalavroes = getProhibitedWords();
 
@@ -149,10 +153,10 @@ export const handleAchievements = async (message) => {
 
   if (text.endsWith("?") && text.length >= 100) updates.long_questions = 1;
 
-  const lastMessages = getLastMessages(channelId, guildId, 5);
-  const capsStreak = lastMessages.every(msg => msg.authorId === userId && /^[A-Z\s]+$/.test(msg.text)) ? lastMessages.length : 0;
-  setUserProperty("caps_streak", userId, guildId, capsStreak);
-  if (capsStreak >= 5) updates.caps_streak = true;
+  const lastMessages = getRecentMessagesArray(channelId, guildId, 5);
+  const capStreak = lastMessages.every(msg => msg.authorId === userId && /^[A-Z\s]+$/.test(msg.text)) ? lastMessages.length : 0;
+  setUserProperty("caps_streak", userId, guildId, capStreak);
+  if (capStreak >= 5) updates.caps_streak = true;
 
   const date = new Date();
   if (date.getHours() === 3 && date.getMinutes() === 33)
