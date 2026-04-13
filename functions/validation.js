@@ -1,6 +1,4 @@
-/**
- * Validation and utility functions for data integrity
- */
+import { log } from "../bot.js";
 
 const DISCORD_ID_REGEX = /^\d{15,20}$/;
 
@@ -41,7 +39,7 @@ export const safeJsonParse = (json, defaultValue = null) => {
   try {
     return JSON.parse(json);
   } catch (error) {
-    console.error("❌ JSON Parse Error:", error.message);
+    log(`❌ Erro ao parsear JSON: ${error.message}`, "Validation", 31);
     return defaultValue;
   }
 };
@@ -63,7 +61,7 @@ export const validateConfigValue = (key, value) => {
 
   const validator = validators[key];
   if (!validator) {
-    console.warn(`⚠️  Unknown config key: ${key}`);
+    log(`⚠️  Unknown config key: ${key}`, "Validation", 33);
     return null;
   }
 

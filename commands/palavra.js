@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { dbBot } from "../database.js";
 import { parseMessage } from "../functions/utils.js";
+import { log } from "../bot.js";
 
 export const name = "palavra";
 
@@ -20,7 +21,7 @@ export async function execute(client, data) {
       `A palavra proibida do dia (${date}): **${dailyWord}**`
     );
   } catch (error) {
-    console.error("Erro ao buscar palavra do dia:", error);
+    log(`❌ Erro ao buscar palavra do dia: ${error.message}`, "Palavra", 31);
     await data.reply("Ops, não consegui achar a palavra do dia.");
   }
 }

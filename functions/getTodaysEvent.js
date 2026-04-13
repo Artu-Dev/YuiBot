@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { getTodayEvent, setTodayEvent, getHolidaysForYear, saveHolidays } from "../database.js";
+import { log } from "../bot.js";
 
 const randomEvents = [
   {
@@ -78,10 +79,9 @@ async function loadHolidays(year) {
     const data = await res.json();
     const map = new Map(data.map(h => [h.date, h.name]));
     saveHolidays(map, year);
-    console.log(`✅ ${map.size} feriados carregados e salvos para ${year}`);
     return map;
   } catch (e) {
-    console.error("❌ Falha ao carregar feriados:", e.message);
+    log("❌ Falha ao carregar feriados:", e.message, "Utils", 31);
     return new Map();
   }
 }

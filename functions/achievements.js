@@ -13,6 +13,7 @@ import {
 import { gerar_conquista } from "./image.js";
 import { parseMessage } from "./utils.js";
 import { achievements, achievementsByUpdate } from "../functions/achievmentsData.js";
+import { log } from "../bot.js";
 
 // mostrar progresso igual em stats para cada player, quando desbloqueia conquista secreta, aparece aqui pro player 
 
@@ -41,7 +42,7 @@ export const giveAchievement = async (message, userId, achievementKey, authorUse
   const achievement = achievements.find(ach => ach.key === achievementKey);
 
   if (!achievement) {
-    console.error(`Achievement com chave ${achievementKey} não encontrado.`);
+    log(`❌ Achievement com chave ${achievementKey} não encontrado.`, "Achievements", 31);
     return;
   }
 

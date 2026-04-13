@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } from "discord.js";
 import { generateFakeNews, generateFullArticle } from "../functions/generateNews.js";
 import { createNewsImage } from "../functions/newsImage.js";
+import { log } from "../bot.js";
 
 export const name = "news";
 
@@ -51,7 +52,7 @@ export async function execute(client, data) {
       await data.followUp({ embeds: [embed], files: [attachment] });
     }
   } catch (error) {
-    console.error('Erro ao gerar fake news:', error);
+    log(`❌ Erro ao gerar notícia: ${error.message}`, "News", 31);
     await data.reply('vai da pra gerar samerda nao, deu erro aqui boy');
   }
 }

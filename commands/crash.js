@@ -94,7 +94,7 @@ async function generateCrashStep(lucky, guildId) {
 
 export const data = new SlashCommandBuilder()
   .setName("crash")
-  .setDescription("🚀 CRASH - Multiplique sua aposta e pare antes de explodir!")
+  .setDescription("Aposte chars e tente parar o antes do crash! Quanto mais sobe maior o risco e a recompensa!")
   .addNumberOption(option =>
     option
       .setName("aposta")

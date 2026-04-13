@@ -2,6 +2,7 @@
   import ms from 'ms';
   import { random } from 'es-toolkit';
   import { PermissionFlagsBits } from 'discord.js';
+import { log } from "../bot.js";
 
   export function getRandomTime(minSeconds, maxSeconds) {
     return random(ms(`${minSeconds}s`), ms(`${maxSeconds}s`));
@@ -475,7 +476,8 @@
           const displayName = user.displayName || user.user.username;
           processedContent = processedContent.replace(mention, `@${displayName}`);
         } catch (error) {
-          console.log(`Não foi possível buscar usuário ${userId}`);
+          log(`[${message.guild.id}] ❌ Falha ao buscar usuário ${userId}.`, "Utils", 31);
+
         }
       }
     }
@@ -500,7 +502,7 @@
       });
       return hook;
     } catch (err) {
-      console.error("Erro ao criar webhook:", err.message);
+        log(`❌ Erro ao criar webhook: ${err.message}`, "Utils", 31);
       
       if (webhooks.size === 0) {
         throw new Error("Não foi possível criar webhook e não existe nenhum disponível no canal.");

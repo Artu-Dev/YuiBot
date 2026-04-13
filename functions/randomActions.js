@@ -1,3 +1,4 @@
+import { log } from "../bot.js";
 import { invertMessage } from "./generateRes.js";
 import { getOrCreateWebhook, messageContainsDailyWord } from "./utils.js";
 
@@ -20,7 +21,7 @@ async function randomResend(message) {
     try {
       result = await invertMessage(original);
     } catch (e) {
-      console.error("Erro no evento aleatório de inverter:", e.message);
+      log(`❌ Erro no evento aleatório de inverter: ${e.message}`, "RandomAction", 31);
       return false;
     }
   } else if (choice === "spoiler") {
@@ -40,7 +41,7 @@ async function randomResend(message) {
     message.delete().catch(() => {});
     return true;
   } catch (err) {
-    console.error("Falha ao reenviar mensagem aleatória:", err.message);
+    log(`❌ Falha ao reenviar mensagem aleatória: ${err.message}`, "RandomAction", 31);
     return false;
   }
 }

@@ -12,6 +12,7 @@ import {
   discordDisplayLabel,
 } from "../functions/utils.js";
 import { getBotPrefix } from "../database.js";
+import { log } from "../bot.js";
 
 export const name = "stats";
 
@@ -107,7 +108,7 @@ function maybeEscudoFooter(user, guildId) {
       guildId
     );
   } catch (e) {
-    console.error(`⚠️  Erro ao atualizar last_escudo_shown:`, e);
+    log(`❌ Erro ao atualizar last_escudo_shown para usuário ${user.id} na guild ${guildId}: ${e.message}`, "Stats", 31);
   }
   return `\n🛡️ **Escudo ativo:** ${remainingTime}`;
 }
@@ -305,7 +306,7 @@ export async function execute(client, data) {
 
     return await data.reply({ embeds: [embed] });
   } catch (error) {
-    console.error(`❌ Erro no comando stats:`, error);
+    log(`❌ Erro ao executar comando stats: ${error.message}`, "Stats", 31);
     return await data.reply("❌ Erro ao processar comando.");
   }
 }

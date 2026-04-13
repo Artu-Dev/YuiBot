@@ -11,6 +11,7 @@ import { achievements } from "../functions/achievmentsData.js";
 import { getOrCreateUser } from "../database.js";
 import { getBotPrefix } from "../database.js";
 import { resolveDisplayAvatarURL, discordDisplayLabel } from "../functions/utils.js";
+import { log } from "../bot.js";
 
 export const name = "conquistas";
 
@@ -350,7 +351,7 @@ export async function execute(client, data) {
     });
 
   } catch (err) {
-    console.error("❌ Erro no comando conquistas:", err);
+    log(`❌ Erro no comando conquistas: ${err.message}`, "Comando", 31);
     return await data.reply("❌ Erro ao processar comando.");
   }
 }

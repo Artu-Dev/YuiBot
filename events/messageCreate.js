@@ -11,6 +11,7 @@ import { getTodaysEvent } from "../functions/getTodaysEvent.js";
 import dayjs from "dayjs";
 import {EmbedBuilder} from "discord.js";
 import 'dayjs/locale/pt-br.js';
+import { log } from "../bot.js";
 dayjs.locale('pt-br');
 
 export const name = "messageCreate";
@@ -91,7 +92,7 @@ async function tryHandleCommand(message, client, text) {
   if (!command) return true;
 
   if (typeof command.execute !== "function") {
-    console.warn(`⚠️ Comando "${cmdName}" não tem função execute definida.`);
+    log(`⚠️ Comando "${cmdName}" sem função execute.`, "Comando", 31);
     return true;
   }
 
@@ -101,7 +102,12 @@ async function tryHandleCommand(message, client, text) {
     }
     await command.execute(client, contextFromMessage(message));
   } catch (error) {
-    console.error(`❌ Erro ao executar comando "${cmdName}":`, error);
+    log(`❌ Erro ao executar comando "${cmdName}": ${error.message}`, "Comando", 31);
+     try {
+       await safeReplyToMessage(message, "❌ Ocorreu um erro ao executar esse comando.");
+     } catch (e) {
+       log(`❌ Falha ao enviar mensagem de erro para o usuário: ${e.message}`, "Comando", 31);
+     }
   }
 
   return true;
@@ -143,7 +149,7 @@ async function handleRandomActions(message, userId, mentions) {
     try {
       await replyWithAi(message);
     } catch (error) {
-      console.error("❌ Erro na resposta AI:", error.message);
+      log(`❌ Erro na resposta AI: ${error.message}`, "AI", 31);
     }
   }
 }
@@ -157,21 +163,21 @@ async function replyWithAi(message) {
   try {
     aiResponse = await generateAiRes(message);
   } catch (err) {
-    console.error("❌ Erro na geração de resposta AI:", err.message);
+    log("❌ Erro na geração de resposta AI: " + err.message, "AI", 31);
     return;
   }
 
   const replyText =
     typeof aiResponse === "string" ? aiResponse.trim() : String(aiResponse ?? "").trim();
   if (!replyText) {
-    console.warn("replyWithAi: texto vazio após geração; enviando fallback.");
+    log("⚠️ Resposta AI vazia, enviando fallback.", "AI", 33);
     try {
       await safeReplyToMessage(
         message,
         "Travei aqui e não saiu texto nenhum — tenta de novo daqui a pouco.",
       );
     } catch (e) {
-      console.error("❌ Fallback reply falhou:", e.message);
+      log("❌ Fallback reply falhou: " + e.message, "AI", 31);
     }
     return;
   }
@@ -179,14 +185,14 @@ async function replyWithAi(message) {
   try {
     await safeReplyToMessage(message, replyText);
   } catch (err) {
-    console.error("❌ Erro ao enviar resposta da IA:", err.message);
+    log(`❌ Erro ao enviar resposta da IA: ${err.message}`, "AI", 31);
   }
 
   if (getServerConfig(message.guildId, 'speakMessage') && !isGuildAiSilenced(message.guildId)) {
     try {
       await sayInCall(message, replyText);
     } catch (error) {
-      console.error("❌ Erro ao reproduzir áudio no call:", error.message);
+      log(`❌ Erro ao reproduzir áudio no call: ${error.message}`, "Áudio", 31);
     }
   }
 }
@@ -201,7 +207,7 @@ async function announceEvent(message, guildId) {
       .setDescription(`**${event.name}**\n${event.description}`)
 
     message.channel.send({ embeds: [embed] }).catch((e) => {
-      console.error("❌ Erro ao anunciar evento:", e.message);
+      log("❌ Erro ao anunciar evento: " + e.message, "Evento", 31);
     });
   };
 

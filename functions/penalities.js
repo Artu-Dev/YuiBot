@@ -2,6 +2,7 @@ import { reduceChars, setUserProperty } from "../database.js";
 import { getOrCreateWebhook } from "./utils.js";
 import { invertMessage } from "./generateRes.js";
 import ms from 'ms';
+import { log } from "../bot.js";
 
 
 export const randomWords = [
@@ -44,7 +45,7 @@ async function tryInvertMessage(text) {
   } catch (error) {
     const simple = text.split(" ").reverse().join(" ");
     if (error.message !== "timeout") {
-      console.error("Erro ao inverter mensagem:", error.message);
+      log(`❌ Erro ao inverter mensagem: ${error.message}`, "Penality", 31);
     }
     return simple;
   }

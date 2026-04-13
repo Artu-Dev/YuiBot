@@ -12,6 +12,7 @@ import {
   resolveGroqChatModel,
   resolveGroqInvertModel,
 } from "./groqClient.js";
+import { log } from "../bot.js";
 
 // ==================== CONSTANTES ====================
 const DISCORD_MESSAGE_MAX = 2000;
@@ -123,7 +124,7 @@ const buildPromptText = async (message, text, imageSummary = null, guildId = nul
               parts.push(`A mensagem que ele respondeu continha uma imagem descrita assim: ${referencedImageAnalysis}`);
             }
           } catch (error) {
-            console.error("Erro ao processar imagem da mensagem referenciada:", error.message);
+            log(`Erro ao processar imagem da mensagem referenciada: ${error.message}`, "Audio", 31);
           }
         }
       }
@@ -159,8 +160,8 @@ const handleOllamaError = (error) => {
   };
 
   const msg = errorMap[error.code];
-  if (msg) console.warn(msg);
-  else console.error("Erro ao gerar resposta da IA:", error.message);
+  if (msg) log(msg, "GenerateRes", 31);
+  else log("Erro ao gerar resposta da IA: " + (error.message || error), "GenerateRes", 31);
 
   return "[erro de IA]";
 };
@@ -217,12 +218,12 @@ export const generateAiRes = async (message) => {
     try {
       return await tryOllama();
     } catch (ollamaErr1) {
-      console.warn("Primeira tentativa do Ollama falhou, tentando novamente:", ollamaErr1?.message || ollamaErr1);
+      log("Primeira tentativa do Ollama falhou, tentando novamente: " + (ollamaErr1?.message || ollamaErr1), "GenerateRes", 31);
       
       try {
         return await tryOllama();
       } catch (ollamaErr2) {
-        console.warn("Segunda tentativa do Ollama falhou. Indo para o Groq:", ollamaErr2?.message || ollamaErr2);
+        log("Ollama falhou após múltiplas tentativas: " + (ollamaErr2?.message || ollamaErr2), "GenerateRes", 31);
         
         if (hasGroqApiKey()) {
           try {
@@ -240,7 +241,7 @@ export const generateAiRes = async (message) => {
             if (!trimmed) throw new Error("Resposta vazia do Groq");
             return clipForDiscord(trimmed);
           } catch (groqErr) {
-            console.error("Groq também falhou:", groqErr?.message || groqErr);
+            log("Groq também falhou: " + (groqErr?.message || groqErr), "GenerateRes", 31);
           }
         }
         
@@ -280,7 +281,7 @@ const analyzeImage = async (imageUrl) => {
     );
     return assertNonEmptyModelText(res, "Resposta vazia ao analisar imagem");
   } catch (error) {
-    console.error("Erro ao analisar imagem:", error.message || error);
+    log(`Erro ao analisar imagem: ${error.message || error}`, "GenerateRes", 31);
     return "Não consegui analisar a imagem no momento.";
   }
 };
@@ -306,7 +307,7 @@ export const invertMessage = async (text) => {
       });
       return String(result ?? "").trim() || text;
     } catch (groqErr) {
-      console.warn("Groq para inverter falhou, tentando Ollama:", groqErr?.message || groqErr);
+      log("Groq para inverter falhou, tentando Ollama:", groqErr?.message || groqErr, "GenerateRes", 31);
     }
   }
 
@@ -330,7 +331,7 @@ export const invertMessage = async (text) => {
 
     return assertNonEmptyModelText(res, "Resposta vazia ao inverter");
   } catch (error) {
-    console.error("Erro ao inverter mensagem:", error.message);
+    log("Erro ao inverter mensagem: " + (error.message || error), "GenerateRes", 31);
     return text;
   }
 };

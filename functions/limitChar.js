@@ -3,13 +3,14 @@ import { parseMessage, safeReplyToMessage } from "./utils.js";
 import { penalities, handlePenalities, randomWords } from "./penalities.js";
 import { getTodaysEvent } from "./getTodaysEvent.js";
 import dayjs from "dayjs";
+import { log } from "../bot.js";
 
 
 const GIF_URL_REGEX = /(https?:\/\/[^\s]+)/g;
 
 export const limitChar = async (message, userData) => {
   if (!userData || typeof userData !== "object") {
-    console.warn("limitChar: usuário ausente (getOrCreateUser falhou?); ignorando limite.");
+    log("limitChar: usuário ausente (getOrCreateUser falhou?); ignorando limite.", "LimitChar", 33);
     return;
   }
 
@@ -116,7 +117,7 @@ export const limitChar = async (message, userData) => {
         await message.react(emoji);
       } catch (error) {
         if (error.code !== 10008) {
-          console.error("Erro ao reagir na mensagem:", error);
+          log(`❌ Erro ao reagir na mensagem: ${error.message}`, "LimitChar", 31);
         }
       }
     }

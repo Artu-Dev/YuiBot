@@ -1,4 +1,4 @@
-import { createWriteStream, unlinkSync, readdirSync, statSync, existsSync } from "fs"; // Adicionado statSync
+import { createWriteStream, unlinkSync, readdirSync, statSync, existsSync } from "fs";
 import { AudioPlayerStatus, createAudioPlayer, createAudioResource, EndBehaviorType } from "@discordjs/voice";
 import ffmpeg from "fluent-ffmpeg";
 import { opus } from "prism-media";
@@ -6,14 +6,13 @@ import { getRandomTime } from "./utils.js";
 import { fileURLToPath } from "url";
 import { dirname, resolve, join } from "path";
 import ms from 'ms';
+import { log } from "../bot.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const recordingTimeouts = new Map();
 const playingTimeouts = new Map(); 
-
-const log = (...args) => console.log("\x1b[35m[Audio]\x1b[0m", ...args);
 
 
 function convertPcmToWav(pcmFileName) {
@@ -39,7 +38,7 @@ function convertPcmToWav(pcmFileName) {
                 }
             })
             .on("error", function (err) {
-                console.error(`Erro do FFmpeg ao converter ${pcmFileName}:`, err);
+                log(`❌ Erro do FFmpeg ao converter ${pcmFileName}: ${err.message}`, "Audio", 31);
                 rejectP(err);
             })
             .save(wavFileName);
@@ -62,19 +61,15 @@ export function startRecording(connection, client) {
     const guildId = connection.joinConfig.guildId;
     const receiver = connection.receiver;
     const time = getRandomTime(60, 240);
-    
-    log(`[${guildId}] Próxima tentativa de gravação em`, (time / 1000).toFixed(1), "segundos");
+
 
     receiver.speaking.once("start", (userId) => {
         const user = client.users.cache.get(userId);
         
         if (!user || user.bot) {
-            log(`[${guildId}] Ignorando bot:`, user?.username);
             scheduleNextRecordingLoop(connection, client, time);
             return;
         }
-
-        log(`[${guildId}] 🎙️ Iniciando gravação de áudio de ${user.username}`);
 
         const audioStream = receiver.subscribe(userId, {
             end: { behavior: EndBehaviorType.Manual },
@@ -94,7 +89,6 @@ export function startRecording(connection, client) {
         audioStream.pipe(opusDecoder).pipe(fileStream);
 
         const maxDurationTimeout = setTimeout(() => {
-            log(`[${guildId}] ⏱️ Tempo máximo atingido (10s)`);
             stopRecording();
         }, ms('10s'));
 
@@ -103,7 +97,6 @@ export function startRecording(connection, client) {
                 if (existsSync(pcmFileName)) {
                     const stats = statSync(pcmFileName);
                     if (stats.size >= 1_000_000) {
-                        log(`[${guildId}] 📦 Tamanho máximo atingido (1MB)`);
                         stopRecording();
                     }
                 }
@@ -120,17 +113,14 @@ export function startRecording(connection, client) {
             try { audioStream.destroy(); } catch {}
             try { fileStream.end(); } catch {}
 
-            log(`[${guildId}] 🛑 Parando gravação de ${user.username}`);
-
             // Pequeno delay para garantir que o fileStream liberou o arquivo no disco
             setTimeout(() => {
                 convertPcmToWav(pcmFileName)
                     .then(() => {
-                         log(`[${guildId}] ✅ Conversão concluída.`);
                          scheduleNextRecordingLoop(connection, client, time);
                     })
                     .catch((err) => {
-                         console.error(`[${guildId}] ❌ Falha na conversão.`);
+                         log(`[${guildId}] ❌ Falha na conversão.`, "Audio", 31);
                          scheduleNextRecordingLoop(connection, client, time);
                     });
             }, 500); 
@@ -139,12 +129,11 @@ export function startRecording(connection, client) {
         audioStream.on("end", stopRecording);
         audioStream.on("close", stopRecording);
         audioStream.on("error", (err) => {
-            console.error(`[${guildId}] Erro na stream:`, err);
+            log(`[${guildId}] Erro na stream: ${err.message}`, "Audio", 31);
             stopRecording();
         });
 
         connection.on("disconnect", () => {
-            log(`[${guildId}] Desconectado, parando...`);
             stopRecording();
         });
     });
@@ -165,9 +154,8 @@ function playAudio(relativePath, connection, deleteFile) {
             try {
                 if(existsSync(audioPath)) {
                     unlinkSync(audioPath);
-                    log(`[${guildId}] Arquivo antigo deletado: ${relativePath}`);
                 }
-            } catch(e) { console.error(`[${guildId}] Erro ao deletar arquivo:`, e); }
+            } catch(e) { log(`[${guildId}] Erro ao deletar arquivo: ${e.message}`, "Audio", 31); }
         });
     }
 }
@@ -176,23 +164,20 @@ function playAudio(relativePath, connection, deleteFile) {
 export function playRandomAudio(connection) {
     const guildId = connection.joinConfig.guildId;
     const time = getRandomTime(60, 240);
-    
-    log(`[${guildId}] Próxima execução de áudio em ${(time / 1000).toFixed(1)}s`);
 
     try {
         const recordingDir = resolve(process.cwd(), "./recordings");
         if (existsSync(recordingDir)) {
             const allFilesWav = readdirSync(recordingDir).filter((file) => file.endsWith(".wav"));
             if (allFilesWav.length !== 0) {
-                log(`[${guildId}] 🔊 Tocando áudio aleatório...`);
                 const randomFile = allFilesWav[Math.floor(Math.random() * allFilesWav.length)];
                 playAudio(join("./recordings", randomFile), connection, allFilesWav.length >= 50);
             }
         } else {
-             log(`[${guildId}] Pasta recordings não existe ou está vazia.`);
+            log(`[${guildId}] Pasta recordings não existe ou está vazia.`, "Audio", 31);
         }
     } catch (e) {
-        console.error(`[${guildId}] Erro ao ler diretório de gravações:`, e);
+        log(`[${guildId}] Falha ao acessar gravações.`, "Audio", 31);
     }
 
     const oldTimeout = playingTimeouts.get(guildId);
@@ -204,7 +189,7 @@ export function playRandomAudio(connection) {
 
 export function stopPlayingAudio(guildId) {
     if (!guildId) {
-        console.error("GuildId não fornecido para stopPlayingAudio.");
+        log("GuildId não fornecido para stopPlayingAudio.", "Audio", 31);
         return;
     }
 
@@ -212,13 +197,11 @@ export function stopPlayingAudio(guildId) {
     if (playingTimeout) {
         clearTimeout(playingTimeout);
         playingTimeouts.delete(guildId); 
-        log(`[${guildId}] Timer de reprodução parado.`);
     }
 
     const recordingTimeout = recordingTimeouts.get(guildId);
     if (recordingTimeout) {
         clearTimeout(recordingTimeout);
         recordingTimeouts.delete(guildId);
-        log(`[${guildId}] Timer de gravação parado.`);
     }
 }

@@ -6,7 +6,7 @@ import { joinCall } from "../functions/voice.js";
 import { AudioPlayerStatus, createAudioPlayer, createAudioResource } from "@discordjs/voice";
 import { unlinkSync } from "fs";
 import { dbBot } from "../database.js";
-import { createAudioFileFromText } from "./createTTS.js";
+import { log } from "../bot.js";
 config();
 
 const elevenlabs = new ElevenLabsClient({
@@ -81,11 +81,11 @@ export async function sayInCall(message, responseText) {
       try {
         unlinkSync(audio);
       } catch (e) {
-        console.error(`⚠️  Erro ao deletar arquivo de áudio ${audio}:`, e.message);
+        log(`⚠️  Erro ao deletar arquivo de áudio ${audio}: ${e.message}`, "Audio", 31);
       }
     });
   } catch (error) {
-    console.error("❌ Erro em sayInCall:", error.message);
+    log(`❌ Erro em sayInCall: ${error.message}`, "Audio", 31);
     throw error;
   }
 }

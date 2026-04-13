@@ -15,8 +15,6 @@ export function joinCall(message) {
     return null;
   }
 
-  console.log("Entrando no canal de voz:", voiceChannel.name);
-
   return joinVoiceChannel({
     channelId: voiceChannel.id,
     guildId: message.guild.id,

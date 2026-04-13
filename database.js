@@ -3,6 +3,7 @@ import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
 import { isValidUserId, isValidGuildId } from "./functions/validation.js";
 import dayjs from "dayjs";
+import { log } from "./bot.js";
 
 export function getBotPrefix(guildId) {
   return getServerConfig(guildId, 'prefix') || '$';
@@ -93,7 +94,7 @@ function updateUserDb() {
 
   for (const [column, type] of Object.entries(requiredColumns)) {
     if (!existingColumns.includes(column)) {
-      console.log(`➕ Adicionando coluna AUSENTE no BD: ${column}`);
+      log(`➕ Adicionando coluna AUSENTE no BD: ${column}`, "Database", 33);
       db.prepare(`ALTER TABLE users ADD COLUMN ${column} ${type}`).run();
     }
   }
@@ -270,9 +271,13 @@ export const saveHolidays = (holidays, year) => {
 /// USUÁRIOS
 /// ==============================================
 
+function logInvalidId(userId, guildId, functionName) {
+  log(`[${guildId}] ⚠️  Invalid IDs in ${functionName}: userId=${userId}, guildId=${guildId}`, "Database", 31);
+}
+
 export const getUser = (userId, guildId) => {
   if (!userId || !guildId || !isValidUserId(userId) || !isValidGuildId(guildId)) {
-    console.warn(`⚠️  Invalid IDs provided to getUser: userId=${userId}, guildId=${guildId}`);
+    logInvalidId(userId, guildId, "getUser");
     return null;
   }
   return db.queries.getUserById.get(userId, guildId);
@@ -280,7 +285,7 @@ export const getUser = (userId, guildId) => {
 
 export const deleteUser = (userId, guildId) => {
   if (!userId || !guildId || !isValidUserId(userId) || !isValidGuildId(guildId)) {
-    console.warn(`⚠️  Invalid IDs provided to deleteUser: userId=${userId}, guildId=${guildId}`);
+    logInvalidId(userId, guildId, "deleteUser");
     return false;
   }
   const result = db.prepare("DELETE FROM users WHERE id = ? AND guild_id = ?").run(userId, guildId);
@@ -289,7 +294,7 @@ export const deleteUser = (userId, guildId) => {
 
 export const getUserPenality = (userId, guildId) => {
   if (!userId || !guildId || !isValidUserId(userId) || !isValidGuildId(guildId)) {
-    console.warn(`⚠️  Invalid IDs provided to getUserPenality: userId=${userId}, guildId=${guildId}`);
+    logInvalidId(userId, guildId, "getUserPenality");
     return null;
   }
   const user = getUser(userId, guildId);
@@ -298,28 +303,28 @@ export const getUserPenality = (userId, guildId) => {
 
 export const setUserPenality = (userId, guildId, penality, penalitySetByAdmin = false) => {
   if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
-    console.warn(`⚠️  Invalid IDs in setUserPenality`);
+    logInvalidId(userId, guildId, "setUserPenality");
     return false;
   }
   try {
     db.queries.addUserPenalty.run(penality, penalitySetByAdmin ? 1 : 0, userId, guildId);
     return true;
   } catch (error) {
-    console.error(`❌ Erro ao atualizar penalidade:`, error);
+    log(`❌ Erro ao atualizar penalidade: ${error.message}`, "Database", 31);
     return false;
   }
 };
 
 export const removeUserPenality = (userId, guildId) => {  
   if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
-    console.warn(`⚠️  Invalid IDs in removeUserPenality`);
+    logInvalidId(userId, guildId, "removeUserPenality");
     return false;
   }
   try {
     db.queries.removeUserPenalty.run(userId, guildId);
     return true;
   } catch (error) {
-    console.error(`❌ Erro ao remover penalidade:`, error);
+    log(`❌ Erro ao remover penalidade: ${error.message}`, "Database", 31);
     return false;
   }
 };
@@ -381,7 +386,7 @@ export function setServerConfig(guildId, key, value) {
 
 export const getOrCreateUser = (userId, displayName, guildId) => {
   if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
-    console.error(`❌ Invalid IDs in getOrCreateUser: userId=${userId}, guildId=${guildId}`);
+    logInvalidId(userId, guildId, "getOrCreateUser");
     return null;
   }
 
@@ -401,7 +406,7 @@ export const getOrCreateUser = (userId, displayName, guildId) => {
         user = getUser(userId, guildId);
         if (user) return user;
       }
-      console.error(`❌ Erro ao criar usuário:`, error);
+      log(`❌ Erro ao criar usuário: ${error.message}`, "Database", 31);
       return null;
     }
   }
@@ -421,7 +426,7 @@ export const hasEscudo = (userId, guildId) => {
 
 export const setEscudo = (userId, guildId, hours = 24) => {
   if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
-    console.error(`❌ Invalid IDs in setEscudo`);
+    logInvalidId(userId, guildId, "setEscudo");
     return null;
   }
   const expiry = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
@@ -430,7 +435,7 @@ export const setEscudo = (userId, guildId, hours = 24) => {
       .run(expiry, userId, guildId);
     return expiry;
   } catch (error) {
-    console.error(`❌ Erro ao definir escudo:`, error);
+    log(`❌ Erro ao definir escudo: ${error.message}`, "Database", 31);
     return null;
   }
 };
@@ -767,12 +772,11 @@ function getProhibitedWordsSet() {
     );
     return set;
   } catch (error) {
-    console.error("❌ Erro ao carregar palavras proibidas:", error);
+    log("erro ao carregar palavras proibidas", "Database", 31);
     return new Set(["capeta"]);
   }
 }
 
-// Cache das palavras proibidas em memória (carregado uma vez na inicialização)
 let prohibitedWordsCache = null;
 
 export function getProhibitedWords() {
