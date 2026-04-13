@@ -17,10 +17,11 @@ const attributeDescriptions = {
 
 function getColorByPrice(cost) {
   if (cost === 0)         return 0x95A5A6;
-  if (cost < 10_000)     return 0x2ECC71;
-  if (cost < 50_000)     return 0x3498DB;o
-  if (cost < 150_000)    return 0x9B59B6; 
-  if (cost < 500_000)    return 0xF39C12;
+  if (cost < 501)     return 0x2ECC71;
+  if (cost < 1001)     return 0x3498DB;
+  if (cost < 1501)    return 0x9B59B6; 
+  if (cost < 2001)    return 0xF39C12;
+  if (cost < 2501)    return 0xE67E22;
   return 0xE74C3C;
 }
 
