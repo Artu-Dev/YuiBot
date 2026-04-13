@@ -33,7 +33,7 @@ export async function execute(client, data) {
         return;
     }
 
-    const classLuckyMod = getClassModifier(userData.user_class || "none", "lucky");
+    const classLuckyMod = getClassModifier(userData.user_class, "lucky");
     const randomChars = Math.floor(Math.random() * 100) + 50 + Math.floor(50 * classLuckyMod);
 
     addChars(userId, guildId, randomChars);

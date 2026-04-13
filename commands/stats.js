@@ -6,7 +6,7 @@ import {
   getEscudoTimeRemaining,
   db,
 } from "../database.js";
-import { CLASSES } from "../functions/classes.js";
+import { CLASSES, getClassModifier } from "../functions/classes.js";
 import {
   resolveDisplayAvatarURL,
   discordDisplayLabel,
@@ -205,7 +205,7 @@ function embedFull(user, discordUser, guildId) {
         value:
           `**Chars restantes (mês):** ${(user.charLeft ?? 0).toLocaleString()}\n` +
           `**Classe:** ${cls?.name ?? "Nenhuma"}\n` +
-          `**Sorte:** ${user.luck_stat > 0 ? "+" : ""}${user.luck_stat ?? 0}\n`,
+          `**Sorte:** ${getClassModifier(user.user_class, "lucky")}\n`,
         inline: false,
       },
       {

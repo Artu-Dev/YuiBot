@@ -36,7 +36,7 @@ export async function execute(client, data) {
     { type: "jackpot", chance: 0.01, amount: randomInt(5000, 25001),    emoji: "🎰", desc: "JACKPOT!" },
   ];
 
-  const classLucky = getClassModifier(user.user_class || "none", "lucky");
+  const classLucky = getClassModifier(user.user_class, "lucky");
   const LUCK_WEIGHT = 0.25;
   const adjustedOutcomes = outcomes.map((outcome) => {
     const modifier = outcome.type === "loss"

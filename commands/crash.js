@@ -127,7 +127,7 @@ export async function execute(client, data) {
   reduceChars(userId, guildId, aposta);
   addUserPropertyByAmount("tiger_plays", userId, guildId, 1);
 
-  const classLucky = getClassModifier(user.user_class || "none", "lucky");
+  const classLucky = getClassModifier(user.user_class, "lucky");
 
   const crashStep = await generateCrashStep(classLucky, guildId);
 

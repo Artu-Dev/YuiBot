@@ -1,3 +1,4 @@
+import { user } from "@elevenlabs/elevenlabs-js/api/index.js";
 import { reduceChars, setUserProperty } from "../database.js";
 
 export const ESCUDO_BLOCK_BASE = 0.60;
@@ -164,7 +165,8 @@ export const CLASS_KEYS_ORDERED = Object.keys(CLASSES).sort((a, b) => {
   return CLASSES[a].unlockCost - CLASSES[b].unlockCost;
 });
 
-export function getClassModifier(userClass, key) {
+export function getClassModifier(userClass = "none", key) {
+  if (!CLASSES[userClass]) return 0;
   return CLASSES[userClass]?.modifiers?.[key] || 0;
 }
 
