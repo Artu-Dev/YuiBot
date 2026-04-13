@@ -224,52 +224,46 @@ export const intializeDbBot = async () => {
 };
 
 export const getTodayEvent = (guildId) => {
-  if (!guildId || !isValidGuildId(guildId)) {
-    console.warn(`⚠️  Invalid guildId provided to getTodayEvent: ${guildId}`);
-    return null;
-  }
-
+  if (!guildId || !isValidGuildId(guildId)) return null;
   const today = new Date().toISOString().split("T")[0];
-  return db.prepare(
-    "SELECT * FROM daily_events WHERE guildId = ? AND date = ?",
-  ).get(guildId, today);
-}
+  const row = db.prepare("SELECT * FROM daily_events WHERE guildId = ?").get(guildId);
+  if (!row || row.date !== today) return null;
+  return row;
+};
 
-export const setTodayEvent = async (guildId, date, eventKey, charMultiplier, casinoMultiplier, robSuccess, name, description) => {
-  if (!guildId || !isValidGuildId(guildId)) {
-    console.warn(`⚠️  Invalid guildId provided to setTodayEvent: ${guildId}`);
-    return null;
-  }
-  db.prepare(
-    `
-    INSERT OR REPLACE INTO daily_events (guildId, date, eventKey, charMultiplier, casinoMultiplier, robSuccess, name, description)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `,
-  ).run(guildId, date, eventKey, charMultiplier, casinoMultiplier, robSuccess, name, description);
-}
+export const setTodayEvent = (guildId, date, eventKey, charMultiplier, casinoMultiplier, robSuccess, name, description) => {
+  if (!guildId || !isValidGuildId(guildId)) return null;
+  db.prepare(`
+    INSERT OR REPLACE INTO daily_events
+      (guildId, date, eventKey, charMultiplier, casinoMultiplier, robSuccess, name, description, hasBeenAnnounced)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+  `).run(guildId, date, eventKey, charMultiplier, casinoMultiplier, robSuccess ?? null, name, description);
+};
 
 export const checkAnnouncedEvent = (guildId) => {
-  if (!guildId || !isValidGuildId(guildId)) {
-    console.warn(`⚠️ Invalid guildId provided: ${guildId}`);
-    return true; 
-  }
-
+  if (!guildId || !isValidGuildId(guildId)) return true;
   const today = new Date().toISOString().split("T")[0];
-  const event = db.prepare("SELECT hasBeenAnnounced FROM daily_events WHERE guildId = ? AND date = ?").get(guildId, today);
-
-  if (event?.hasBeenAnnounced === 1) {
-    return true;
-  }
-
-  const result = db.prepare("UPDATE daily_events SET hasBeenAnnounced = 1 WHERE guildId = ? AND date = ?").run(guildId, today);
-
-  if (result.changes === 0) {
-    return true;
-  }
-
+  const row = db.prepare("SELECT hasBeenAnnounced, date FROM daily_events WHERE guildId = ?").get(guildId);
+  if (!row || row.date !== today) return true;
+  if (row.hasBeenAnnounced === 1) return true;
+  db.prepare("UPDATE daily_events SET hasBeenAnnounced = 1 WHERE guildId = ?").run(guildId);
   return false;
-}
+};
 
+export const getHolidaysForYear = (year) => {
+  const rows = db.prepare("SELECT date, name FROM holidays_cache WHERE year = ?").all(year);
+  return new Map(rows.map(r => [r.date, r.name]));
+};
+
+export const saveHolidays = (holidays, year) => {
+  const insert = db.prepare("INSERT OR REPLACE INTO holidays_cache (date, name, year) VALUES (?, ?, ?)");
+  const insertAll = db.transaction((holidays) => {
+    for (const [date, name] of holidays.entries()) {
+      insert.run(date, name, year);
+    }
+  });
+  insertAll(holidays);
+};
 
 /// ==============================================
 /// USUÁRIOS
