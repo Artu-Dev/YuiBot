@@ -164,10 +164,6 @@ export const CLASS_KEYS_ORDERED = Object.keys(CLASSES).sort((a, b) => {
   return CLASSES[a].unlockCost - CLASSES[b].unlockCost;
 });
 
-export function getClassModifiers(userClass) {
-  return CLASSES[userClass]?.modifiers || {};
-}
-
 export function getClassModifier(userClass, key) {
   return CLASSES[userClass]?.modifiers?.[key] || 0;
 }

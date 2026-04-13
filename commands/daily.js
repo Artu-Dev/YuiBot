@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
-import { addChars, getOrCreateUser, setUserProperty, getClassModifier } from "../database.js";
+import { addChars, getOrCreateUser, setUserProperty } from "../database.js";
+import { getClassModifier } from "../functions/classes.js";
 
 export const name = "dia";
 
@@ -31,7 +32,7 @@ export async function execute(client, data) {
         return;
     }
 
-    const classLuckyMod = getClassModifier(userData.user_class, 'lucky') || 0;
+    const classLuckyMod = getClassModifier(userData.user_class || "none", "lucky");
     const randomChars = Math.floor(Math.random() * 100) + 50 + Math.floor(50 * classLuckyMod);
 
     addChars(userId, guildId, randomChars);
