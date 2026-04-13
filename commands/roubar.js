@@ -16,7 +16,7 @@ import {
 } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { sample } from "es-toolkit";
-import { getTodaysEvent } from "../functions/getTodaysEvent.js";
+import { getCurrentDailyEvent } from "../functions/getTodaysEvent.js";
 import { customEmojis } from "../functions/utils.js";  
 // ==================== CONFIG ====================
 const STEAL_PERCENTAGE_MIN = 0.05;
@@ -30,6 +30,8 @@ const ROUBO_CHANCE_MULTIPLIER = 1.0;
 const LOADING_TIME = 5000;
 
 export const name = "roubar";
+export const aliases = ["steal", "rob", "assaltar", "roubo"];
+
 export const data = new SlashCommandBuilder()
   .setName("roubar")
   .setDescription(
@@ -144,7 +146,7 @@ export async function execute(client, data) {
 
   const userClass = user.user_class || "none";
   const victimClass = victimData.user_class || "none";
-  const event = await getTodaysEvent(guildId);
+  const event = await getCurrentDailyEvent(guildId);
 
   let successChance = isTargeted
     ? SUCCESS_CHANCE_TARGETED

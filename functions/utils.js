@@ -4,8 +4,8 @@
   import { PermissionFlagsBits } from 'discord.js';
 import { log } from "../bot.js";
 
-  export function getRandomTime(minSeconds, maxSeconds) {
-    return random(ms(`${minSeconds}s`), ms(`${maxSeconds}s`));
+  export function getRandomTime(min, max) {
+    return Math.floor(Math.random() * (max - min) + min)
   }
 
   function parseArgs(content) {
@@ -92,6 +92,7 @@ import { log } from "../bot.js";
       fromInteraction: false,
       content: message.content,
       args: rawArgs,
+      rawMessage: message, 
 
       adapterCreator: message.guild?.voiceAdapterCreator ?? null,
 
@@ -472,8 +473,10 @@ import { log } from "../bot.js";
       for (const mention of mentions) {
         const userId = mention.match(/\d+/)[0];
         try {
-          const user = await message.guild.members.fetch(userId);
-          const displayName = user.displayName || user.user.username;
+          const member = message.guild.members.cache.get(userId);
+          
+          const displayName = member?.displayName || message.client.users.cache.get(userId)?.username || "usuário";
+
           processedContent = processedContent.replace(mention, `@${displayName}`);
         } catch (error) {
           log(`[${message.guild.id}] ❌ Falha ao buscar usuário ${userId}.`, "Utils", 31);

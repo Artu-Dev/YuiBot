@@ -3,6 +3,9 @@ import { getOrCreateUser, getBotPrefix } from "../database.js";
 import { CLASSES, CLASS_KEYS_ORDERED, unlockClass, formatModifier } from "../functions/classes.js";
 import { customEmojis } from "../functions/utils.js";
 
+export const name = "classe";
+export const aliases = ["classes", "class", "cls"];
+
 const attributeDescriptions = {
   lucky: "Sorte no tigre",
   robCost: "Custo de roubo",
@@ -56,8 +59,6 @@ function buildRow(currentIndex, userData) {
 
   return new ActionRowBuilder().addComponents(...components);
 }
-
-export const name = "classe";
 
 export const data = new SlashCommandBuilder()
   .setName("classe")

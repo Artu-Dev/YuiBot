@@ -1,8 +1,9 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { getTodaysEvent } from "../functions/getTodaysEvent.js";
+import { getCurrentDailyEvent } from "../functions/getTodaysEvent.js";
 import dayjs from "dayjs";
 
 export const name = "evento";
+export const aliases = ["event", "eventos"];
 
 
 export const data = new SlashCommandBuilder()
@@ -11,12 +12,12 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(client, data) {
     const guildId = data.guildId;
-    const event = await getTodaysEvent(guildId);
+    const event = await getCurrentDailyEvent(guildId);
 
     const embed = new EmbedBuilder()
       .setColor(0xff00ff)
         .setTitle(`Evento de ${dayjs().format('dddd')}`)
-        .setDescription(event && event.key !== "normal" ? `**${event.name}**\n${event.description}` : "Nenhum evento especial hoje. Aproveite o dia!");
+        .setDescription(event && event.eventKey !== "normal" ? `**${event.name}**\n${event.description}` : "Nenhum evento especial hoje. Aproveite o dia!");
 
     await data.reply({ embeds: [embed] });
 }

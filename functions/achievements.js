@@ -86,36 +86,33 @@ const checkRelevantAchievements = async (message, userId, stats, authorUserObj, 
 
 const handleMentions = async (message, guildId, userId, displayName, stats) => {
   if (!message.mentions.users.size) return;
-  const mentions = Array.from(message.mentions.users.keys());
 
-  const stalkerAch = achievements.find((ach) => ach.key === "stalker");
-  const popularAch = achievements.find((ach) => ach.key === "popular");
+  const stalkerAch = achievements.find(ach => ach.key === "stalker");
+  const popularAch = achievements.find(ach => ach.key === "popular");
 
-  for (const mentionedId of mentions) {
+  for (const mentionedId of message.mentions.users.keys()) {
+    if (mentionedId === userId) continue;
+
     const mentionedUser = message.mentions.users.get(mentionedId);
-    if (!mentionedUser) continue;
+    if (!mentionedUser || mentionedUser.bot) continue;
 
-    const mentionedDisplayName =
-      message.guild.members.cache.get(mentionedId)?.displayName ||
-      mentionedUser.username;
+    const mentionedMember = message.guild.members.cache.get(mentionedId);
+    const mentionedDisplayName = mentionedMember?.displayName 
+      || mentionedUser.globalName 
+      || mentionedUser.username;
 
-    if (!mentionedUser.bot) {
-      addUserProperty("mentions_sent", userId, guildId);
-      if (stalkerAch && stalkerAch.check(stats)) {
-        await giveAchievement(message, userId, "stalker", message.author);
-      }
+    addUserProperty("mentions_sent", userId, guildId);
+
+    if (stalkerAch && stalkerAch.check(stats)) {
+      await giveAchievement(message, userId, "stalker", message.author);
     }
 
-    if (mentionedId !== userId) {
-      addUserProperty("mentions_received", mentionedId, guildId);
-      const mentionedStats = getOrCreateUser(
-        mentionedId,
-        mentionedDisplayName,
-        guildId
-      );
-      if (popularAch && popularAch.check(mentionedStats)) {
-        await giveAchievement(message, mentionedId, "popular", mentionedUser);
-      }
+    addUserProperty("mentions_received", mentionedId, guildId);
+
+    const mentionedStats = getOrCreateUser(mentionedId, mentionedDisplayName, guildId);
+
+    if (popularAch && popularAch.check(mentionedStats)) {
+      await giveAchievement(message, mentionedId, "popular", mentionedUser);
     }
   }
 };

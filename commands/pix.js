@@ -12,6 +12,7 @@ import { sample } from 'es-toolkit';
 import { ALLOWED_MESSAGE_BOT_ID } from "../constants.js";
 
 export const name = "pix";
+export const aliases = ["doar", "donate", "give", "transferir"];
 
 export const data = new SlashCommandBuilder()
   .setName("pix")

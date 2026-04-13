@@ -225,31 +225,61 @@ export const intializeDbBot = async () => {
   };
 };
 
-export const getTodayEvent = (guildId) => {
+export const getDailyEventFromDB = (guildId) => {
   if (!guildId || !isValidGuildId(guildId)) return null;
-  const today = dayjs().format("YYYY-MM-DD");;
-  const row = db.prepare("SELECT * FROM daily_events WHERE guildId = ?").get(guildId);
-  if (!row || row.date !== today) return null;
-  return row;
+
+  const today = dayjs().format("YYYY-MM-DD");
+
+  return db.prepare(`
+    SELECT * FROM daily_events 
+    WHERE guildId = ? AND date = ?
+  `).get(guildId, today);
 };
 
-export const setTodayEvent = (guildId, date, eventKey, charMultiplier, casinoMultiplier, robSuccess, name, description) => {
-  if (!guildId || !isValidGuildId(guildId)) return null;
+export const saveDailyEvent = (guildId, eventData) => {
+  if (!guildId || !isValidGuildId(guildId)) return;
+
+  const today = dayjs().format("YYYY-MM-DD");
+
   db.prepare(`
-    INSERT OR REPLACE INTO daily_events
-      (guildId, date, eventKey, charMultiplier, casinoMultiplier, robSuccess, name, description, hasBeenAnnounced)
+    INSERT OR REPLACE INTO daily_events 
+      (guildId, date, eventKey, charMultiplier, casinoMultiplier, 
+       robSuccess, name, description, hasBeenAnnounced)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-  `).run(guildId, date, eventKey, charMultiplier, casinoMultiplier, robSuccess ?? null, name, description);
+  `).run(
+    guildId,
+    today,
+    eventData.eventKey ?? "normal",
+    eventData.charMultiplier ?? 1.0,
+    eventData.casinoMultiplier ?? 1.0,
+    eventData.robSuccess ?? null,
+    eventData.name ?? "Dia Normal",
+    eventData.description ?? "Tudo normal hoje"
+  );
 };
 
-export const checkAnnouncedEvent = (guildId) => {
-  if (!guildId || !isValidGuildId(guildId)) return true;
-  const today = new Date().toISOString().split("T")[0];
-  const row = db.prepare("SELECT hasBeenAnnounced, date FROM daily_events WHERE guildId = ?").get(guildId);
-  if (!row || row.date !== today) return true;
-  if (row.hasBeenAnnounced === 1) return true;
-  db.prepare("UPDATE daily_events SET hasBeenAnnounced = 1 WHERE guildId = ?").run(guildId);
-  return false;
+export const shouldAnnounceDailyEvent = (guildId) => {
+  if (!guildId || !isValidGuildId(guildId)) return false;
+
+  const today = dayjs().format("YYYY-MM-DD");
+  const row = db.prepare(`
+    SELECT hasBeenAnnounced 
+    FROM daily_events 
+    WHERE guildId = ? AND date = ?
+  `).get(guildId, today);
+
+  return !row || row.hasBeenAnnounced === 0;
+};
+
+export const markDailyEventAsAnnounced = (guildId) => {
+  if (!guildId || !isValidGuildId(guildId)) return;
+
+  const today = dayjs().format("YYYY-MM-DD");
+
+  db.prepare(`
+    INSERT OR REPLACE INTO daily_events (guildId, date, hasBeenAnnounced)
+    VALUES (?, ?, 1)
+  `).run(guildId, today);
 };
 
 export const getHolidaysForYear = (year) => {
@@ -651,6 +681,7 @@ export const getChannels = (guildId) => {
     .get(guildId);
   return row ? JSON.parse(row.channel_id || "[]") : [];
 };
+
 
 export const addChannel = (guildId, channelId) => {
   let channels = getChannels(guildId);

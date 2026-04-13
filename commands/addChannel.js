@@ -2,6 +2,7 @@ import { SlashCommandBuilder } from "discord.js";
 import { addChannel, getChannels } from "../database.js";
 
 export const name = "add-channel";
+export const aliases = ["addchannel", "ac"];
 
 export const data = new SlashCommandBuilder()
   .setName("add-channel")

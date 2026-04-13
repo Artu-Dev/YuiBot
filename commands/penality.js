@@ -1,7 +1,9 @@
 import { SlashCommandBuilder } from "discord.js";
 import { getOrCreateUser, getUserPenality } from "../database.js";
+import { penalities } from "../functions/penalities.js";
 
 export const name = "penality";
+export const aliases = ["penalidade", "penalidades", "penalitys"];
 
 export const data = new SlashCommandBuilder()
   .setName("penality")
@@ -11,11 +13,6 @@ export const data = new SlashCommandBuilder()
       .setDescription("O usuário para verificar (opcional, padrão é você mesmo)")
       .setRequired(false)
   );
-
-const formatPenaltyList = (list) =>
-  list.length > 0
-    ? list.map((pen, idx) => `• ${idx + 1}. ${pen}`).join("\n")
-    : "Nenhuma penalidade encontrada.";
 
 function parseArgs(data) {
   if (data.fromInteraction) {
@@ -44,6 +41,9 @@ export async function execute(client, data) {
   }
 
   return data.reply(
-    `Penalidades de ${displayName}:\n${formatPenaltyList(penality)}`
+    `Penalidade de ${displayName}: ${penality}\n
+    ${penalities.filter(p => p.name === penality)}
+    `
+
   );
 }

@@ -7,9 +7,10 @@ import {
 } from "../database.js";
 import { getClassModifier } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
-import { getTodaysEvent } from "../functions/getTodaysEvent.js";
+import { getCurrentDailyEvent } from "../functions/getTodaysEvent.js";
 
 export const name = "crash";
+export const aliases = ["crashgame", "cg", "aviaozinho"];
 
 // ========== CONFIGURAÇÕES DO CRASH ==========
 const LUCK_FACTOR = 1.0;      
@@ -38,7 +39,7 @@ function randomStepInRange(min, max, bias) {
 
 async function generateCrashStep(lucky, guildId) {
   let eventFactor = 1.0;
-  const event = await getTodaysEvent(guildId);
+  const event = await getCurrentDailyEvent(guildId);
   if (event && typeof event[EVENT_FIELD] === 'number') {
     eventFactor = Math.max(0.5, Math.min(2.0, event[EVENT_FIELD])); // limites seguros
   }

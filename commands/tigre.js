@@ -3,9 +3,10 @@ import { getOrCreateUser, getUser, reduceChars, addChars, db, addUserPropertyByA
 import { getClassModifier } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { randomInt } from 'es-toolkit';
-import { getTodaysEvent } from "../functions/getTodaysEvent.js";
+import { getCurrentDailyEvent } from "../functions/getTodaysEvent.js";
 
 export const name = "tigre";
+export const aliases = ["tigrinho", "casino", "slot", "slots", "apostar"];
 
 const TIGRE_CUSTO = 350;
 let TIGRE_SUCCESS_MULTIPLIER = 1.0;
@@ -50,7 +51,7 @@ export async function execute(client, data) {
   const rand = Math.random();
   let selectedOutcome;
   
-  const event = await getTodaysEvent(guildId);
+  const event = await getCurrentDailyEvent(guildId);
   if (event && event.tigerSuccess !== null) {
     TIGRE_SUCCESS_MULTIPLIER = event.tigerSuccess;
   }

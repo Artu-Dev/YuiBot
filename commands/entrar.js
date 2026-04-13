@@ -4,6 +4,7 @@ import { joinCall } from "../functions/voice.js";
 import { getVoiceConnection } from "@discordjs/voice";
 
 export const name = "entrar";
+export const aliases = ["join", "vc", "conectar"];
 
 export const data = new SlashCommandBuilder()
   .setName("entrar")

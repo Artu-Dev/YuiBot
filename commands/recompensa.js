@@ -14,6 +14,7 @@ import { sample } from 'es-toolkit';
 import { ALLOWED_MESSAGE_BOT_ID } from "../constants.js";
 
 export const name = "recompensa";
+export const aliases = ["bounty", "bountyhead", "recompensas"];
 
 export const data = new SlashCommandBuilder()
   .setName("recompensa")

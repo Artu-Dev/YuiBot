@@ -3,6 +3,7 @@ import { getOrCreateUser, getBotPrefix, setUserPenality } from "../database.js";
 import { penalities } from "../functions/penalities.js";
 
 export const name = "set-penality";
+export const aliases = ["set-penalidade", "add-penality", "add-penalidade", "add-p", "set-p"];
 
 const EXISTING = penalities.map((p) => p.nome);
 

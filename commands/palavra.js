@@ -1,14 +1,13 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { dbBot } from "../database.js";
-import { parseMessage } from "../functions/utils.js";
 import { log } from "../bot.js";
 
 export const name = "palavra";
+export const aliases = ["palavraproibida", "word", "pb", "proibida"];
 
 export const data = new SlashCommandBuilder()
   .setName("palavra")
   .setDescription("Mostra a palavra proibida do dia.");
-
 
 export async function execute(client, data) {
   try {

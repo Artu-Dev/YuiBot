@@ -14,6 +14,7 @@ import { resolveDisplayAvatarURL, discordDisplayLabel } from "../functions/utils
 import { log } from "../bot.js";
 
 export const name = "conquistas";
+export const aliases = ["conqs", "achievements", "cq"];
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 

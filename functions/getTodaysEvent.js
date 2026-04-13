@@ -1,6 +1,11 @@
 import dayjs from "dayjs";
-import { getTodayEvent, setTodayEvent, getHolidaysForYear, saveHolidays } from "../database.js";
+import { 
+  getDailyEventFromDB, 
+  getHolidaysForYear, 
+  saveDailyEvent
+} from "../database.js";
 import { log } from "../bot.js";
+import { isValidGuildId } from "./validation.js";
 
 const randomEvents = [
   {
@@ -69,6 +74,88 @@ const randomEvents = [
   },
 ];
 
+function createNormalEvent() {
+  return {
+    eventKey: "normal",
+    name: "Dia Normal",
+    description: "Tudo normal hoje",
+    charMultiplier: 1.0,
+    casinoMultiplier: 1.0,
+    robSuccess: null,
+  };
+}
+
+async function generateDailyEvent(today) {
+  const year = dayjs().year();
+  const holidays = await loadHolidays(year);
+  const isHoliday = holidays.get(today);
+
+  if (isHoliday) {
+    const multiplier = Math.random() < 0.5 ? 0.5 : 1.5;
+    return {
+      eventKey: "holiday_special",
+      charMultiplier: multiplier,
+      casinoMultiplier: 1.0,
+      robSuccess: null,
+      name: `Feriado: ${isHoliday}`,
+      description: `Dia de feriado! Bônus geral de ${multiplier}x`,
+    };
+  }
+
+  if (dayjs().month() === 9) {
+    const base = randomEvents[Math.floor(Math.random() * randomEvents.length)];
+    return {
+      eventKey: "halloween",
+      charMultiplier: base.charMultiplier || 1.5,
+      casinoMultiplier: base.casinoMultiplier,
+      robSuccess: base.robSuccess,
+      name: "Halloween do MEDO!!",
+      description: "Evento especial de Halloween! 👻",
+    };
+  }
+
+  if (dayjs().month() === 11 && dayjs().date() >= 25) {
+    return {
+      eventKey: "natal",
+      charMultiplier: 0.5,
+      casinoMultiplier: 2.0,
+      robSuccess: null,
+      name: "Final de ano da Yui",
+      description: "Final de ano!! Gasta menos chars e cassino paga mais!",
+    };
+  }
+
+  if (Math.random() < 0.8) {
+    return createNormalEvent();
+  }
+
+  const random = randomEvents[Math.floor(Math.random() * randomEvents.length)];
+  return {
+    eventKey: random.key,
+    charMultiplier: random.charMultiplier,
+    casinoMultiplier: random.casinoMultiplier,
+    robSuccess: random.robSuccess,
+    name: random.name,
+    description: random.description,
+  };
+}
+
+export async function getCurrentDailyEvent(guildId) {
+  if (!guildId || !isValidGuildId(guildId)) {
+    return createNormalEvent();
+  }
+
+  const today = dayjs().format("YYYY-MM-DD");
+
+  let event = getDailyEventFromDB(guildId);
+  if (event) return event;
+
+  event = await generateDailyEvent(today);
+  saveDailyEvent(guildId, event);
+
+  return event;
+}
+
 async function loadHolidays(year) {
   const cached = getHolidaysForYear(year);
   if (cached.size > 0) return cached;
@@ -81,74 +168,7 @@ async function loadHolidays(year) {
     saveHolidays(map, year);
     return map;
   } catch (e) {
-    log("❌ Falha ao carregar feriados:", e.message, "Utils", 31);
+    log(`❌ Falha ao carregar feriados: ${e.message}`, "Feriados", 31);
     return new Map();
   }
-}
-
-export async function getTodaysEvent(guildId) {
-  const today = dayjs().format("YYYY-MM-DD");
-  const year = dayjs().year();
-
-  const existing = getTodayEvent(guildId);
-  if (existing) return existing;
-
-  const holidays = await loadHolidays(year);
-  const isHoliday = holidays.get(today);
-  let newEvent;
-
-  if (isHoliday) {
-    const multiplier = Math.random() < 0.5 ? 0.5 : 1.5;
-    newEvent = {
-      eventKey: "holiday_special",
-      charMultiplier: multiplier,
-      casinoMultiplier: 1.0,
-      robSuccess: null,
-      name: `Feriado: ${isHoliday}`,
-      description: `Dia de feriado! Bônus geral de ${multiplier}x`,
-    };
-  } else if (dayjs().month() === 9) {
-    const base = randomEvents[Math.floor(Math.random() * randomEvents.length)];
-    newEvent = {
-      eventKey: "halloween",
-      charMultiplier: base.charMultiplier || 1.5,
-      casinoMultiplier: base.casinoMultiplier,
-      robSuccess: base.robSuccess,
-      name: "Halloween do MEDO!!",
-      description: "Evento especial de Halloween! 👻",
-    };
-  } else if (dayjs().month() === 11 && dayjs().date() >= 25) {
-    newEvent = {
-      eventKey: "natal",
-      charMultiplier: 0.5,
-      casinoMultiplier: 2.0,
-      robSuccess: null,
-      name: "Final de ano da Yui",
-      description: "Final de ano!! Gasta menos chars e cassino paga mais!",
-    };
-  } else if (Math.random() < 0.8) {
-    newEvent = {
-      eventKey: "normal",
-      charMultiplier: 1.0,
-      casinoMultiplier: 1.0,
-      robSuccess: null,
-      name: "Dia Normal",
-      description: "Tudo normal hoje",
-    };
-  } else {
-    const random = randomEvents[Math.floor(Math.random() * randomEvents.length)];
-    newEvent = {
-      eventKey: random.key,
-      charMultiplier: random.charMultiplier,
-      casinoMultiplier: random.casinoMultiplier,
-      robSuccess: random.robSuccess,
-      name: random.name,
-      description: random.description,
-    };
-  }
-
-  setTodayEvent(guildId, today, newEvent.eventKey, newEvent.charMultiplier,
-    newEvent.casinoMultiplier, newEvent.robSuccess, newEvent.name, newEvent.description);
-
-  return newEvent;
 }

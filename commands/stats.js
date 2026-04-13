@@ -15,6 +15,7 @@ import { getBotPrefix } from "../database.js";
 import { log } from "../bot.js";
 
 export const name = "stats";
+export const aliases = ["estatísticas", "stat", "perfil", "profile", "dados"];
 
 function normalizeModeToken(raw) {
   if (!raw) return null;

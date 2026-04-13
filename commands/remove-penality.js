@@ -6,6 +6,7 @@ import {
 } from "../database.js";
 
 export const name = "remove-penality";
+export const aliases = ["remover-penalidade", "remover-penality", "rm-penality", "rm-penalidade", "rm-p"];
 
 export const data = new SlashCommandBuilder()
   .setName("remove-penality")

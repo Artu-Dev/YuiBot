@@ -1,7 +1,7 @@
 import { dbBot, reduceChars, setUserProperty, addChars, getRandomProhibitedWord, getServerConfig, getPoorestGuildUsers, addCharsBulk, removeUserPenality } from "../database.js";
 import { parseMessage, safeReplyToMessage } from "./utils.js";
 import { penalities, handlePenalities, randomWords } from "./penalities.js";
-import { getTodaysEvent } from "./getTodaysEvent.js";
+import { getCurrentDailyEvent } from "./getTodaysEvent.js";
 import dayjs from "dayjs";
 import { log } from "../bot.js";
 
@@ -95,7 +95,7 @@ export const limitChar = async (message, userData) => {
   }
 
   // ====================== EVENTO ======================
-  const event = await getTodaysEvent(guildId);
+  const event = await getCurrentDailyEvent(guildId);
   const charMultiplier = event?.charMultiplier ?? 1.0;
 
   if (charMultiplier === 0) return;
@@ -145,7 +145,7 @@ export const limitChar = async (message, userData) => {
       );
       await message.channel.send(`${randomPenality.description}${randomWord}`);
     }
-  } else if (userData.penality && userData.penalitySetByAdmin !== "1") {
+  } else if (userData.penality && userData.penalitySetByAdmin !== 1) {
     removeUserPenality(userId, guildId);
     setUserProperty("penalityWord", userId, guildId, "");
     await safeReplyToMessage(

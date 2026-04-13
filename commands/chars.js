@@ -2,6 +2,7 @@ import { SlashCommandBuilder } from "discord.js";
 import { getOrCreateUser } from "../database.js";
 
 export const name = "chars";
+export const aliases = ["char", "caracteres", "saldo"];
 
 export const data = new SlashCommandBuilder()
   .setName("chars")

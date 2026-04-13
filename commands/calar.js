@@ -8,6 +8,7 @@ import {
 } from "../database.js";
 
 export const name = "calar";
+export const aliases = ["silenciar", "shut"];
 
 const CALAR_CUSTO = 500;
 const SILENCIO_MS = 3 * 60 * 60 * 1000;

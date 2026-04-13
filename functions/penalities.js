@@ -119,7 +119,7 @@ export async function handlePenalities(message, userData) {
     return false;
   }
 
-  if (Number(userData.charLeft) > 0) return false;
+  if (Number(userData.charLeft) > 0 && userData.penalitySetByAdmin !== 1) return false;
 
   const penality = userData.penality;
   if (!penality) return false;

@@ -4,6 +4,7 @@ import { getClassModifier } from "../functions/classes.js";
 import { SlashCommandBuilder } from "discord.js";
 
 export const name = "dia";
+export const aliases = ["daily", "diario", "bonusdiario"];
 
 export const data = new SlashCommandBuilder()
   .setName("dia")

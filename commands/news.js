@@ -4,6 +4,7 @@ import { createNewsImage } from "../functions/newsImage.js";
 import { log } from "../bot.js";
 
 export const name = "news";
+export const aliases = ["noticia", "notícias", "noticiafalsa", "fakeNews"];
 
 export const data = new SlashCommandBuilder()
   .setName("news")

@@ -6,8 +6,11 @@ export async function cleanupLeftUsers(client) {
 
   for (const [guildId, guild] of client.guilds.cache) {
     try {
-      const members = await guild.members.fetch();
-      const memberIds = new Set(members.keys());
+      if (guild.memberCount !== guild.members.cache.size) {
+        await guild.members.fetch();
+      }
+
+      const memberIds = new Set(guild.members.cache.keys());
 
       const dbUsers = db.prepare("SELECT id FROM users WHERE guild_id = ?").all(guildId);
 
@@ -24,14 +27,14 @@ export async function cleanupLeftUsers(client) {
         deleteAll(toRemove);
         totalRemoved += toRemove.length;
         
-        log( `[${guild.name}] ${toRemove.length} usuário(s) removido(s) do banco`, "Limpeza", 32);
+        log(`[${guild.name}] ${toRemove.length} usuário(s) removido(s) do banco`, "Limpeza", 32);
       }
     } catch (err) {
       log(`❌ Erro ao limpar guild ${guildId}: ${err.message}`, "Limpeza", 31);
     }
   }
 
-  if (totalRemoved === 0) return
-
-  log(`Limpeza concluída. Total removido: ${totalRemoved} usuário(s).`, "Limpeza", 32);
+  if (totalRemoved > 0) {
+    log(`Limpeza concluída. Total removido: ${totalRemoved} usuário(s).`, "Limpeza", 32);
+  }
 }

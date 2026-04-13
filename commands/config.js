@@ -8,20 +8,14 @@ import {
   ComponentType 
 } from "discord.js";
 
-import { getBotPrefix, getServerConfig, setServerConfig } from "../database.js";
+import { getServerConfig, setServerConfig } from "../database.js";
 
 export const name = "config";
+export const aliases = ["cfg", "settings", "configurações", "ajustes"];
+
 export const data = new SlashCommandBuilder()
   .setName("config")
   .setDescription("Configurações do bot (apenas administradores)");
-
-const boolize = (raw) => {
-  if (!raw) return null;
-  const text = raw.toString().toLowerCase().trim();
-  if (["true", "on", "1", "yes", "sim", "ligado"].includes(text)) return true;
-  if (["false", "off", "0", "no", "não", "nao", "desligado"].includes(text)) return false;
-  return null;
-};
 
 const configOptions = [
   {
@@ -108,7 +102,6 @@ export async function execute(client, data) {
     ephemeral: true 
   });
 
-  // Coletor unificado para Menu e Botões
   const collector = response.createMessageComponentCollector({
     time: 120000, // 2 minutos
     filter: i => i.user.id === userId
@@ -116,7 +109,6 @@ export async function execute(client, data) {
 
   collector.on('collect', async (interaction) => {
     
-    // Tratamento para o Menu de Seleção
     if (interaction.isStringSelectMenu()) {
       const selectedValue = interaction.values[0];
       const option = configOptions.find(o => o.value === selectedValue);

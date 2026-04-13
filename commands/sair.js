@@ -2,6 +2,7 @@ import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { getVoiceConnection } from "@discordjs/voice";
 
 export const name = "sair";
+export const aliases = ["leave", "disconnect", "dc", "saircall", "sair-call"];
 
 export const data = new SlashCommandBuilder()
   .setName("sair")

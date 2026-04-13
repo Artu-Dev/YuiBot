@@ -1,4 +1,13 @@
-import { getChannels, saveMessageContext, getOrCreateUser, isGuildAiSilenced, getServerConfig, checkAnnouncedEvent } from "../database.js";
+import { 
+  getChannels, 
+  saveMessageContext, 
+  getOrCreateUser, 
+  isGuildAiSilenced, 
+  getServerConfig,
+  shouldAnnounceDailyEvent,
+  markDailyEventAsAnnounced 
+} from "../database.js";
+
 import { handleAchievements } from "../functions/achievements.js";
 import { generateAiRes } from "../functions/generateRes.js";
 import { limitChar } from "../functions/limitChar.js";
@@ -6,15 +15,19 @@ import { sayInCall } from "../functions/sayInCall.js";
 import { parseMessage, replaceMentions, contextFromMessage, safeReplyToMessage, messageContainsDailyWord } from "../functions/utils.js";
 import { randomResend } from "../functions/randomActions.js";
 import { ALLOWED_MESSAGE_BOT_ID } from "../constants.js";
+
 import ms from 'ms';
-import { getTodaysEvent } from "../functions/getTodaysEvent.js";
+import { getCurrentDailyEvent } from "../functions/getTodaysEvent.js"; 
+
 import dayjs from "dayjs";
-import {EmbedBuilder} from "discord.js";
+import { EmbedBuilder } from "discord.js";
 import 'dayjs/locale/pt-br.js';
 import { log } from "../bot.js";
+
 dayjs.locale('pt-br');
 
 export const name = "messageCreate";
+
 const AI_COOLDOWN_MS        = ms('12s');
 const COOLDOWN_CLEANUP_MS   = ms('1m');
 const COOLDOWN_TTL_FACTOR   = 5;
@@ -32,7 +45,6 @@ setInterval(() => {
   }
 }, COOLDOWN_CLEANUP_MS);
 
-
 function isOnCooldown(userId) {
   const last = aiCooldowns.get(userId) ?? 0;
   return Date.now() - last < AI_COOLDOWN_MS;
@@ -43,7 +55,6 @@ export const execute = async (message, client) => {
   if (!author || (author.bot && author.id !== ALLOWED_MESSAGE_BOT_ID)) return;
 
   const { guildId, userId, channelId, displayName, text, mentions } = parseMessage(message, client);
-
   if (!guildId || !userId || !channelId) return;
 
   if (await tryHandleCommand(message, client, text)) return;
@@ -69,8 +80,6 @@ export const execute = async (message, client) => {
   );
 
   await limitChar(message, userData);
-
-
   await handleRandomActions(message, userId, mentions);
   handleAchievements(message);
 };
@@ -78,18 +87,20 @@ export const execute = async (message, client) => {
 // ── Funções auxiliares ────────────────────────────────────────
 
 async function tryHandleCommand(message, client, text) {
-  const prefix = getServerConfig(message.guildId, 'prefix') || "$";
-  const isSlash  = text.startsWith("/");
-  const isPrefix = text.startsWith(prefix);
+  if (!text) return false;
 
-  if (!isSlash && !isPrefix) return false;
+  const guildId = message.guild?.id;
+  if (!guildId) return false;
 
-  const raw     = text.slice(isSlash ? 1 : prefix.length).trim();
+  const prefix = getServerConfig(guildId, 'prefix') || "$";
+  if (!text.startsWith(prefix)) return false;
+
+  const raw     = text.slice(prefix.length).trim();
   const args    = raw.split(/ +/);
   const cmdName = args.shift().toLowerCase();
-  const command = client.commands.get(cmdName);
 
-  if (!command) return true;
+  const command = client.commands.get(cmdName);
+  if (!command) return false;
 
   if (typeof command.execute !== "function") {
     log(`⚠️ Comando "${cmdName}" sem função execute.`, "Comando", 31);
@@ -97,22 +108,18 @@ async function tryHandleCommand(message, client, text) {
   }
 
   try {
-    if (command.name === "entrar" || command.name === "sair") {
-      command.execute(client, message);
-    }
     await command.execute(client, contextFromMessage(message));
   } catch (error) {
     log(`❌ Erro ao executar comando "${cmdName}": ${error.message}`, "Comando", 31);
-     try {
-       await safeReplyToMessage(message, "❌ Ocorreu um erro ao executar esse comando.");
-     } catch (e) {
-       log(`❌ Falha ao enviar mensagem de erro para o usuário: ${e.message}`, "Comando", 31);
-     }
+    try {
+      await safeReplyToMessage(message, "❌ Ocorreu um erro ao executar esse comando.");
+    } catch (e) {
+      log(`❌ Falha ao enviar mensagem de erro: ${e.message}`, "Comando", 31);
+    }
   }
 
   return true;
 }
-
 
 function extractImageUrl(message) {
   if (!message.attachments.size) return null;
@@ -167,15 +174,14 @@ async function replyWithAi(message) {
     return;
   }
 
-  const replyText =
-    typeof aiResponse === "string" ? aiResponse.trim() : String(aiResponse ?? "").trim();
+  const replyText = typeof aiResponse === "string" 
+    ? aiResponse.trim() 
+    : String(aiResponse ?? "").trim();
+
   if (!replyText) {
     log("⚠️ Resposta AI vazia, enviando fallback.", "AI", 33);
     try {
-      await safeReplyToMessage(
-        message,
-        "Travei aqui e não saiu texto nenhum — tenta de novo daqui a pouco.",
-      );
+      await safeReplyToMessage(message, "Travei aqui e não saiu texto nenhum — tenta de novo daqui a pouco.");
     } catch (e) {
       log("❌ Fallback reply falhou: " + e.message, "AI", 31);
     }
@@ -198,17 +204,24 @@ async function replyWithAi(message) {
 }
 
 async function announceEvent(message, guildId) {
-  const event = await getTodaysEvent(guildId);
+  const event = await getCurrentDailyEvent(guildId);
+  if (!event || event.eventKey === "normal") return;
 
-  if (!checkAnnouncedEvent(guildId) && event && event.key !== "normal") {
+  const shouldAnnounce = shouldAnnounceDailyEvent(guildId);
+  if (!shouldAnnounce) return;
+
+  try {
     const embed = new EmbedBuilder()
       .setColor(0xff00ff)
       .setTitle(`Evento de ${dayjs().format('dddd')}`)
-      .setDescription(`**${event.name}**\n${event.description}`)
+      .setDescription(`**${event.name}**\n${event.description}`);
 
-    message.channel.send({ embeds: [embed] }).catch((e) => {
-      log("❌ Erro ao anunciar evento: " + e.message, "Evento", 31);
-    });
-  };
+    await message.channel.send({ embeds: [embed] });
 
+    markDailyEventAsAnnounced(guildId);
+    log(`✅ Evento "${event.name}" anunciado no servidor ${guildId}`, "Evento", 32);
+
+  } catch (error) {
+    log(`❌ Erro ao anunciar evento no guild ${guildId}: ${error.message}`, "Evento", 31);
+  }
 }

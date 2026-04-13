@@ -3,20 +3,30 @@ import { REST, Routes } from 'discord.js';
 import { config } from 'dotenv';
 config();
 
-
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
-export const registerCommands = async (commands) => {
+export const registerCommands = async (commandsMap) => {
   try {
-    log(`Registrando ${commands.size} comandos globais...`, "Registro", 34);
+    const slashCommands = [];
 
-    await rest.put(
+    for (const [name, command] of commandsMap) {
+      if (name === command.name?.toLowerCase() && command.data) {
+        slashCommands.push(command.data.toJSON ? command.data.toJSON() : command.data);
+      }
+    }
+
+    log(`Registrando ${slashCommands.length} comandos globais...`, "Registro", 34);
+
+    const data = await rest.put(
       Routes.applicationCommands(process.env.CLIENT_ID),
-      { body: commands.data }
+      { body: slashCommands }
     );
 
-    log('✅ Comandos registrados com sucesso!', "Registro", 34);
+    log(`✅ ${data.length} comandos registrados com sucesso!`, "Registro", 34);
   } catch (error) {
-    log('❌ Erro ao registrar comandos:', "Registro", 34);
+    log(`❌ Erro ao registrar comandos: ${error.message}`, "Registro", 31);
+    if (error.rawError) {
+      console.error(error.rawError);
+    }
   }
 };

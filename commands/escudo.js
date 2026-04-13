@@ -5,6 +5,7 @@ import { sample } from 'es-toolkit';
 import { customEmojis } from "../functions/utils.js"; 
 
 export const name = "escudo";
+export const aliases = ["shield", "protecao", "proteção"];
 
 export const ESCUDO_COST_BASE = 300;
 export const ESCUDO_HOURS = 24;

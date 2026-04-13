@@ -2,6 +2,8 @@ import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { getGuildUsers } from "../database.js";
 
 export const name = "rank";
+export const aliases = ["ranking", "placar", "top", "leaderboard"]; 
+
 export const data = new SlashCommandBuilder()
   .setName("rank")
   .setDescription("Mostra o ranking de caracteres do servidor.");

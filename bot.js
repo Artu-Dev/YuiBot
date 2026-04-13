@@ -53,22 +53,43 @@ function checkMonthlyReset() {
 async function main() {
   // === CARREGAR COMANDOS ===
   client.commands = new Map();
+
   const commandsPath = path.join(process.cwd(), "commands");
+
+  let commandCount = 0
+  let aliasCount = 0;
 
   for (const file of readdirSync(commandsPath)) {
     try {
       const command = await import(`./commands/${file}`);
+
       if (!command.name || typeof command.execute !== "function") {
         log(`⚠️  Comando inválido em ${file}: faltam 'name' ou 'execute'`, "Bot", 31);
         continue;
       }
-      client.commands.set(command.name, command);
+
+      client.commands.set(command.name.toLowerCase(), command);
+      commandCount++;
+
+      if (Array.isArray(command.aliases)) {
+        for (const alias of command.aliases) {
+          const lowerAlias = alias.toLowerCase();
+          
+          if (!client.commands.has(lowerAlias)) {
+            client.commands.set(lowerAlias, command);
+            aliasCount++;
+          } else {
+            log(`⚠️ Alias "${lowerAlias}" de ${file} já existe (ignorado)`, "Bot", 33);
+          }
+        }
+      }
+
     } catch (error) {
-      log(`❌ Erro ao carregar comando ${file}: ${error.message}`, "Bot", 31);
+      log(`❌ Erro ao carregar comando ${file}: ${error}`, "Bot", 31);
     }
   }
 
-  log(`Carregados ${client.commands.size} comandos.`);
+  log(`Carregados ${commandCount} comandos (${aliasCount} aliases).`, "Bot", 36);
 
   // === CARREGAR EVENTOS ===
   const eventsPath = path.join(process.cwd(), "events");
@@ -94,6 +115,8 @@ async function main() {
     log(`Online como ${client.user.tag}`);
     await cleanupLeftUsers(client);
     await registerCommands(client.commands);
+
+    await Promise.all(client.guilds.cache.map(guild => guild.members.fetch().catch(() => null)));
 
     nodeCron.schedule("0 0 * * *", checkMonthlyReset, {
       timezone: "America/Sao_Paulo",
