@@ -108,6 +108,8 @@ export const limitChar = async (message, userData) => {
   const event = await getTodaysEvent(guildId);
   const charMultiplier = event?.charMultiplier ?? 1.0;
 
+  if (charMultiplier === 0) return;
+
   textSize = Math.ceil(textSize * charMultiplier);
 
   const oldValue = Number(userData.charLeft) || 0;
@@ -130,8 +132,6 @@ export const limitChar = async (message, userData) => {
       }
     }
   }
-
-  if (charMultiplier === 0) return;
 
   // ====================== PENALIDADES ======================
   const wasPunished = await handlePenalities(message, userData);
