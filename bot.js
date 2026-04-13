@@ -6,6 +6,7 @@ import Config from "./config.js";
 import { intializeDbBot, dbBot, getGuildUsers, addChars, getServerConfig, addCharsBulk } from "./database.js";
 import nodeCron from "node-cron";
 import { cleanupLeftUsers } from "./functions/cleanUsers.js";
+import { registerCommands } from "./registerCommands.js";
 
 dotenv.config();
 Config.setupDirectories();
@@ -91,6 +92,7 @@ client.once("clientReady", async () => {
   log(`Online como ${client.user.tag}`);
 
   await cleanupLeftUsers(client);
+  await registerCommands();
 
   nodeCron.schedule("0 0 * * *", checkMonthlyReset, {
     timezone: "America/Sao_Paulo"

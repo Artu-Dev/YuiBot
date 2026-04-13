@@ -25,7 +25,7 @@ for (const file of commandFiles) {
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
-(async () => {
+export const registerCommands = async () => {
   try {
     console.log(`🔄 Registrando ${commands.length} comandos globais...`);
 
@@ -38,4 +38,4 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
   } catch (error) {
     console.error('❌ Erro ao registrar comandos:', error);
   }
-})();
+};
