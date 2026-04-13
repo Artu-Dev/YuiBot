@@ -25,7 +25,8 @@ export const achievementsByUpdate = {
   tiger_jackpots:       ["tigrinho_lenda"],
   tiger_losses:         ["apostador", "masoquista"],
   tiger_wins:           ["sortudo_no_tigre", "tigreiro_nato"],
-  consecutive_robbery_losses: ["ladrao_pessimo"]
+  consecutive_robbery_losses: ["ladrao_pessimo"],
+  total_chars_donated:  ["generoso"],
 };
 
 export const achievements = [
