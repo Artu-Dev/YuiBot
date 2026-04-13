@@ -1,6 +1,7 @@
-import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } from "discord.js";
 import { getOrCreateUser, getBotPrefix } from "../database.js";
-import { unlockClass, CLASSES } from "../functions/classes.js";
+import { CLASSES, CLASS_KEYS_ORDERED, unlockClass, formatModifier } from "../functions/classes.js";
+import { customEmojis } from "../functions/utils.js";
 
 const attributeDescriptions = {
   lucky: "Sorte no tigre",
@@ -14,213 +15,161 @@ const attributeDescriptions = {
   escudoCost: "Desconto no custo do escudo",
 };
 
-function parseClasseArgs(data) {
-  if (data.fromInteraction) {
-    return {
-      subcommand: data.getString("ação"),
-      className: data.getString("classe"),
-    };
+function getColorByPrice(cost) {
+  if (cost === 0)         return 0x95A5A6;
+  if (cost < 10_000)     return 0x2ECC71;
+  if (cost < 50_000)     return 0x3498DB;o
+  if (cost < 150_000)    return 0x9B59B6; 
+  if (cost < 500_000)    return 0xF39C12;
+  return 0xE74C3C;
+}
+
+function buildRow(currentIndex, userData) {
+  const classKey = CLASS_KEYS_ORDERED[currentIndex];
+  const cls = CLASSES[classKey];
+  const isOwned = userData.user_class === classKey;
+  const canAfford = classKey === "none" || userData.charLeft >= cls.unlockCost;
+  const canBuy = !isOwned && canAfford;
+
+  const components = [
+    new ButtonBuilder()
+      .setCustomId("prev")
+      .setEmoji("◀️")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(currentIndex === 0),
+    new ButtonBuilder()
+      .setCustomId("next")
+      .setEmoji("▶️")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(currentIndex === CLASS_KEYS_ORDERED.length - 1),
+  ];
+
+  if (canBuy) {
+    components.push(
+      new ButtonBuilder()
+        .setCustomId("buy")
+        .setLabel("🛒 Comprar")
+        .setStyle(ButtonStyle.Success)
+    );
   }
 
-  const args = data.args ?? [];
-  let subcommand = null;
-  let className = null;
-  const positional = [];
-
-  for (const raw of args) {
-    const t = String(raw).trim();
-    if (!t) continue;
-    const colon = t.indexOf(":");
-    if (colon !== -1) {
-      const key = t.slice(0, colon).toLowerCase().replace(/\s/g, "");
-      const val = t.slice(colon + 1).trim().toLowerCase();
-      if (key === "ação" || key === "acao") subcommand = val;
-      else if (key === "classe") className = val;
-      continue;
-    }
-    positional.push(t.toLowerCase());
-  }
-
-  if (positional[0] === "info" || positional[0] === "escolher") {
-    subcommand = positional[0];
-    if (positional[1]) className = positional[1].toLowerCase().trim() || null;
-  }
-
-  return {
-    subcommand,
-    className: className || null,
-  };
+  return new ActionRowBuilder().addComponents(...components);
 }
 
 export const name = "classe";
 
 export const data = new SlashCommandBuilder()
   .setName("classe")
-  .setDescription("Sistema de classes (none, ladrao, pobre, agiota, maldito, fodao).")
-  .addStringOption(option =>
-    option.setName("ação")
-      .setDescription("O que você quer fazer?")
-      .addChoices(
-        { name: "info", value: "info" },
-        { name: "escolher", value: "escolher" }
-      )
-      .setRequired(false)
-  )
-  .addStringOption(option =>
-    option.setName("classe")
-      .setDescription("A classe que quer escolher ou ver info")
-      .addChoices(
-        { name: "nenhum (sem classe)", value: "none" },
-        { name: "ladrao", value: "ladrao" },
-        { name: "pobre", value: "pobre" },
-        { name: "agiota", value: "agiota" },
-        { name: "maldito", value: "maldito" },
-        { name: "fodao", value: "fodao" }
-      )
-      .setRequired(false)
-  );
+  .setDescription("Sistema de classes que modificam seus atributos");
 
 export async function execute(client, data) {
   const { userId, guildId, displayName } = data;
   const userData = getOrCreateUser(userId, displayName, guildId);
 
-  const { subcommand, className } = parseClasseArgs(data);
+  const currentClassKey = userData.user_class ?? "none";
 
-  if ((subcommand === "info" || subcommand === "escolher") && !className) {
-    return data.reply({
-      content: "⚠️ Você precisa informar a **classe** ao usar essa ação!",
-      ephemeral: true,
-    });
-  }
+  let startIndex = CLASS_KEYS_ORDERED.indexOf(currentClassKey);
+  if (startIndex === -1) startIndex = 0;
 
-  switch (subcommand) {
-    case null:
-    case undefined:
-      return handleList(data, userData);
-    case "info":
-      return handleInfo(data, className);
-    case "escolher":
-      return handleChoose(data, userData, userId, guildId, className);
-    default:
-      return data.reply({ content: "❌ subcomando inválido.", ephemeral: true });
-  }
+  const embed = buildClassEmbed(startIndex, userData);
+  const row = buildRow(startIndex, userData);
+
+  const reply = await data.reply({
+    embeds: [embed],
+    components: [row],
+    fetchReply: true
+  });
+
+  const collector = reply.createMessageComponentCollector({
+    time: 120000
+  });
+
+  collector.on("collect", async (interaction) => {
+    if (interaction.user.id !== userId) {
+      return interaction.reply({ content: "❌ Apenas quem executou o comando pode usar os botões.", ephemeral: true });
+    }
+
+    let currentIndex = CLASS_KEYS_ORDERED.indexOf(
+      interaction.message.embeds[0].footer.text.match(/Classe: (\w+)/)?.[1] || "none"
+    );
+
+    if (interaction.customId === "prev") {
+      currentIndex = Math.max(0, currentIndex - 1);
+    } else if (interaction.customId === "next") {
+      currentIndex = Math.min(CLASS_KEYS_ORDERED.length - 1, currentIndex + 1);
+    } else if (interaction.customId === "buy") {
+      const classKey = CLASS_KEYS_ORDERED[currentIndex];
+      const targetClass = CLASSES[classKey];
+      const freshUserData = getOrCreateUser(userId, displayName, guildId);
+
+      if (classKey === freshUserData.user_class) {
+        return interaction.reply({ content: `ℹ️ Você já é **${targetClass.name}**!`, ephemeral: true });
+      }
+
+      if (classKey !== "none" && freshUserData.charLeft < targetClass.unlockCost) {
+        const falta = (targetClass.unlockCost - freshUserData.charLeft).toLocaleString();
+        return interaction.reply({
+          content: `❌ Chars insuficientes. Faltam **${falta}** para liberar **${targetClass.name}**.`,
+          ephemeral: true
+        });
+      }
+
+      const success = unlockClass(userId, guildId, classKey);
+      if (!success) {
+        return interaction.reply({ content: "❌ Ocorreu um erro ao desbloquear a classe.", ephemeral: true });
+      }
+
+      const updatedUser = getOrCreateUser(userId, displayName, guildId);
+      const newEmbed = buildClassEmbed(currentIndex, updatedUser);
+      const newRow = buildRow(currentIndex, updatedUser);
+
+      await interaction.update({ embeds: [newEmbed], components: [newRow] });
+
+      return interaction.followUp({
+        content: `✅ Classe **${targetClass.name}** desbloqueada com sucesso!`,
+        ephemeral: true
+      });
+    }
+
+    const freshUserData = getOrCreateUser(userId, displayName, guildId);
+    const newEmbed = buildClassEmbed(currentIndex, freshUserData);
+    const newRow = buildRow(currentIndex, freshUserData);
+
+    await interaction.update({ embeds: [newEmbed], components: [newRow] });
+  });
+
+  collector.on("end", () => {
+    reply.edit({ components: [] }).catch(() => {});
+  });
 }
 
-function handleList(data, userData) {
-  const p = getBotPrefix();
-  const current = CLASSES[userData.user_class ?? "none"];
+function buildClassEmbed(index, userData) {
+  const classKey = CLASS_KEYS_ORDERED[index];
+  const cls = CLASSES[classKey];
+  const isOwned = userData.user_class === classKey;
 
-  const classList = Object.entries(CLASSES)
-    .map(([key, c]) => {
-      const affordable = userData.charLeft >= c.unlockCost;
-      const owned = userData.user_class === key;
+  const modifiersList = Object.entries(cls.modifiers)
+    .filter(([_, val]) => val !== 0)
+    .map(([key, val]) => `▸ ${attributeDescriptions[key] || key}: ${formatModifier(val)}`)
+    .join("\n") || "Nenhum modificador ativo.";
 
-      let status = "";
-      if (owned) status = "[**☑️**]";
-      else if (affordable) status = "[**🔓**]";
-      else status = "[**🚫**]";
+  const costText = cls.unlockCost > 0
+    ? `${cls.unlockCost.toLocaleString()} chars`
+    : "GRÁTIS";
 
-      const cost = c.unlockCost > 0
-        ? ` — ${c.unlockCost.toLocaleString()} chars`
-        : " — GRÁTIS";
-
-      return `${status} **${c.name}**${cost}`;
-    })
-    .join("\n");
+  const status = isOwned ? "✅ **CLASSE ATUAL**" : "";
 
   const embed = new EmbedBuilder()
-    .setTitle("CLASSES DA YUI!!!")
-    .setDescription(`**Sua classe agora:** ${current.name}\n> ${current.description}`)
+    .setTitle(`${cls.name} ${status}`)
+    .setDescription(cls.description)
+    .setThumbnail(cls.image)
     .addFields(
-      { name: "CLASSES", value: classList, inline: false },
-      {
-        name: "💡 COMO USAR MANO",
-        value:
-          `**Prefixo:** \`${p}classe\` lista · \`${p}classe info <classe>\` · \`${p}classe escolher <classe>\` (\`none\` = sem classe)`,
-        inline: false,
-      }
+      { name: `${customEmojis.mineLegendHero} Modificadores`, value: modifiersList, inline: false },
+      { name: `${customEmojis.lapislazuli} Custo de desbloqueio`, value: costText, inline: true },
+      { name: `${customEmojis.lapislazuli} Seus chars`, value: userData.charLeft.toLocaleString(), inline: true }
     )
-    .setFooter({ text: `Seus chars: ${userData.charLeft.toLocaleString()}` });
+    .setFooter({ text: `Classe: ${classKey} | ${index + 1}/${CLASS_KEYS_ORDERED.length}` })
+    .setColor(isOwned ? 0x00FF00 : getColorByPrice(cls.unlockCost));
 
-  return data.reply({ embeds: [embed] });
-}
-
-function handleInfo(data, className) {
-  const target = CLASSES[className];
-  if (!target) {
-    return data.reply({
-      content: `❌ Classe **${className ?? "?"}** não achada krl.`,
-      ephemeral: true,
-    });
-  }
-
-  const perks = Object.entries(target.modifiers)
-    .map(([key, value]) => `▸ ${attributeDescriptions[key] || key}: ${value}`)
-    .join("\n") || "Nenhum benefício foda por enquanto.";
-
-  const embed = new EmbedBuilder()
-    .setTitle(`# ${target.name} - DETALHES`)
-    .setDescription(target.description)
-    .addFields(
-      { name: "➤  O QUE GANHA", value: perks, inline: false },
-      {
-        name: "➤  CUSTO",
-        value: target.unlockCost > 0
-          ? `${target.unlockCost.toLocaleString()} chars`
-          : "GRÁTIS PORRA",
-        inline: true,
-      }
-    );
-
-  return data.reply({ embeds: [embed] });
-}
-
-function handleChoose(data, userData, userId, guildId, className) {
-  const target = CLASSES[className];
-  if (!target) {
-    return data.reply({ content: `❌ Classe **${className}** não existe porra.`, ephemeral: true });
-  }
-
-  const currentClass = userData.user_class ?? "none";
-  if (currentClass === className) {
-    return data.reply({ content: `ℹ️ tu já é **${target.name}**, relaxa.`, ephemeral: true });
-  }
-
-  if (className !== "none" && userData.charLeft < target.unlockCost) {
-    const falta = (target.unlockCost - userData.charLeft).toLocaleString();
-    return data.reply({
-      content: `❌ Chars insuficientes mano. Faltam **${falta}** pra liberar **${target.name}** krl.`,
-      ephemeral: true,
-    });
-  }
-
-  const success = unlockClass(userId, guildId, className);
-  if (!success) {
-    return data.reply({ content: "❌ deu ruim krl. Tenta de novo mano.", ephemeral: true });
-  }
-
-  if (className === "none") {
-    const embed = new EmbedBuilder()
-      .setTitle("SEM CLASSE")
-      .setDescription(`Você voltou pra **${target.name}** — sem modificadores de classe.`)
-      .setFooter({ text: `Seus chars: ${userData.charLeft.toLocaleString()}` });
-    return data.reply({ embeds: [embed] });
-  }
-
-  const embed = new EmbedBuilder()
-    .setTitle("CLASSE ESCOLHIDA PAE!!")
-    .setDescription(`**${target.name}**\n> ${target.description}`)
-    .addFields(
-      {
-        name: "BENEFÍCIOS",
-        value: Object.entries(target.modifiers)
-          .map(([key, value]) => `• ${attributeDescriptions[key] || key}: ${value}`)
-          .join("\n"),
-        inline: false,
-      },
-      { name: "Custo pago", value: `${target.unlockCost.toLocaleString()} chars`, inline: true },
-      { name: "Chars restantes", value: `${(userData.charLeft - target.unlockCost).toLocaleString()}`, inline: true }
-    );
-
-  return data.reply({ embeds: [embed] });
+  return embed;
 }
