@@ -530,8 +530,9 @@ export const customEmojis = {
   mineNightVision:    emoji("1492709364308643982", true),
   mineWeakness:       emoji("1492714094409679040", true),
   dolphin:            emoji("1492709353474752644", true),
-  pepeCry:            emoji("1492713990197874698", true),
-
+  
+  pepeHands:          emoji("1492713991217348658"),
+  pepeCry:            emoji("1492709274147618918"),
   monkaS:             emoji("1492713988574810132"),
   agiotaFedora:       emoji("1492700704027181056"),
   shield:             emoji("1492699657661452308"),

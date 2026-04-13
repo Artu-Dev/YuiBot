@@ -49,7 +49,7 @@ function buildRow(currentIndex, userData) {
     components.push(
       new ButtonBuilder()
         .setCustomId("buy")
-        .setLabel("🛒 Comprar")
+        .setLabel("Comprar")
         .setStyle(ButtonStyle.Success)
     );
   }

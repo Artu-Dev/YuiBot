@@ -5,7 +5,7 @@ export const ESCUDO_BLOCK_BASE = 0.60;
 export const CLASSES = {
   none: {
     name: "Nenhum",
-    description: "Sem classe - jogador comum",
+    description: "Sem classe",
     image: "https://upload.wikimedia.org/wikipedia/pt/0/04/Wojak.jpg", 
     modifiers: {
       lucky: 0, //afeta sorte no tigre
@@ -40,7 +40,7 @@ export const CLASSES = {
   pobre: {
     name: "Pobre",
     description: "Tudo é mais barato e escudo e defesa é acima da média, mas é azarado.",
-    image: "https://media.tenor.com/NPk2J6xMjX8AAAAe/meme-broke.png",
+    image: "https://media1.tenor.com/m/f8acChNvdVMAAAAd/poor.gif",
     modifiers: {
       lucky: -0.30,
       robCost: -0.50,
@@ -57,7 +57,7 @@ export const CLASSES = {
   agiota: {
     name: "Agiota",
     description: "Sniper e dono de cassino. Excelente no roubo com alvo e muita sorte no tigre, mas pra roubar custa caro e defesa é péssima.",
-    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLdQqUbUQD-NayIOsGh4gyXHzQvkoSYma_rA&s",
+    image: "https://media1.tenor.com/m/dHs_j3duIQ8AAAAd/lucafalcone123.gif",
     modifiers: {
       lucky: 0.60,
       robCost: 0.30,
@@ -74,7 +74,7 @@ export const CLASSES = {
   hacker: {
     name: "Hacker",
     description: "Roubos baratos e alta taxa de sucesso, perde menos chars por falha.",
-    image: "https://media.tenor.com/yoDf2V4bGzQAAAAe/hacker.png",
+    image: "https://media1.tenor.com/m/CgGUXc-LDc4AAAAC/hacker-pc.gif",
     modifiers: {
       lucky: 0.20,
       robCost: -0.40,
@@ -125,7 +125,7 @@ export const CLASSES = {
   maldito: {
     name: "Maldito",
     description: "Kamikaze. Dano de roubo insano, defesa e escudo ruins e AZARADO paporra!!",
-    image: "https://media.tenor.com/KaC2uJElIYoAAAAe/poule-nike.png",
+    image: "https://i.pinimg.com/736x/32/99/d6/3299d6e842cc095e71009b7cd9839052.jpg",
     modifiers: {
       lucky: -0.80,
       robCost: 0,
@@ -142,7 +142,7 @@ export const CLASSES = {
   fodao: {
     name: "FODÃO",
     description: "O FODÃO do servidor. Absoluto em tudo.",
-    image: "https://pbs.twimg.com/profile_images/1415555616303685632/S4y_X-uA_400x400.jpg",
+    image: "https://media1.tenor.com/m/6_8VJgwt3wMAAAAC/sigma.gif",
     modifiers: {
       lucky: 1,
       robCost: -1,
