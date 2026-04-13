@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { addChars } from "../database";
+import { addChars } from "../database.js";
 
 export const name = "dia";
 
