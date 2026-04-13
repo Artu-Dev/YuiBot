@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { addChars, getOrCreateUser, setUserProperty } from "../database.js";
 import { getClassModifier } from "../functions/classes.js";
+import { SlashCommandBuilder } from "discord.js";
 
 export const name = "dia";
 
