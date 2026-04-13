@@ -5,6 +5,7 @@ import path from "path";
 import Config from "./config.js";
 import { intializeDbBot, dbBot, getGuildUsers, addChars, getServerConfig, addCharsBulk } from "./database.js";
 import nodeCron from "node-cron";
+import { cleanupLeftUsers } from "./functions/cleanUsers.js";
 
 dotenv.config();
 Config.setupDirectories();
@@ -86,8 +87,10 @@ function checkMonthlyReset() {
   log(`--- RESET MENSAL CONCLUÍDO PARA ${monthYearNow} ---`);
 }
 
-client.once("clientReady", () => {
+client.once("clientReady", async () => {
   log(`Online como ${client.user.tag}`);
+
+  await cleanupLeftUsers(client);
 
   nodeCron.schedule("0 0 * * *", checkMonthlyReset, {
     timezone: "America/Sao_Paulo"
