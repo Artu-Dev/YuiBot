@@ -168,18 +168,23 @@ export const intializeDbBot = async () => {
 
   db.prepare(`
     CREATE TABLE IF NOT EXISTS daily_events (
-      guildId TEXT,
+      guildId TEXT PRIMARY KEY,
       date TEXT,
       eventKey TEXT,
       hasBeenAnnounced INTEGER DEFAULT 0,
-
       charMultiplier REAL DEFAULT 1.0,
       casinoMultiplier REAL DEFAULT 1.0,
-      robSuccess REAL DEFAULT NULL,
-
+      robSuccess REAL,
       name TEXT,
-      description TEXT,
-      PRIMARY KEY (guildId, date)
+      description TEXT
+    )
+  `).run();
+
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS holidays_cache (
+      date TEXT PRIMARY KEY,
+      name TEXT,
+      year INTEGER
     )
   `).run();
 
