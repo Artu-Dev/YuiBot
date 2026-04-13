@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { Low } from "lowdb";
 import { JSONFile } from "lowdb/node";
 import { isValidUserId, isValidGuildId } from "./functions/validation.js";
+import dayjs from "dayjs";
 
 export function getBotPrefix(guildId) {
   return getServerConfig(guildId, 'prefix') || '$';
@@ -225,7 +226,7 @@ export const intializeDbBot = async () => {
 
 export const getTodayEvent = (guildId) => {
   if (!guildId || !isValidGuildId(guildId)) return null;
-  const today = new Date().toISOString().split("T")[0];
+  const today = dayjs().format("YYYY-MM-DD");;
   const row = db.prepare("SELECT * FROM daily_events WHERE guildId = ?").get(guildId);
   if (!row || row.date !== today) return null;
   return row;
