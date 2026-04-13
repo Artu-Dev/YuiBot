@@ -70,17 +70,6 @@ export const limitChar = async (message, userData) => {
     return;
   }
 
-  // ====================== BÔNUS DIÁRIO ======================
-  if ((userData.lastDailyBonus || "") !== hoje) {
-    addChars(userId, guildId, 25);
-    setUserProperty("lastDailyBonus", userId, guildId, hoje);
-    try {
-      await message.react("➕");
-    } catch (err) {
-      if (err.code !== 10008) console.error("Erro ao reagir (bônus diário):", err);
-    }
-  }
-
   const textWithoutUrls = text.replace(GIF_URL_REGEX, "").trim();
   let textSize = textWithoutUrls.length;
 
