@@ -254,11 +254,13 @@ export async function execute(client, data) {
     finalReply = userChars === 0 ? sample(failRepliesNoChars) : sample(failReplies);
   }
 
+
+  const finalChars = userChars + (success ? stolenAmount : -penalty);
   const resultEmbed = new EmbedBuilder()
     .setColor(success ? "#00FF00" : "#FF0000")
     .setTitle(success ? `${customEmojis.pointingGun} Roubo deu bom!` : `${customEmojis.pepeCry} Roubo deu B.O!`)
     .setDescription(finalReply)
-    .setFooter({ text: `Total de chars: ${stolenAmount + userChars}` });
+    .setFooter({ text: `Total de chars: ${finalChars}` });
 
   await loadingMsg.edit({ embeds: [resultEmbed] });
 
