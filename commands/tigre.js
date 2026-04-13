@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { getOrCreateUser, getUser, reduceChars, addChars, db } from "../database.js";
+import { getOrCreateUser, getUser, reduceChars, addChars, db, addUserPropertyByAmount } from "../database.js";
 import { getClassModifier } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { randomInt } from 'es-toolkit';
@@ -37,7 +37,7 @@ export async function execute(client, data) {
   ];
 
   const classLucky = getClassModifier(user.user_class || "none", "lucky");
-  const LUCK_WEIGHT = 0.1;
+  const LUCK_WEIGHT = 0.25;
   const adjustedOutcomes = outcomes.map((outcome) => {
     const modifier = outcome.type === "loss"
       ? 1 - classLucky * LUCK_WEIGHT
@@ -104,16 +104,11 @@ export async function execute(client, data) {
     resultMessage = `${selectedOutcome.emoji} **${selectedOutcome.desc}**\nAcúmulo de dobro: **×${2 ** newPending}** na próxima vitória (win ou jackpot).`;
   }
 
-  db.prepare(`
-    UPDATE users
-    SET tiger_pending_double  = ?,
-        lifetime_tiger_spins  = COALESCE(lifetime_tiger_spins, 0) + 1,
-        tiger_jackpots        = COALESCE(tiger_jackpots, 0) + ?,
-        tiger_plays           = COALESCE(tiger_plays, 0) + 1,
-        tiger_wins            = COALESCE(tiger_wins, 0) + ?,
-        tiger_losses          = COALESCE(tiger_losses, 0) + ?
-    WHERE id = ? AND guild_id = ?
-  `).run(newPending, jackpotInc, winsInc, lossesInc, userId, guildId);
+  addUserPropertyByAmount("tiger_plays", userId, guildId, 1);
+  addUserPropertyByAmount("tiger_wins", userId, guildId, winsInc);
+  addUserPropertyByAmount("tiger_losses", userId, guildId, lossesInc);
+  addUserPropertyByAmount("tiger_jackpots", userId, guildId, jackpotInc);
+  addUserPropertyByAmount("tiger_pending_double", userId, guildId, newPending);
 
   // ── Conquistas ───────────────────────────────────────────────────────────────
   await awardAchievementInCommand(client, data, "tigrinho_lenda");
@@ -123,7 +118,7 @@ export async function execute(client, data) {
   await awardAchievementInCommand(client, data, "sortudo_no_tigre");
   await awardAchievementInCommand(client, data, "tigreiro_nato");
 
-  const saldoFinal = getUser(userId, guildId)?.charLeft ?? 0;
+  const saldoFinal = await getUser(userId, guildId)?.charLeft ?? 0;
 
   const embedColor =
     selectedOutcome.type === "jackpot" ? "#FFD700" :

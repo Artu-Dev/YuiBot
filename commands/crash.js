@@ -6,8 +6,91 @@ import {
   addUserPropertyByAmount 
 } from "../database.js";
 import { getClassModifier } from "../functions/classes.js";
+import { awardAchievementInCommand } from "../functions/achievements.js";
+import { getTodaysEvent } from "../functions/getTodaysEvent.js";
 
 export const name = "crash";
+
+// ========== CONFIGURAÇÕES DO CRASH ==========
+const LUCK_FACTOR = 1.0;      
+const EVENT_FIELD = 'crashBonus'
+
+const BASE_WEIGHTS = {
+  low:    1.00,   // ≤1.0x (steps 2-6)
+  medium: 1.85,   // 1.1x – 2.0x (steps 7-16)
+  high:   0.45,   // 2.1x – 5.0x (steps 17-46)
+  jackpot:0.08    // >5.0x (steps 47-100)
+};
+
+const BIAS = {
+  low:    2.0,
+  medium: 1.8,
+  high:   1.5,
+  jackpot:1.2
+};
+
+function randomStepInRange(min, max, bias) {
+  const range = max - min + 1;
+  const u = Math.random();
+  const index = Math.floor(Math.pow(u, bias) * range);
+  return min + index;
+}
+
+async function generateCrashStep(lucky, guildId) {
+  let eventFactor = 1.0;
+  const event = await getTodaysEvent(guildId);
+  if (event && typeof event[EVENT_FIELD] === 'number') {
+    eventFactor = Math.max(0.5, Math.min(2.0, event[EVENT_FIELD])); // limites seguros
+  }
+
+  const luckyEffect = LUCK_FACTOR * lucky * 0.25;
+
+  const weights = {
+    low:    BASE_WEIGHTS.low    * (1 - luckyEffect) * (1 / eventFactor),
+    medium: BASE_WEIGHTS.medium * (1 + luckyEffect) * eventFactor,
+    high:   BASE_WEIGHTS.high   * (1 + luckyEffect) * eventFactor,
+    jackpot:BASE_WEIGHTS.jackpot* (1 + luckyEffect) * eventFactor
+  };
+
+  const total = Object.values(weights).reduce((a, b) => a + b, 0);
+  const norm = {
+    low:    weights.low    / total,
+    medium: weights.medium / total,
+    high:   weights.high   / total,
+    jackpot:weights.jackpot/ total
+  };
+
+  const rand = Math.random();
+  let cumulative = 0;
+  let selectedFaixa;
+  const faixas = ['low', 'medium', 'high', 'jackpot'];
+  for (const f of faixas) {
+    cumulative += norm[f];
+    if (rand <= cumulative) {
+      selectedFaixa = f;
+      break;
+    }
+  }
+
+  let step;
+  switch (selectedFaixa) {
+    case 'low':
+      step = randomStepInRange(2, 6, BIAS.low);
+      break;
+    case 'medium':
+      step = randomStepInRange(7, 16, BIAS.medium);
+      break;
+    case 'high':
+      step = randomStepInRange(17, 46, BIAS.high);
+      break;
+    case 'jackpot':
+      step = randomStepInRange(47, 100, BIAS.jackpot);
+      break;
+    default:
+      step = 2;
+  }
+  return step;
+}
 
 export const data = new SlashCommandBuilder()
   .setName("crash")
@@ -42,72 +125,18 @@ export async function execute(client, data) {
   }
 
   reduceChars(userId, guildId, aposta);
+  addUserPropertyByAmount("tiger_plays", userId, guildId, 1);
 
   const classLucky = getClassModifier(user.user_class || "none", "lucky");
 
-  let multiplier = 0.5;
-  let step = 0;
-  let crashStep;
+  const crashStep = await generateCrashStep(classLucky, guildId);
 
-  if (classLucky === 1) {
-    const r = Math.random();
-    let min, max;
-    
-    if (r < 0.15) {
-      min = 2; max = 6;       // ≤1.0x
-    } else if (r < 0.80) {
-      min = 7; max = 16;      // 1.1x – 2.0x
-    } else if (r < 0.992) {
-      min = 17; max = 46;     // 2.1x – 5.0x
-    } else {
-      min = 47; max = 100;    // >5.0x
-    }
-    
-    const range = max - min + 1;
-    const u = Math.random();
-    const index = Math.floor(Math.pow(u, 1.5) * range);
-    crashStep = min + index;
-    
-  } else if (classLucky === 0) {
-    const r = Math.random();
-    let min, max;
-    
-    if (r < 0.75) {
-      min = 2; max = 16;
-    } else if (r < 0.80) {
-      min = 17; max = 26;
-    } else if (r < 0.90) {
-      min = 27; max = 36;
-    } else {
-      min = 37; max = 100;
-    }
-    
-    const range = max - min + 1;
-    const u = Math.random();
-    const index = Math.floor(Math.pow(u, 1.3) * range);
-    crashStep = min + index;
-    
-  } else {
-    
-    const baseExponent = 1.75;
-    const baseScale    = 17;
-    const baseAdd      = 2;
-
-    const luckEffectExponent = classLucky * 0.165;
-    const luckEffectScale    = classLucky * 4.8;
-
-    const exponent = Math.max(1.05, baseExponent - luckEffectExponent);
-    const scale    = Math.max(12, baseScale + luckEffectScale);
-
-    crashStep = Math.ceil(Math.pow(Math.random(), exponent) * scale) + baseAdd;
-  }
-
-  // Multiplier exato no momento do crash e maior prêmio possível
   const crashMultiplier = parseFloat((0.5 + (crashStep - 1) * 0.10).toFixed(1));
   const maxPayout       = Math.floor(aposta * crashMultiplier);
   const maxLucro        = maxPayout - aposta;
 
-  // Flag para travar o jogo — usada tanto no interval quanto no collector
+  let multiplier = 0.5;
+  let step = 0;
   let gameActive = true;
 
   const row = new ActionRowBuilder().addComponents(
@@ -143,7 +172,6 @@ export async function execute(client, data) {
       gameActive = false;
       clearInterval(gameInterval);
 
-      addUserPropertyByAmount("tiger_plays", userId, guildId, 1);
       addUserPropertyByAmount("tiger_losses", userId, guildId, 1);
 
       const updatedUser = getOrCreateUser(userId, displayName, guildId);
@@ -197,7 +225,6 @@ export async function execute(client, data) {
     const totalRecebido = aposta + lucroFinal;
 
     addChars(userId, guildId, totalRecebido);
-    addUserPropertyByAmount("tiger_plays", userId, guildId, 1);
     addUserPropertyByAmount("tiger_wins", userId, guildId, 1);
 
     const updatedUser = getOrCreateUser(userId, displayName, guildId);
@@ -224,6 +251,13 @@ export async function execute(client, data) {
 
     await msg.edit({ embeds: [embed], components: [disableRow] });
   });
+
+  await awardAchievementInCommand(client, data, "tigrinho_lenda");
+  await awardAchievementInCommand(client, data, "tigre_centuria"); 
+  await awardAchievementInCommand(client, data, "apostador"); 
+  await awardAchievementInCommand(client, data, "masoquista");  
+  await awardAchievementInCommand(client, data, "sortudo_no_tigre");
+  await awardAchievementInCommand(client, data, "tigreiro_nato");
 
   collector.on("end", async (collected, reason) => {
     if (reason !== "time" || !gameActive) return;
