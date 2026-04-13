@@ -72,15 +72,6 @@ function buildDiscordFacade(data, mentionedUser, userId, username, displayName) 
   };
 }
 
-function parsePenalties(user) {
-  try {
-    const list = JSON.parse(user.penalities || "[]");
-    return Array.isArray(list) ? list.length : 0;
-  } catch {
-    return 0;
-  }
-}
-
 function parseAchievements(user) {
   try {
     return JSON.parse(user.achievements_unlocked || "{}");
@@ -199,7 +190,7 @@ function embedConquistas(user, discordUser) {
 // ====================== EMBED FULL ======================
 function embedFull(user, discordUser, guildId) {
   const cls = CLASSES[user.user_class || "none"];
-  const penN = parsePenalties(user);
+  const penality = user.penality || "Nenhuma";
   const escudoExtra = maybeEscudoFooter(user, guildId);
   const unlocked = parseAchievements(user);
   const achPretty = formatAchievements(unlocked);
@@ -262,7 +253,7 @@ function embedFull(user, discordUser, guildId) {
         name: "🤖 Bot & sanções",
         value:
           `**Comandos usados:** ${user.bot_commands_used ?? 0}\n` +
-          `**Penalidades ativas:** ${penN}\n` +
+          `**Penalidades ativas:** ${penality}\n` +
           `**Palavra-chave penalidade:** ${user.penalityWord ? "definida" : "—"}`,
         inline: false,
       },

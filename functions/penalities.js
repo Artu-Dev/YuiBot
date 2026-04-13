@@ -120,20 +120,20 @@ export async function handlePenalities(message, userData) {
 
   if (Number(userData.charLeft) > 0) return false;
 
-  const penalitiesList = JSON.parse(userData.penality);
-  if (!penalitiesList || penalitiesList.length === 0) return false;
+  const penality = userData.penality;
+  if (!penality) return false;
 
   const content = message.content;
   let isPunished = false;
   let warning = "";
 
   // ===== ESTRANGEIRO: Não pode usar vogais =====
-  if (penalitiesList.includes("estrangeiro") && /[aeiou]/i.test(content)) {
+  if (penality === "estrangeiro" && /[aeiou]/i.test(content)) {
     isPunished = true;
     warning = "Você não pode usar vogais!";
 
   // ===== PALAVRA OBRIGATÓRIA: Deve terminar com palavra específica =====
-  } else if (penalitiesList.includes("palavra_obrigatoria")) {
+  } else if (penality === "palavra_obrigatoria") {
     const required = userData.penalityWord || "";
     if (!content.endsWith(required)) {
       isPunished = true;
@@ -142,7 +142,7 @@ export async function handlePenalities(message, userData) {
 
   // ===== SCREAMER: Apenas letras maiúsculas =====
   } else if (
-    penalitiesList.includes("screamer") &&
+    penality === "screamer" &&
     content !== content.toUpperCase()
   ) {
     isPunished = true;
@@ -150,8 +150,8 @@ export async function handlePenalities(message, userData) {
 
   // ===== POETA BINÁRIO: Apenas uma palavra =====
   } else if (
-    penalitiesList.includes("poeta_binario") ||
-    penalitiesList.includes("mudo")
+    penality === "poeta_binario" ||
+    penality === "mudo"
   ) {
     const palavras = content.trim().split(/\s+/);
     if (palavras.length > 1) {
@@ -160,7 +160,7 @@ export async function handlePenalities(message, userData) {
     }
 
   // ===== GAGO DIGITAL: Repetir cada palavra duas vezes =====
-  } else if (penalitiesList.includes("gago_digital")) {
+  } else if (penality === "gago_digital") {
     const words = content.trim().split(/\s+/);
     let erroGago = false;
     for (let i = 0; i < words.length; i += 2) {
@@ -176,8 +176,8 @@ export async function handlePenalities(message, userData) {
 
   // ===== REDIGIDO: Tudo em spoilers =====
   } else if (
-    penalitiesList.includes("spoiler_maniac") ||
-    penalitiesList.includes("redigido")
+    penality === "spoiler_maniac" ||
+    penality === "redigido"
   ) {
     const textPunished =
       (message.content || "")
@@ -189,7 +189,7 @@ export async function handlePenalities(message, userData) {
     return false;
 
   // ===== SENTIDO INVERTIDO: Inverte a mensagem =====
-  } else if (penalitiesList.includes("sentido_invertido")) {
+  } else if (penality === "sentido_invertido") {
     let invertedText = message.content || "";
     invertedText = await tryInvertMessage(invertedText);
 
@@ -197,7 +197,7 @@ export async function handlePenalities(message, userData) {
     return false;
 
   // ===== ECO: Deleta mensagem após timeout =====
-  } else if (penalitiesList.includes("eco")) {
+  } else if (penality === "eco") {
     setTimeout(() => {
       message.delete().catch(() => {});
     }, ECO_DELETE_TIMEOUT_MS);

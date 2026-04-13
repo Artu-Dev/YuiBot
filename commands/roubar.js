@@ -87,6 +87,7 @@ export async function execute(client, data) {
   const today = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
 
   const user = getOrCreateUser(userId, displayName, guildId);
+  const userChars = Number(user.charLeft) || 0;
 
   const lastRouboDate = user.lastRoubo;
   let daily_robberies = Number(user.daily_robberies) || 0;
@@ -114,7 +115,7 @@ export async function execute(client, data) {
   if (isTargeted) {
     victimData = getUser(mentionedUser.id, guildId);
     if (!victimData)
-      return data.reply(`${customEmojis.pepeHmm} Esse usuário ainda não está no banco de dados.`);
+      return data.reply(`${customEmojis.pepehmm} Esse usuário ainda não está no banco de dados.`);
     victimId = mentionedUser.id;
     victimName = victimData.display_name || mentionedUser.username;
   } else {
@@ -131,12 +132,11 @@ export async function execute(client, data) {
     );
   }
 
-  // Loading com emoji customizado
   const loadingEmbed = new EmbedBuilder()
     .setColor("#751CA1")
     .setTitle(`${customEmojis.loading} Iniciando Roubo...`)
     .setDescription(getRandomLoadingPhrase(isTargeted, victimName))
-    .setFooter({ text: "Isso pode levar alguns segundos..." });
+    .setFooter({ text: "se preparando pra roubar..." });
 
   const loadingMsg = await data.reply({ embeds: [loadingEmbed] });
 
@@ -209,41 +209,56 @@ export async function execute(client, data) {
 
     const successReplies = isTargeted
       ? [
-          `✅ ${displayName} foi direto atrás de ${victimName} e conseguiu roubar ${stolenAmount} caracteres...`,
-          `✅ ${displayName} foi sem dó em ${victimName} e saiu com ${stolenAmount} caracteres no cu, sem ser visto.`,
-          `✅ ${displayName} sacou o brinquedo de furar moletom e pediu a ${victimName}, ${stolenAmount} caracteres, ele aceitou numa boa.`,
+          `${displayName} foi direto atrás de ${victimName} e conseguiu roubar ${stolenAmount} caracteres...`,
+          `${displayName} foi sem dó em ${victimName} e saiu com ${stolenAmount} caracteres no cu, sem ser visto.`,
+          `${displayName} sacou o brinquedo de furar moletom e pediu a ${victimName}, ${stolenAmount} caracteres, ele aceitou numa boa.`,
         ]
       : [
-          `✅ ${displayName} roubou ${stolenAmount} caracteres de ${victimName} na covardia!`,
-          `✅ ${victimName} moscou feiao e ${displayName} sem piedade alguma levou ${stolenAmount} chars de seu patrimonio.`,
-          `✅ ${displayName} foi safado e roubou ${stolenAmount} caracteres de ${victimName}. (sem ele perceber rsrs)`,
+          `${displayName} roubou ${stolenAmount} caracteres de ${victimName} na covardia!`,
+          `${victimName} moscou feiao e ${displayName} sem piedade alguma levou ${stolenAmount} chars de seu patrimonio.`,
+          `${displayName} foi safado e roubou ${stolenAmount} caracteres de ${victimName}. (sem ele perceber rsrs)`,
         ];
 
     finalReply = sample(successReplies) + escudoHint;
   } else {
-    reduceChars(userId, guildId, penalty);
-    addChars(victimId, guildId, penalty);
+    if (userChars != 0) {
+      reduceChars(userId, guildId, penalty);
+      addChars(victimId, guildId, penalty);
+    }
+
     setUserProperty("consecutive_robbery_losses", userId, guildId, 0);
+
+    const failRepliesNoChars = isTargeted ? [
+      `${displayName} tentou roubar ${victimName} e deu ruim pra caralho! Mas por sorte não tinha char nenhum pra perder kkk`,
+      `${victimName} deu uma surra em ${displayName} e quase levou tudo... só não levou nada porque ${displayName} tava liso`,
+      `${displayName} se fodeu tentando roubar ${victimName}, mas como não tinha char pra perder, saiu só na humilhação mesmo`,
+    ] : [
+      `${displayName} tentou roubar um aleatório e deu tudo errado! Ainda bem que não tinha char nenhum pra perder...`,
+      `${displayName} quase doou chars sem querer pro ${victimName}, mas tava liso e não perdeu nada além da vergonha...`,
+      `${displayName} foi tentar roubar alguém e se deu mal feio... por sorte não tinha char nenhum pra perder!`,
+    ]
+
 
     const failReplies = isTargeted
       ? [
-          `❌ ${displayName} tentou roubar ${victimName} na surdina... mas ${victimName} pegou com a mao na jaca. ${displayName} perdeu pra ele ${penalty} caracteres igual um betinha.`,
-          `❌ ${victimName} estava paranoico com os cara no teto, viu ${displayName} chegando, pegou a makita e passou a mao em ${penalty} caracteres.`,
-          `❌ deu ruim menó! ${displayName} foi pego ao tentar roubar ${victimName} e teve que fazer um pix ${penalty} chars pra ele.`,
+          `${displayName} tentou roubar ${victimName} na surdina... mas ${victimName} pegou com a mao na jaca. ${displayName} perdeu pra ele ${penalty} caracteres igual um betinha.`,
+          `${victimName} estava paranoico com os cara no teto, viu ${displayName} chegando, pegou a makita e passou a mao em ${penalty} caracteres.`,
+          `deu ruim menó! ${displayName} foi pego ao tentar roubar ${victimName} e teve que fazer um pix ${penalty} chars pra ele.`,
         ]
       : [
-          `❌ ${displayName} foi roubar um aleatorio e se fodeu, foi pego no flagra e perdeu ${penalty} caracteres para ${victimName}!`,
-          `❌ ${displayName} se deu mal na ação e acabou doando contra sua vontade ${penalty} caracteres para ${victimName}.`,
-          `❌ ${displayName} foi burrao e acabou doando ${penalty} chars pra ${victimName} viva a benevolencia.`,
+          `${displayName} foi roubar um aleatorio e se fodeu, foi pego no flagra e perdeu ${penalty} caracteres para ${victimName}!`,
+          `${displayName} se deu mal na ação e acabou doando contra sua vontade ${penalty} caracteres para ${victimName}.`,
+          `${displayName} foi burrao e acabou doando ${penalty} chars pra ${victimName} viva a benevolencia.`,
         ];
 
-    finalReply = sample(failReplies) + escudoHint;
+    finalReply = userChars === 0 ? sample(failRepliesNoChars) : sample(failReplies);
   }
 
   const resultEmbed = new EmbedBuilder()
     .setColor(success ? "#00FF00" : "#FF0000")
     .setTitle(success ? `${customEmojis.pointingGun} Roubo deu bom!` : `${customEmojis.pepeCry} Roubo deu B.O!`)
-    .setDescription(finalReply);
+    .setDescription(finalReply)
+    .setFooter({ text: `Total de chars: ${stolenAmount + userChars}` });
 
   await loadingMsg.edit({ embeds: [resultEmbed] });
 
@@ -262,13 +277,13 @@ export async function execute(client, data) {
         `${customEmojis.skullAndRoses} **Recompensa coletada!** ${displayName} pegou os **${bountyValue} chars** que estavam na cabeça de ${victimName}!`,
       );
     }
-
-    if (daily_robberies >= ROUBO_LIMIT_PER_DAY) {
-      await data.followUp(`${customEmojis.pepeAngry} Você atingiu o limite de 3 roubos por dia!`);
-    }
-
-    await awardAchievementInCommand(client, data, "primeiro_roubo");
-    await awardAchievementInCommand(client, data, "dependente");
-    await awardAchievementInCommand(client, data, "ladrao_pessimo");
   }
+
+  if (daily_robberies >= ROUBO_LIMIT_PER_DAY) {
+      await data.followUp(`${customEmojis.pepeAngry} Você atingiu o limite de ${ROUBO_LIMIT_PER_DAY} roubos por dia!`);
+  }
+
+  await awardAchievementInCommand(client, data, "primeiro_roubo");
+  await awardAchievementInCommand(client, data, "dependente");
+  await awardAchievementInCommand(client, data, "ladrao_pessimo");
 }

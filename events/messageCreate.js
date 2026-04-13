@@ -57,8 +57,6 @@ export const execute = async (message, client) => {
   
   await announceEvent(message, guildId);
 
-  await limitChar(message, userData);
-
   await saveMessageContext(
     channelId,
     guildId,
@@ -68,6 +66,9 @@ export const execute = async (message, client) => {
     message.id,
     imageUrl
   );
+
+  await limitChar(message, userData);
+
 
   await handleRandomActions(message, userId, mentions);
   handleAchievements(message);

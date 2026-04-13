@@ -134,7 +134,7 @@ export const handleAchievements = async (message) => {
   const now = new Date();
   const { displayName, guildId, text, channelId, userId } = parseMessage(message);
 
-  let stats = getOrCreateUser(userId, displayName, guildId);
+  let user = getOrCreateUser(userId, displayName, guildId);
   const updates = {};
 
   if (isNightOwlHour()) updates.night_owl_messages = true;
@@ -167,9 +167,8 @@ export const handleAchievements = async (message) => {
   if (text.length >= 600) updates.textao_messages = 1;
 
   const previousAuthor = getLastMessageAuthor(channelId, guildId);
-  const prevMonologo = Number(stats.monologo_streak) || 0;
-  const newMonologoStreak =
-    previousAuthor === userId ? prevMonologo + 1 : 1;
+  const prevMonologo = Number(user.monologo_streak) || 0;
+  const newMonologoStreak = previousAuthor === userId ? prevMonologo + 1 : 1;
   setUserProperty("monologo_streak", userId, guildId, newMonologoStreak);
   updates.monologo_streak = true;
 
@@ -177,15 +176,15 @@ export const handleAchievements = async (message) => {
     updates.bot_commands_used = 1;
 
   updateUserStats(userId, guildId, updates);
-  stats = getOrCreateUser(userId, displayName, guildId);
+  user = getOrCreateUser(userId, displayName, guildId);
 
-  await handleMentions(message, guildId, userId, displayName, stats);
+  await handleMentions(message, guildId, userId, displayName, user);
   
-  await checkRelevantAchievements(message, userId, stats, message.author, updates);
+  await checkRelevantAchievements(message, userId, user, message.author, updates);
 
   // Ghost achievement (30 dias sem mensagem)
-  const lastMessageTime = stats.last_message_time
-    ? Number(stats.last_message_time)
+  const lastMessageTime = user.last_message_time
+    ? Number(user.last_message_time)
     : null;
 
   if (lastMessageTime) {
