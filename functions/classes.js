@@ -24,7 +24,7 @@ export const CLASSES = {
     name: "Ladrão",
     description: "Chance de roubo maior, frágil na defesa e escudo um pouco pior que a média",
     modifiers: {
-      lucky: 0,
+      lucky: 0.15,
       robCost: 0,
       robDamage: 0.60,        
       robSuccess: 0.30,
@@ -56,7 +56,7 @@ export const CLASSES = {
     name: "Agiota",
     description: "Sniper e dono de cassino. Excelente no roubo com alvo e muita sorte no tigre, mas pra roubar custa caro e defesa é péssima.",
     modifiers: {
-      lucky: 0.40,
+      lucky: 0.60,
       robCost: 0.30, 
       robDamage: 0.20,
       robSuccess: -0.10,  
@@ -67,6 +67,54 @@ export const CLASSES = {
       escudoCost: 0.20,
     },
     unlockCost: 2000,
+  },
+  hacker: {
+    name: "Hacker",
+    description: "Roubos baratos e alta taxa de sucesso, perde menos chars por falha.",
+    modifiers: {
+      lucky: 0.20,
+      robCost: -0.40,
+      robDamage: -0.40,
+      robSuccess: 0.50,
+      singleRobSuccess: 0.30,
+      singleRobDamage: -0.20,
+      robDefense: -0.20,
+      escudoBonus: 0.30,
+      escudoCost: 0.10,
+    },
+    unlockCost: 950,
+  },
+  fantasma: {
+    name: "Fantasma",
+    description: "Quase impossível de ser roubado, mas sua sorte e ataque são podres.",
+    modifiers: {
+      lucky: -0.20,
+      robCost: 0.30,
+      robDamage: -0.70,
+      robSuccess: 0.00,
+      singleRobSuccess: 0.00,
+      singleRobDamage: 0.00,
+      robDefense: 1.00,
+      escudoBonus: 0.80,
+      escudoCost: 0.20,
+    },
+    unlockCost: 700,
+  },
+  sortudo: {
+    name: "Sortudo",
+    description: "A sorte está sempre ao seu lado, mas falta habilidade para outras coisas.",
+    modifiers: {
+      lucky: 0.60,
+      robCost: 0.10,
+      robDamage: -0.20,
+      robSuccess: -0.10,
+      singleRobSuccess: -0.10,
+      singleRobDamage: -0.20,
+      robDefense: 0.10,
+      escudoBonus: 0.10,
+      escudoCost: 0,
+    },
+    unlockCost: 1800,
   },
   maldito: {
     name: "Maldito",
@@ -84,6 +132,8 @@ export const CLASSES = {
     },
     unlockCost: 1500,
   },
+
+
   fodao: {
     name: "FODÃO",
     description: "O FODÃO do servidor. Absoluto em tudo.",
