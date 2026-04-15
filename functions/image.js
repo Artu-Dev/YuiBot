@@ -4,6 +4,11 @@ import { GlobalFonts } from "@napi-rs/canvas";
 GlobalFonts.registerFromPath("./fonts/Minecraftia.ttf", "Minecraftia");
 GlobalFonts.registerFromPath("./fonts/twemoji.ttf", "Twemoji"); 
 
+function extrairIdEmoji(emojiString) {
+    const match = emojiString.match(/<?a?:?\w+:(\d+)>?/);
+    return match ? match[1] : null;
+}
+
 export async function gerar_conquista(usuario, achievement, size = "normal") {
     const template = await loadImage('./img/achievmentTemplate.png');
     const canvas = createCanvas(template.width, template.height);
@@ -29,15 +34,20 @@ export async function gerar_conquista(usuario, achievement, size = "normal") {
         ctx.fillText(`${achievement.description}`, 65, 60);
     }
     
-    const isDiscordId = /^\d+$/.test(achievement.icon);
+
+    const emojiId = extrairIdEmoji(achievement.icon);
+    const isDiscordId = emojiId && /^\d+$/.test(emojiId);
 
     if (isDiscordId) {
         try {
-            const emojiUrl = `https://cdn.discordapp.com/emojis/${achievement.icon}.png`;
-            const emojiImg = await loadImage(emojiUrl);
+            const isAnimated = achievement.icon.includes('<a:');
+            const extension = isAnimated ? 'gif' : 'png';
+            const emojiUrl = `https://cdn.discordapp.com/emojis/${emojiId}.${extension}`;
             
+            const emojiImg = await loadImage(emojiUrl);
             ctx.drawImage(emojiImg, 16, 16, 32, 32);
         } catch (error) {
+            console.error('Erro ao carregar emoji do Discord:', error);
             desenharEmojiTexto(ctx, "🏆");
         }
     } else {

@@ -14,8 +14,6 @@ const attributeDescriptions = {
   robSuccess: "Chance de sucesso do roubo",
   singleRobSuccess: "Chance de sucesso do roubo específico",
   singleRobDamage: "Dano do roubo específico",
-  escudoBonus: "Bônus de defesa do escudo",
-  escudoCost: "Desconto no custo do escudo",
 };
 
 function getColorByPrice(cost) {

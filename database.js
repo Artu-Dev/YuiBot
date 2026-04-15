@@ -82,9 +82,6 @@ const USERS_SCHEMA = {
   tiger_losses: "INTEGER DEFAULT 0",
   tiger_wins: "INTEGER DEFAULT 0",
 
-  escudo_expiry: "TEXT DEFAULT ''",
-
-  last_escudo_shown: "TEXT DEFAULT ''",
   total_chars_donated: "INTEGER DEFAULT 0",
   user_class: "TEXT DEFAULT 'none'",
 };
@@ -262,7 +259,7 @@ export const initializeDbBot = async () => {
     insertUser: db.prepare("INSERT OR IGNORE INTO users (id, display_name, guild_id) VALUES (?, ?, ?)"),
     addUserPenalty: db.prepare("UPDATE users SET penality = ?, penalitySetByAdmin = ? WHERE id = ? AND guild_id = ?"),
     removeUserPenalty: db.prepare("UPDATE users SET penality = NULL, penalitySetByAdmin = 0 WHERE id = ? AND guild_id = ?"),
-    getEscudoExpiry: db.prepare("SELECT escudo_expiry FROM users WHERE id = ? AND guild_id = ?"),
+
     getGuildRandomUser: db.prepare("SELECT id FROM users WHERE guild_id = ? AND id != ? ORDER BY RANDOM() LIMIT 1"),
     getGuildAllUsers: db.prepare("SELECT * FROM users WHERE guild_id = ?"),
     getAchievements: db.prepare("SELECT achievements_unlocked FROM users WHERE id = ? AND guild_id = ?"),
@@ -457,51 +454,7 @@ export const getOrCreateUser = (userId, displayName, guildId) => {
   return db.queries.getUserById.get(userId, guildId);
 };
 
-// ==============================================
-// ESCUDO
-// ==============================================
 
-export const hasEscudo = (userId, guildId) => {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) return false;
-  const user = getUser(userId, guildId);
-  if (!user?.escudo_expiry) return false;
-  return new Date(user.escudo_expiry) > new Date();
-};
-
-export const setEscudo = (userId, guildId, hours = 24) => {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
-    logInvalidId(userId, guildId, "setEscudo");
-    return null;
-  }
-  const expiry = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-  try {
-    db.prepare("UPDATE users SET escudo_expiry = ? WHERE id = ? AND guild_id = ?")
-      .run(expiry, userId, guildId);
-    return expiry;
-  } catch (error) {
-    log(`❌ Erro ao definir escudo: ${error.message}`, "Database", 31);
-    return null;
-  }
-};
-
-export const getEscudoExpiry = (userId, guildId) => {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) return null;
-  const user = getUser(userId, guildId);
-  if (!user?.escudo_expiry) return null;
-  const d = new Date(user.escudo_expiry);
-  return d > new Date() ? d : null;
-};
-
-export const getEscudoTimeRemaining = (userId, guildId) => {
-  const expiry = getEscudoExpiry(userId, guildId);
-  if (!expiry) return null;
-  const now = new Date();
-  const diffMs = expiry - now;
-  if (diffMs <= 0) return null;
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-};
 
 // ==============================================
 // CONTEXTO DE MENSAGENS

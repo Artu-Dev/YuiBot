@@ -1,8 +1,6 @@
 import { user } from "@elevenlabs/elevenlabs-js/api/index.js";
 import { reduceChars, setUserProperty } from "../database.js";
 
-export const ESCUDO_BLOCK_BASE = 0.60;
-
 export const CLASSES = {
   none: {
     name: "Nenhum",
@@ -16,14 +14,12 @@ export const CLASSES = {
       robSuccess: 0, // afeta chance de sucesso do roubo
       singleRobSuccess: 0, // roubo especifico
       singleRobDamage: 0, // dano do roubo especifico
-      escudoBonus: 0, // bonus de defesa do escudo
-      escudoCost: 0, // desconto no custo do escudo
     },
     unlockCost: 0,
   },
   ladrao: {
     name: "Ladrão",
-    description: "Chance de roubo maior, frágil na defesa e escudo um pouco pior que a média",
+    description: "Chance de roubo maior, frágil na defesa.",
     image: "https://media.tenor.com/H8Z4VTfZwdsAAAAM/%D0%BE%D1%82%D0%B4%D0%B0%D0%B9.gif",
     modifiers: {
       lucky: 0.15,
@@ -33,14 +29,12 @@ export const CLASSES = {
       singleRobSuccess: 0,
       singleRobDamage: 0,
       robDefense: -0.50,
-      escudoBonus: -0.20,
-      escudoCost: 0.20,
     },
     unlockCost: 1000,
   },
   pobre: {
     name: "Pobre",
-    description: "Tudo é mais barato e escudo e defesa é acima da média, mas é azarado.",
+    description: "Tudo é mais barato e defesa é acima da média, mas é azarado.",
     image: "https://media1.tenor.com/m/f8acChNvdVMAAAAd/poor.gif",
     modifiers: {
       lucky: -0.30,
@@ -50,8 +44,6 @@ export const CLASSES = {
       singleRobSuccess: 0,
       singleRobDamage: 0,
       robDefense: 0.30,
-      escudoBonus: 0.20,
-      escudoCost: -0.50,
     },
     unlockCost: 500,
   },
@@ -67,8 +59,6 @@ export const CLASSES = {
       singleRobSuccess: 0.50,
       singleRobDamage: 0.50,
       robDefense: -0.30,
-      escudoBonus: 0,
-      escudoCost: 0.20,
     },
     unlockCost: 2000,
   },
@@ -84,8 +74,6 @@ export const CLASSES = {
       singleRobSuccess: 0.30,
       singleRobDamage: -0.20,
       robDefense: -0.20,
-      escudoBonus: 0.30,
-      escudoCost: 0.10,
     },
     unlockCost: 950,
   },
@@ -101,8 +89,6 @@ export const CLASSES = {
       singleRobSuccess: 0.00,
       singleRobDamage: 0.00,
       robDefense: 1.00,
-      escudoBonus: 0.80,
-      escudoCost: 0.20,
     },
     unlockCost: 700,
   },
@@ -118,14 +104,12 @@ export const CLASSES = {
       singleRobSuccess: -0.10,
       singleRobDamage: -0.20,
       robDefense: 0.10,
-      escudoBonus: 0.10,
-      escudoCost: 0,
     },
     unlockCost: 1800,
   },
   maldito: {
     name: "Maldito",
-    description: "Kamikaze. Dano de roubo insano, defesa e escudo ruins e AZARADO paporra!!",
+    description: "Kamikaze. Dano de roubo insano, defesa ruim e AZARADO paporra!!",
     image: "https://i.pinimg.com/736x/32/99/d6/3299d6e842cc095e71009b7cd9839052.jpg",
     modifiers: {
       lucky: -0.80,
@@ -135,8 +119,6 @@ export const CLASSES = {
       singleRobDamage: 0.20,
       singleRobSuccess: 0.20,
       robDefense: -0.80,
-      escudoBonus: -0.50,
-      escudoCost: 0,
     },
     unlockCost: 1500,
   },
@@ -152,8 +134,6 @@ export const CLASSES = {
       singleRobSuccess: 1,
       singleRobDamage: 1,
       robDefense: 1,
-      escudoBonus: 1,
-      escudoCost: -1,
     },
     unlockCost: 20000,
   }
@@ -189,7 +169,7 @@ export function applyClassModifier(baseValue, modifierType, userClass) {
   const mod = getClassModifier(userClass, modifierType);
   const multiplier = 1 + mod;
 
-  if (modifierType === "escudoCost" || modifierType === "robCost") {
+  if (modifierType === "robCost") {
     return Math.max(0, Math.round(baseValue * multiplier));
   }
 

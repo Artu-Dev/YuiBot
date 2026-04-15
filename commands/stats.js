@@ -2,8 +2,6 @@ import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import { achievements } from "../functions/achievmentsData.js";
 import {
   getOrCreateUser,
-  hasEscudo,
-  getEscudoTimeRemaining,
   db,
 } from "../database.js";
 import { CLASSES, getClassModifier } from "../functions/classes.js";
@@ -96,35 +94,9 @@ function formatAchievements(unlocked) {
     .join("\n");
 }
 
-function maybeEscudoFooter(user, guildId) {
-  if (!hasEscudo(user.id, guildId)) return "";
-  const today = new Date().toISOString().split("T")[0];
-  const lastEscudoShown = user.last_escudo_shown || "";
-  if (lastEscudoShown === today) return "";
-  const remainingTime = getEscudoTimeRemaining(user.id, guildId);
-  try {
-    db.prepare(`UPDATE users SET last_escudo_shown = ? WHERE id = ? AND guild_id = ?`).run(
-      today,
-      user.id,
-      guildId
-    );
-  } catch (e) {
-    log(`❌ Erro ao atualizar last_escudo_shown para usuário ${user.id} na guild ${guildId}: ${e.message}`, "Stats", 31);
-  }
-  return `\n🛡️ **Escudo ativo:** ${remainingTime}`;
-}
-
-function baseAuthor(discordUser) {
-  const name = `${discordDisplayLabel(discordUser)} — Estatísticas`;
-  const icon = resolveDisplayAvatarURL(discordUser);
-  const thumb = resolveDisplayAvatarURL(discordUser, { size: 256 });
-  return { name, icon, thumb };
-}
-
 function embedResumo(user, discordUser, guildId) {
   const cls = CLASSES[user.user_class || "none"];
   const penalityName = user && user.penality ? user.penality : "Nenhuma";
-  const escudoExtra = maybeEscudoFooter(user, guildId);
   const { name, icon, thumb } = baseAuthor(discordUser);
   const unlocked = parseAchievements(user);
   const achCount = Object.keys(unlocked).length;
@@ -132,7 +104,7 @@ function embedResumo(user, discordUser, guildId) {
 
   const eb = new EmbedBuilder()
     .setColor("#8A2BE2")
-    .setDescription(`**${user.display_name}** — Estatísticas${escudoExtra}`)
+    .setDescription(`**${user.display_name}** — Estatísticas`)
     .addFields(
       {
         name: "💎 Conta",
@@ -193,14 +165,13 @@ function embedConquistas(user, discordUser) {
 function embedFull(user, discordUser, guildId) {
   const cls = CLASSES[user.user_class || "none"];
   const penality = user.penality || "Nenhuma";
-  const escudoExtra = maybeEscudoFooter(user, guildId);
   const unlocked = parseAchievements(user);
   const achPretty = formatAchievements(unlocked);
   const { name, icon, thumb } = baseAuthor(discordUser);
 
   const eb = new EmbedBuilder()
     .setColor("#8A2BE2")
-    .setDescription(`**${user.display_name}** — Painel Completo${escudoExtra}`)
+    .setDescription(`**${user.display_name}** — Painel Completo`)
     .addFields(
       {
         name: "💎 Geral",

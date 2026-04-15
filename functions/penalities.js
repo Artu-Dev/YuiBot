@@ -118,7 +118,7 @@ export async function handlePenalities(message, userData) {
     return false;
   }
 
-  // ===== VERIFICAR IMMUNITY (ESCUDO DA YUI) =====
+  // ===== VERIFICAR IMMUNITY =====
   const { guildId, userId } = message;
   const actualGuildId = guildId || message.guild?.id;
   const actualUserId = userId || message.author?.id;

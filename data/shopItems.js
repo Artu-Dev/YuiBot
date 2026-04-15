@@ -10,14 +10,23 @@ export const SHOP_ITEMS = {
     duration: () => randomInt(24, 36) * 60 * 60 * 1000,
     effect: 'char_discount',
   },
-  escudo_da_yui: {
-    name: 'Escudo da Yui',
-    description: 'Imunidade total a penalidades (mudo, taxa de pobre, etc.).',
-    image: "https://placehold.co/400x300/e74c3c/ffffff?text=🛡️+Escudo",
+  fora_da_lei: { 
+    name: 'Fora da Lei',
+    description: 'Imunidade total a penalidades.',
+    image: "https://placehold.co/400x300/e74c3c/ffffff?text=🛡️+Fora+da+Lei",
     rarity: 'raro',
     price: () => randomInt(1200, 2000),
     duration: () => (Math.random() < 0.5 ? 24 : 48) * 60 * 60 * 1000,
     effect: 'immunity',
+  },
+  guarda_costas: {
+    name: 'Guarda costas',
+    description: 'Proteção contra roubos por 24 horas.',
+    image: "https://placehold.co/400x300/e74c3c/ffffff?text=🛡️+Roubo",
+    rarity: 'incomum',
+    price: () => randomInt(200, 400),
+    duration: () => 24 * 60 * 60 * 1000,
+    effect: 'shield_robbery',
   },
   carta_de_maldicao: {
     name: 'Carta de Maldição',

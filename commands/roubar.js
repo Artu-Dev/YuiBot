@@ -7,12 +7,10 @@ import {
   getUser,
   reduceChars,
   setUserProperty,
-  hasEscudo,
 } from "../database.js";
 import {
   applyClassModifier,
   getClassModifier,
-  ESCUDO_BLOCK_BASE,
 } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { hasEffect, removeEffect } from "../functions/effects.js";
@@ -171,20 +169,9 @@ export async function execute(client, data) {
     userClass,
   );
   const victimDefense = getClassModifier(victimClass, "robDefense");
-  let escudoHint = "";
 
-  if (hasEffect(victimId, guildId, 'immunity')) {
-    return data.reply(`${customEmojis.shield} ${victimName} tem imunidade ativa neste momento! Não dá pra roubar de quem está protegido.`);
-  }
-
-  if (hasEscudo(victimId, guildId)) {
-    const escudoBonus = getClassModifier(victimClass, "escudoBonus");
-    const blockChance = Math.min(
-      1,
-      Math.max(0, ESCUDO_BLOCK_BASE + escudoBonus),
-    );
-    successChance *= 1 - blockChance;
-    escudoHint = `\n\n${customEmojis.shield} A vítima tinha escudo ativo — bloqueou ${Math.round(blockChance * 100)}% da sua chance.`;
+  if (hasEffect(victimId, guildId, 'shield_robbery')) {
+    return data.reply(`${customEmojis.shield} ${victimName} tinha um guarda costas MUITO foda! não da pra roubar alguem assim agora.`);
   }
 
   const baseStolen = Math.max(
@@ -241,7 +228,7 @@ export async function execute(client, data) {
       allHint = `\n\n🔫 **PISTOLA DOURADA ATIVADA!** ${displayName} levou TODOS os caracteres de ${victimName}!`;
     }
 
-    finalReply = sample(successReplies) + escudoHint + allHint;
+    finalReply = sample(successReplies) + allHint;
   } else {
     if (userChars != 0) {
       reduceChars(userId, guildId, penalty);
