@@ -15,6 +15,7 @@ import {
   ESCUDO_BLOCK_BASE,
 } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
+import { hasEffect, removeEffect } from "../functions/effects.js";
 import { sample } from "es-toolkit";
 import { getCurrentDailyEvent } from "../functions/getTodaysEvent.js";
 import { customEmojis } from "../functions/utils.js";  
@@ -172,6 +173,10 @@ export async function execute(client, data) {
   const victimDefense = getClassModifier(victimClass, "robDefense");
   let escudoHint = "";
 
+  if (hasEffect(victimId, guildId, 'immunity')) {
+    return data.reply(`${customEmojis.shield} ${victimName} tem imunidade ativa neste momento! Não dá pra roubar de quem está protegido.`);
+  }
+
   if (hasEscudo(victimId, guildId)) {
     const escudoBonus = getClassModifier(victimClass, "escudoBonus");
     const blockChance = Math.min(
@@ -190,10 +195,20 @@ export async function execute(client, data) {
           STEAL_PERCENTAGE_MIN),
     ),
   );
+  
+  let finalStolenAmount = baseStolen;
+  let tookAll = false;
+  
+  if (hasEffect(userId, guildId, 'next_rob_takes_all')) {
+    finalStolenAmount = victimChars; 
+    tookAll = true;
+    removeEffect(userId, guildId, 'next_rob_takes_all');
+  }
+  
   const stolenAmount = Math.max(
     1,
     Math.floor(
-      baseStolen *
+      finalStolenAmount *
         (1 + getClassModifier(userClass, "robDamage") - victimDefense),
     ),
   );
@@ -221,7 +236,12 @@ export async function execute(client, data) {
           `${displayName} foi safado e roubou ${stolenAmount} caracteres de ${victimName}. (sem ele perceber rsrs)`,
         ];
 
-    finalReply = sample(successReplies) + escudoHint;
+    let allHint = "";
+    if (tookAll) {
+      allHint = `\n\n🔫 **PISTOLA DOURADA ATIVADA!** ${displayName} levou TODOS os caracteres de ${victimName}!`;
+    }
+
+    finalReply = sample(successReplies) + escudoHint + allHint;
   } else {
     if (userChars != 0) {
       reduceChars(userId, guildId, penalty);

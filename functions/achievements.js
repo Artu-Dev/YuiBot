@@ -1,21 +1,19 @@
 import {
   addUserProperty,
-  unlockAchievement,
+  addUserPropertyByAmount,
   setUserProperty,
+  unlockAchievement,
   getOrCreateUser,
-  dbBot,
-  getLastMessageAuthor,
+  getPreviousMessageAuthor,
   getProhibitedWords,
   getServerConfig,
-  getRecentMessages,
   getRecentMessagesArray,
 } from "../database.js";
+
 import { gerar_conquista } from "./image.js";
 import { parseMessage } from "./utils.js";
 import { achievements, achievementsByUpdate } from "../functions/achievmentsData.js";
 import { log } from "../bot.js";
-
-// mostrar progresso igual em stats para cada player, quando desbloqueia conquista secreta, aparece aqui pro player 
 
 const setPalavroes = getProhibitedWords();
 
@@ -26,11 +24,12 @@ const isNightOwlHour = () => {
   return hour >= 2 && hour < 6;
 };
 
+// ====================== FUNÇÃO CORRIGIDA ======================
 const updateUserStats = (userId, guildId, updates) => {
   for (const [prop, value] of Object.entries(updates)) {
-    if (typeof value === "number") {
+    if (typeof value === "number" && value > 0) {
       addUserProperty(prop, userId, guildId, value);
-    } else {
+    } else if (value === true || value === 1) {
       addUserProperty(prop, userId, guildId);
     }
   }
@@ -38,8 +37,7 @@ const updateUserStats = (userId, guildId, updates) => {
 
 export const giveAchievement = async (message, userId, achievementKey, authorUserObj) => {
   const guildId = message.guild.id;
-  
-  const achievement = achievements.find(ach => ach.key === achievementKey);
+  const achievement = achievements.find((ach) => ach.key === achievementKey);
 
   if (!achievement) {
     log(`❌ Achievement com chave ${achievementKey} não encontrado.`, "Achievements", 31);
@@ -51,6 +49,7 @@ export const giveAchievement = async (message, userId, achievementKey, authorUse
 
   const size = achievement.description.length > 22 ? "small" : "normal";
   const userData = getOrCreateUser(userId, authorUserObj.displayName, guildId);
+
   setUserProperty(
     "charLeft",
     userId,
@@ -70,14 +69,14 @@ export const giveAchievement = async (message, userId, achievementKey, authorUse
 
 const checkRelevantAchievements = async (message, userId, stats, authorUserObj, updates) => {
   const keysToCheck = new Set();
-  
+
   for (const updateKey of Object.keys(updates)) {
     const relevant = achievementsByUpdate[updateKey] || [];
-    relevant.forEach(key => keysToCheck.add(key));
+    relevant.forEach((key) => keysToCheck.add(key));
   }
-  
+
   for (const key of keysToCheck) {
-    const achievement = achievements.find(ach => ach.key === key);
+    const achievement = achievements.find((ach) => ach.key === key);
     if (achievement && achievement.check(stats)) {
       await giveAchievement(message, userId, key, authorUserObj);
     }
@@ -87,8 +86,8 @@ const checkRelevantAchievements = async (message, userId, stats, authorUserObj, 
 const handleMentions = async (message, guildId, userId, displayName, stats) => {
   if (!message.mentions.users.size) return;
 
-  const stalkerAch = achievements.find(ach => ach.key === "stalker");
-  const popularAch = achievements.find(ach => ach.key === "popular");
+  const stalkerAch = achievements.find((ach) => ach.key === "stalker");
+  const popularAch = achievements.find((ach) => ach.key === "popular");
 
   for (const mentionedId of message.mentions.users.keys()) {
     if (mentionedId === userId) continue;
@@ -97,9 +96,8 @@ const handleMentions = async (message, guildId, userId, displayName, stats) => {
     if (!mentionedUser || mentionedUser.bot) continue;
 
     const mentionedMember = message.guild.members.cache.get(mentionedId);
-    const mentionedDisplayName = mentionedMember?.displayName 
-      || mentionedUser.globalName 
-      || mentionedUser.username;
+    const mentionedDisplayName =
+      mentionedMember?.displayName || mentionedUser.globalName || mentionedUser.username;
 
     addUserProperty("mentions_sent", userId, guildId);
 
@@ -119,7 +117,6 @@ const handleMentions = async (message, guildId, userId, displayName, stats) => {
 
 const checkSwears = (text) => {
   if (text.length < 2) return 0;
-  
   const tokens = text.toLowerCase().split(/[\s,.;!?]+/);
   let swearsCount = 0;
   for (const token of tokens) {
@@ -136,8 +133,8 @@ export const handleAchievements = async (message) => {
   const updates = {};
 
   if (isNightOwlHour()) updates.night_owl_messages = true;
-
   updates.messages_sent = 1;
+
   if (isOnlyCaps(text)) updates.caps_lock_messages = 1;
   if (isQuestionMessage(text)) updates.question_marks = 1;
 
@@ -151,59 +148,52 @@ export const handleAchievements = async (message) => {
 
   if (text.endsWith("?") && text.length >= 100) updates.long_questions = 1;
 
+  if ((text.match(/\.\.\./g) || []).length >= 2) updates.suspense_messages = 1;
+  if (text.length >= 600) updates.textao_messages = 1;
+
+  if (message.content.startsWith(getServerConfig(message.guild?.id, "prefix") || "$"))
+    updates.bot_commands_used = 1;
+
   const lastMessages = getRecentMessagesArray(channelId, guildId, 5);
-  const capStreak = lastMessages.every(msg => msg.authorId === userId && /^[A-Z\s]+$/.test(msg.text)) ? lastMessages.length : 0;
+
+  const capStreak =
+    lastMessages.length > 0 &&
+    lastMessages.every((msg) => msg.author === displayName && isOnlyCaps(msg.content))
+      ? lastMessages.length
+      : 0;
+
   setUserProperty("caps_streak", userId, guildId, capStreak);
   if (capStreak >= 5) updates.caps_streak = true;
 
-  const date = new Date();
-  if (date.getHours() === 3 && date.getMinutes() === 33)
-    updates.specific_time_messages = 1;
-
-  if ((text.match(/\.\.\./g) || []).length >= 2) updates.suspense_messages = 1;
-
-  if (text.length >= 600) updates.textao_messages = 1;
-
-  const previousAuthor = getLastMessageAuthor(channelId, guildId);
+  const previousAuthor = getPreviousMessageAuthor(channelId, guildId);
   const prevMonologo = Number(user.monologo_streak) || 0;
   const newMonologoStreak = previousAuthor === userId ? prevMonologo + 1 : 1;
-  setUserProperty("monologo_streak", userId, guildId, newMonologoStreak);
-  updates.monologo_streak = true;
 
-  if (message.content.startsWith(getServerConfig(message.guild?.id, 'prefix') || '$'))
-    updates.bot_commands_used = 1;
+  setUserProperty("monologo_streak", userId, guildId, newMonologoStreak);
+  if (newMonologoStreak >= 3) updates.monologo_streak = true; 
 
   updateUserStats(userId, guildId, updates);
+
   user = getOrCreateUser(userId, displayName, guildId);
 
   await handleMentions(message, guildId, userId, displayName, user);
-  
   await checkRelevantAchievements(message, userId, user, message.author, updates);
 
-  // Ghost achievement (30 dias sem mensagem)
-  const lastMessageTime = user.last_message_time
-    ? Number(user.last_message_time)
-    : null;
-
+  // === Ghost / Reincarnation ===
+  const lastMessageTime = user.last_message_time ? Number(user.last_message_time) : null;
   if (lastMessageTime) {
     const diffMs = now.getTime() - lastMessageTime;
     const diffDays = diffMs / (1000 * 60 * 60 * 24);
 
-    if (diffDays >= 30) {
-      await giveAchievement(message, userId, "ghost", message.author);
-    }
-
-    const diffYears = diffDays / 365;
-    if (diffYears >= 2) {
-      await giveAchievement(message, userId, "reincarnation", message.author);
-    }
+    if (diffDays >= 30) await giveAchievement(message, userId, "ghost", message.author);
+    if (diffDays / 365 >= 2) await giveAchievement(message, userId, "reincarnation", message.author);
   }
 
   setUserProperty("last_message_time", userId, guildId, now.getTime());
 };
 
 export async function awardAchievementInCommand(client, data, achievementKey) {
-  const achievement = achievements.find(ach => ach.key === achievementKey);
+  const achievement = achievements.find((ach) => ach.key === achievementKey);
   if (!achievement || typeof achievement.check !== "function") return;
 
   const stats = getOrCreateUser(data.userId, data.displayName, data.guildId);

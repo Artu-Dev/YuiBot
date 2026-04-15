@@ -15,8 +15,6 @@ export const registerCommands = async (commandsMap) => {
       }
     }
 
-    log(`Registrando ${slashCommands.length} comandos globais...`, "Registro", 34);
-
     const data = await rest.put(
       Routes.applicationCommands(process.env.CLIENT_ID),
       { body: slashCommands }

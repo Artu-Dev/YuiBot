@@ -1,8 +1,10 @@
-import { reduceChars, setUserProperty } from "../database.js";
+import { getLastAuthorMessage, reduceChars, setUserProperty } from "../database.js";
 import { getOrCreateWebhook } from "./utils.js";
 import { invertMessage } from "./generateRes.js";
+import { hasEffect } from "./effects.js";
 import ms from 'ms';
 import { log } from "../bot.js";
+import dayjs from "dayjs";
 
 
 export const randomWords = [
@@ -17,19 +19,16 @@ export const penalities = [
   { nome: "eco",                 description: "suas mensagens serao apagadas em 5 segundos" },
   { nome: "screamer",            description: "Voce agora só pode enviar mensagens em letras maiúsculas" },
   { nome: "poeta_binario",       description: "Voce agora só pode enviar mensagens com uma única palavra" },
-  { nome: "gago_digital",        description: "Voce agora precisa repetir cada palavra duas vezes" },
   { nome: "redigido",            description: "Todas as letras de suas mensagens agora sao spoilers!!" },
   { nome: "sentido_invertido",   description: "Suas mensagens serão reescritas com o sentido invertido" },
-  { nome: "spoiler_maniac",      description: "Todas as letras de suas mensagens agora sao spoilers!!" },
-  { nome: "mudo",                description: "Voce agora só pode enviar mensagens com uma única palavra" },
-
-
+  { nome: "slowmode",            description: "Você agora está em slowmode e só pode enviar mensagem a cada 10 segundos" },
 ];
 
 // ==================== CONSTANTES ====================
 const INVERT_TIMEOUT_MS = ms('5s');
-const WARNING_DELETE_TIMEOUT_MS = ms('30s');
+const WARNING_DELETE_TIMEOUT_MS = ms('10s');
 const ECO_DELETE_TIMEOUT_MS = ms('5s');
+const SLOWMODE_COOLDOWN_MS = ms('10s');
 
 // ==================== UTILITÁRIOS INTERNOS ====================
 async function tryInvertMessage(text) {
@@ -119,6 +118,15 @@ export async function handlePenalities(message, userData) {
     return false;
   }
 
+  // ===== VERIFICAR IMMUNITY (ESCUDO DA YUI) =====
+  const { guildId, userId } = message;
+  const actualGuildId = guildId || message.guild?.id;
+  const actualUserId = userId || message.author?.id;
+  
+  if (hasEffect(actualUserId, actualGuildId, 'immunity')) {
+    return false; 
+  }
+
   if (Number(userData.charLeft) > 0 && userData.penalitySetByAdmin !== 1) return false;
 
   const penality = userData.penality;
@@ -128,12 +136,12 @@ export async function handlePenalities(message, userData) {
   let isPunished = false;
   let warning = "";
 
-  // ===== ESTRANGEIRO: Não pode usar vogais =====
+  // ===== ESTRANGEIRO =====
   if (penality === "estrangeiro" && /[aeiou]/i.test(content)) {
     isPunished = true;
     warning = "Você não pode usar vogais!";
 
-  // ===== PALAVRA OBRIGATÓRIA: Deve terminar com palavra específica =====
+  // ===== PALAVRA OBRIGATÓRIA =====
   } else if (penality === "palavra_obrigatoria") {
     const required = userData.penalityWord || "";
     if (!content.endsWith(required)) {
@@ -141,7 +149,7 @@ export async function handlePenalities(message, userData) {
       warning = `Sua mensagem precisa terminar com: ${required}`;
     }
 
-  // ===== SCREAMER: Apenas letras maiúsculas =====
+  // ===== SCREAMER =====
   } else if (
     penality === "screamer" &&
     content !== content.toUpperCase()
@@ -149,10 +157,9 @@ export async function handlePenalities(message, userData) {
     isPunished = true;
     warning = "Você só pode usar letras maiúsculas!";
 
-  // ===== POETA BINÁRIO: Apenas uma palavra =====
+  // ===== POETA BINÁRIO =====
   } else if (
-    penality === "poeta_binario" ||
-    penality === "mudo"
+    penality === "poeta_binario"
   ) {
     const palavras = content.trim().split(/\s+/);
     if (palavras.length > 1) {
@@ -160,24 +167,8 @@ export async function handlePenalities(message, userData) {
       warning = "Você só pode enviar uma única palavra!";
     }
 
-  // ===== GAGO DIGITAL: Repetir cada palavra duas vezes =====
-  } else if (penality === "gago_digital") {
-    const words = content.trim().split(/\s+/);
-    let erroGago = false;
-    for (let i = 0; i < words.length; i += 2) {
-      if (!words[i + 1] || words[i] !== words[i + 1]) {
-        erroGago = true;
-        break;
-      }
-    }
-    if (erroGago) {
-      isPunished = true;
-      warning = "Você precisa repetir cada palavra duas vezes!";
-    }
-
-  // ===== REDIGIDO: Tudo em spoilers =====
+  // ===== REDIGIDO =====
   } else if (
-    penality === "spoiler_maniac" ||
     penality === "redigido"
   ) {
     const textPunished =
@@ -189,7 +180,7 @@ export async function handlePenalities(message, userData) {
     await sendModifiedMessage(message, textPunished);
     return false;
 
-  // ===== SENTIDO INVERTIDO: Inverte a mensagem =====
+  // ===== SENTIDO INVERTIDO =====
   } else if (penality === "sentido_invertido") {
     let invertedText = message.content || "";
     invertedText = await tryInvertMessage(invertedText);
@@ -197,14 +188,34 @@ export async function handlePenalities(message, userData) {
     await sendModifiedMessage(message, invertedText);
     return false;
 
-  // ===== ECO: Deleta mensagem após timeout =====
+  // ===== SLOWMODE =====
+  } else if (penality === "slowmode") {
+    const now = dayjs().valueOf();
+
+    const lastMessageTime = getLastAuthorMessage(
+      message.channel.id,
+      message.guild.id,
+      message.author.id
+    );
+    
+    const lastTime = lastMessageTime ? Number(lastMessageTime) : 0;
+    const timeSinceLast = now - lastTime;
+
+    if (timeSinceLast < SLOWMODE_COOLDOWN_MS) {
+        isPunished = true;
+
+        const expiryTimeMs = lastTime + SLOWMODE_COOLDOWN_MS;
+        const expiryUnix = Math.floor(expiryTimeMs / 1000);
+
+        warning = `Você está em slowmode! Aguarde <t:${expiryUnix}:R> antes de enviar outra mensagem.`;
+    }
+  // ===== ECO =====
   } else if (penality === "eco") {
     setTimeout(() => {
       message.delete().catch(() => {});
     }, ECO_DELETE_TIMEOUT_MS);
   }
 
-  // Envia aviso se violou alguma regra
   if (isPunished) {
     await sendWarning(message, warning);
     return true;

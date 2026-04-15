@@ -546,6 +546,93 @@ export const achievements = [
     check: (stats) => (stats.consecutive_robbery_losses || 0) >= 10,
     progress: (stats) => ({ current: Math.min(stats.consecutive_robbery_losses ?? 0, 10), total: 10 }),
   },
+  {
+    key: "master_of_activity",
+    title: "Mestre da Atividade",
+    icon: customEmojis.mineLegendHero,
+    description: "Desbloqueou TODAS as conquistas de atividade",
+    charPoints: 15000,
+    category: "mastery",
+    secret: false,
+    hiddenDescription: null,
+    check: (stats) => {
+      const activityAchs = achievements.filter(a => a.category === "activity");
+      return activityAchs.length > 0 && activityAchs.every(a => a.check(stats));
+    },
+    progress: null,
+  },
+  {
+    key: "master_of_bounty",
+    title: "Mestre das Recompensas",
+    icon: customEmojis.pointingGun,
+    description: "Desbloqueou TODAS as conquistas de recompensas",
+    charPoints: 20000,
+    category: "mastery",
+    secret: false,
+    hiddenDescription: null,
+    check: (stats) => {
+      const bountyAchs = achievements.filter(a => a.category === "bounty");
+      return bountyAchs.length > 0 && bountyAchs.every(a => a.check(stats));
+    },
+    progress: null,
+  },
+  {
+    key: "master_of_tiger",
+    title: "Mestre do Tigrinho",
+    icon: "🐯",
+    description: "Desbloqueou TODAS as conquistas do tigrinho",
+    charPoints: 12000,
+    category: "mastery",
+    secret: false,
+    hiddenDescription: null,
+    check: (stats) => {
+      const tigerAchs = achievements.filter(a => a.category === "tiger");
+      return tigerAchs.length > 0 && tigerAchs.every(a => a.check(stats));
+    },
+    progress: null,
+  },
+  {
+    key: "master_of_robbery",
+    title: "Mestre da Criminalidade",
+    icon: customEmojis.pepeJail,
+    description: "Desbloqueou TODAS as conquistas de roubo",
+    charPoints: 10000,
+    category: "mastery",
+    secret: false,
+    hiddenDescription: null,
+    check: (stats) => {
+      const robberyAchs = achievements.filter(a => a.category === "robbery");
+      return robberyAchs.length > 0 && robberyAchs.every(a => a.check(stats));
+    },
+    progress: null,
+  },
+  {
+    key: "master_of_verbal",
+    title: "Mestre do Vocabulário Sujo",
+    icon: customEmojis.infested,
+    description: "Desbloqueou TODAS as conquistas verbais",
+    charPoints: 8000,
+    category: "mastery",
+    secret: false,
+    hiddenDescription: null,
+    check: (stats) => {
+      const verbalAchs = achievements.filter(a => a.category === "verbal");
+      return verbalAchs.length > 0 && verbalAchs.every(a => a.check(stats));
+    },
+    progress: null,
+  },
+  {
+    key: "shop_master",
+    title: "Mestre da Loja",
+    icon: customEmojis.ironIngot,
+    description: "Comprou todos os itens únicos disponíveis na loja",
+    charPoints: 25000,
+    category: "special",
+    secret: false,
+    hiddenDescription: null,
+    check: () => false,
+    progress: null,
+  },
 ];
 
 export const getAchievementByKey = (key) =>

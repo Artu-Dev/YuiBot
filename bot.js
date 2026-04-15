@@ -3,7 +3,7 @@ import { readdirSync } from "fs";
 import dotenv from "dotenv";
 import path from "path";
 import Config from "./config.js";
-import { intializeDbBot, dbBot, getGuildUsers, addChars, getServerConfig, addCharsBulk } from "./database.js";
+import { dbBot, getGuildUsers, addChars, getServerConfig, addCharsBulk, initializeDbBot } from "./database.js";
 import nodeCron from "node-cron";
 import { cleanupLeftUsers } from "./functions/cleanUsers.js";
 import { registerCommands } from "./registerCommands.js";
@@ -109,7 +109,7 @@ async function main() {
 
   log(`Eventos ativos: ${readdirSync(eventsPath).length}`);
 
-  await intializeDbBot();
+  await initializeDbBot();
 
   client.once("clientReady", async () => {
     log(`Online como ${client.user.tag}`);
@@ -137,7 +137,7 @@ process.on("unhandledRejection", (reason) => {
 });
 
 process.on("uncaughtException", (error) => {
-  log("❌ Erro não capturado: " + error.message, "Erro", 31);
+  log("❌ Erro não capturado: " + error, "Erro", 31);
 });
 
 main();

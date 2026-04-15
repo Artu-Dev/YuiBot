@@ -94,7 +94,6 @@ export const validatePenalty = (penalty) => {
     "eco",
     "screamer",
     "poeta_binario",
-    "gago_digital",
     "redigido",
     "sentido_invertido",
     "minusculo",

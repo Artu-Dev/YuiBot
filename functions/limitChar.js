@@ -2,6 +2,7 @@ import { dbBot, reduceChars, setUserProperty, addChars, getRandomProhibitedWord,
 import { parseMessage, safeReplyToMessage } from "./utils.js";
 import { penalities, handlePenalities, randomWords } from "./penalities.js";
 import { getCurrentDailyEvent } from "./getTodaysEvent.js";
+import { getCharMultiplier } from "./effects.js";
 import dayjs from "dayjs";
 import { log } from "../bot.js";
 
@@ -9,14 +10,11 @@ import { log } from "../bot.js";
 const GIF_URL_REGEX = /(https?:\/\/[^\s]+)/g;
 
 export const limitChar = async (message, userData) => {
-  if (!userData || typeof userData !== "object") {
-    log("limitChar: usuário ausente (getOrCreateUser falhou?); ignorando limite.", "LimitChar", 33);
-    return;
-  }
+  if (!userData || typeof userData !== "object") return false;
 
   const { text, guildId, userId, displayName } = parseMessage(message);
 
-  if (!getServerConfig(guildId, "charLimitEnabled")) return;
+  if (!getServerConfig(guildId, "charLimitEnabled")) return true;
 
   const hoje = dayjs().format("YYYY-MM-DD");
 
@@ -68,7 +66,7 @@ export const limitChar = async (message, userData) => {
         `⚠️ **PALAVRA DO DIA!** Você disse: **${randomWordBanned}** — você não tem caracteres suficientes pra redistribuir.`
       );
     }
-    return;
+    return false;
   }
 
   const textWithoutUrls = text.replace(GIF_URL_REGEX, "").trim();
@@ -96,9 +94,14 @@ export const limitChar = async (message, userData) => {
 
   // ====================== EVENTO ======================
   const event = await getCurrentDailyEvent(guildId);
-  const charMultiplier = event?.charMultiplier ?? 1.0;
+  const eventMultiplier = event?.charMultiplier ?? 1.0;
 
-  if (charMultiplier === 0) return;
+  // ====================== EFEITOS ======================
+  const effectsMultiplier = getCharMultiplier(userId, guildId);
+
+  if (effectsMultiplier === 0 || eventMultiplier === 0) return true;
+
+  const charMultiplier = eventMultiplier * effectsMultiplier;
 
   textSize = Math.ceil(textSize * charMultiplier);
 
@@ -125,27 +128,25 @@ export const limitChar = async (message, userData) => {
 
   // ====================== PENALIDADES ======================
   const wasPunished = await handlePenalities(message, userData);
-  if (wasPunished) return;
+  if (wasPunished) return false;
 
-  if (newValue <= 0) {
-    if (!userData.penality) {
-      const randomPenality = penalities[Math.floor(Math.random() * penalities.length)];
-      let randomWord = "";
+  if (newValue <= 0 && !userData.penality) {
+    const randomPenality = penalities[Math.floor(Math.random() * penalities.length)];
+    let randomWord = "";
 
-      setUserProperty("penality", userId, guildId, randomPenality.nome);
+    setUserProperty("penality", userId, guildId, randomPenality.nome);
 
-      if (randomPenality.nome === "palavra_obrigatoria") {
-        randomWord = randomWords[Math.floor(Math.random() * randomWords.length)];
-        setUserProperty("penalityWord", userId, guildId, randomWord);
-      }
-
-      await safeReplyToMessage(
-        message,
-        `!${displayName} seus caracteres acabaram! Você recebeu a penalidade: **${randomPenality.nome}**`
-      );
-      await message.channel.send(`${randomPenality.description}${randomWord}`);
+    if (randomPenality.nome === "palavra_obrigatoria") {
+      randomWord = randomWords[Math.floor(Math.random() * randomWords.length)];
+      setUserProperty("penalityWord", userId, guildId, randomWord);
     }
-  } else if (userData.penality && userData.penalitySetByAdmin !== 1) {
+
+    await safeReplyToMessage(
+      message,
+      `!${displayName} seus caracteres acabaram! Você recebeu a penalidade: **${randomPenality.nome}**`
+    );
+    await message.channel.send(`${randomPenality.description}${randomWord}`);
+  } else if (userData.penalitySetByAdmin !== 1) {
     removeUserPenality(userId, guildId);
     setUserProperty("penalityWord", userId, guildId, "");
     await safeReplyToMessage(
@@ -153,4 +154,6 @@ export const limitChar = async (message, userData) => {
       `${displayName} seus caracteres voltaram ao positivo! como seu nome saiu do Serasa, Suas penalidades foram removidas.`
     );
   }
+
+  return true
 };

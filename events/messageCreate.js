@@ -58,29 +58,28 @@ export const execute = async (message, client) => {
   if (!guildId || !userId || !channelId) return;
 
   if (await tryHandleCommand(message, client, text)) return;
-
+  
   const channelSet = new Set(getChannels(guildId));
   if (!channelSet.has(channelId)) return;
-
   const userData = getOrCreateUser(userId, displayName, guildId);
   if (!userData) return;
-
   const imageUrl = extractImageUrl(message);
   
   await announceEvent(message, guildId);
-
-  await saveMessageContext(
-    channelId,
-    guildId,
-    displayName,
-    await replaceMentions(message, text),
-    userId,
-    message.id,
-    imageUrl
-  );
-
-  await limitChar(message, userData);
-  await handleRandomActions(message, userId, mentions);
+  
+  const validCharsMessage = await limitChar(message, userData);
+  if (validCharsMessage) {
+    await saveMessageContext(
+      channelId,
+      guildId,
+      displayName,
+      await replaceMentions(message, text),
+      userId,
+      message.id,
+      imageUrl
+    );
+    await handleRandomActions(message, userId, mentions);
+  }
   handleAchievements(message);
 };
 

@@ -1,4 +1,4 @@
-import { dbBot, getRecentMessages, getGuildMembers } from "../database.js";
+import { dbBot, getRecentMessages } from "../database.js";
 import ollama, { ollamaGenerateQueued } from "./ollamaClient.js";
 import { sample } from 'es-toolkit';
 
@@ -18,14 +18,12 @@ const newsTemplates = [
 // ==================== GERAÇÃO DE NOTÍCIAS ====================
 
 export async function generateFakeNews(guildId, channelId) {
-  const recentContext = getRecentMessages(guildId, channelId);
-  const membersContext = getGuildMembers(guildId);
+  const recentContext = getRecentMessages(guildId, channelId, 30);
 
   const prompt = `Você é um gerador de manchetes de notícias FALSAS e ABSURDAS para um servidor de Discord.
 
 Contexto das conversas recentes:
 ${recentContext}
-${membersContext}
 
 Crie UMA manchete de notícia completamente falsa e engraçada que:
 1. Misture elementos reais das conversas de forma absurda

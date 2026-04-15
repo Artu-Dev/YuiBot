@@ -1,6 +1,5 @@
 import { SlashCommandBuilder } from "discord.js";
-import { intializeDbBot, removeChannel, getChannels } from "../database.js";
-await intializeDbBot();
+import { removeChannel, getChannels } from "../database.js";
 
 export const name = "remove-channel";
 export const aliases = ["remover-canal", "rm-channel", "rm-canal", "rm-ch"]; 
@@ -8,11 +7,6 @@ export const aliases = ["remover-canal", "rm-channel", "rm-canal", "rm-ch"];
 export const data = new SlashCommandBuilder()
   .setName("remove-channel")
   .setDescription("Remove o canal atual da lista de canais permitidos.");
-
-function parseArgs(data) {
-  // No args for remove-channel
-  return {};
-}
 
 export async function execute(client, data) {
   const guild_id = data.guildId;

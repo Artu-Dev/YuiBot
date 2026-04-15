@@ -15,6 +15,7 @@ export async function execute(client, data) {
 
     const userData = getOrCreateUser(userId, displayName, guildId);
     const lastDaily = userData.lastDailyBonus || 0;
+
     const now = dayjs();
 
     if (now.diff(dayjs(lastDaily), 'hour') < 24) {
@@ -35,10 +36,10 @@ export async function execute(client, data) {
     }
 
     const classLuckyMod = getClassModifier(userData.user_class, "lucky");
-    const randomChars = Math.floor(Math.random() * 100) + 50 + Math.floor(50 * classLuckyMod);
+    const randomChars = Math.floor(Math.random() * 101) + 50 + Math.floor(50 * classLuckyMod);
 
-    addChars(userId, guildId, randomChars);
-    setUserProperty('lastDailyBonus', userId, guildId, now.toISOString());
+    await addChars(userId, guildId, randomChars);
+    await setUserProperty('lastDailyBonus', userId, guildId, now.toISOString());
 
     await data.reply({ 
         content: `Você resgatou seu prêmio diário de **${randomChars} chars**!`, 
