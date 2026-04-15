@@ -37,7 +37,7 @@ const updateUserStats = (userId, guildId, updates) => {
 
 export const giveAchievement = async (message, userId, achievementKey, authorUserObj) => {
   const guildId = message.guild.id;
-  const achievement = achievements.find((ach) => ach.key === achievementKey);
+  const achievement = achievements[achievementKey];
 
   if (!achievement) {
     log(`❌ Achievement com chave ${achievementKey} não encontrado.`, "Achievements", 31);
@@ -76,7 +76,7 @@ const checkRelevantAchievements = async (message, userId, stats, authorUserObj, 
   }
 
   for (const key of keysToCheck) {
-    const achievement = achievements.find((ach) => ach.key === key);
+    const achievement = achievements[key];
     if (achievement && achievement.check(stats)) {
       await giveAchievement(message, userId, key, authorUserObj);
     }
@@ -86,8 +86,8 @@ const checkRelevantAchievements = async (message, userId, stats, authorUserObj, 
 const handleMentions = async (message, guildId, userId, displayName, stats) => {
   if (!message.mentions.users.size) return;
 
-  const stalkerAch = achievements.find((ach) => ach.key === "stalker");
-  const popularAch = achievements.find((ach) => ach.key === "popular");
+  const stalkerAch = achievements["stalker"];
+  const popularAch = achievements["popular"];
 
   for (const mentionedId of message.mentions.users.keys()) {
     if (mentionedId === userId) continue;
@@ -151,6 +151,8 @@ export const handleAchievements = async (message) => {
   if ((text.match(/\.\.\./g) || []).length >= 2) updates.suspense_messages = 1;
   if (text.length >= 600) updates.textao_messages = 1;
 
+  if (now.getHours() === 3 && now.getMinutes() === 33) updates.specific_time_messages = 1;
+
   if (message.content.startsWith(getServerConfig(message.guild?.id, "prefix") || "$"))
     updates.bot_commands_used = 1;
 
@@ -193,7 +195,7 @@ export const handleAchievements = async (message) => {
 };
 
 export async function awardAchievementInCommand(client, data, achievementKey) {
-  const achievement = achievements.find((ach) => ach.key === achievementKey);
+  const achievement = achievements[achievementKey];
   if (!achievement || typeof achievement.check !== "function") return;
 
   const stats = getOrCreateUser(data.userId, data.displayName, data.guildId);

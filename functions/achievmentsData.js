@@ -29,9 +29,8 @@ export const achievementsByUpdate = {
   total_chars_donated:  ["generoso"],
 };
 
-export const achievements = [
-  {
-    key: "ghost",
+export const achievements = {
+  ghost: {
     title: "Fantasma",
     icon: customEmojis.skullGlowing,
     description: "30 dias sem mensagens e voltou",
@@ -42,8 +41,7 @@ export const achievements = [
     check: () => false,
     progress: null,
   },
-  {
-    key: "archaeologist",
+  archaeologist: {
     title: "O Arqueólogo",
     icon: customEmojis.writingGOOD,
     description: "Desenterre o passado...",
@@ -54,8 +52,7 @@ export const achievements = [
     check: () => false,
     progress: null,
   },
-  {
-    key: "the_chosen_one",
+  the_chosen_one: {
     title: "O Escolhido",
     icon: customEmojis.mineLegendHero,
     description: "Você tem 0.01% de sorte",
@@ -66,8 +63,7 @@ export const achievements = [
     check: () => false,
     progress: null,
   },
-  {
-    key: "caps_addict",
+  caps_addict: {
     title: "VICIADO EM CAPS LOCK",
     icon: "📢",
     description: "50 mensagens gritando",
@@ -78,8 +74,7 @@ export const achievements = [
     check: (stats) => stats.caps_lock_messages >= 50,
     progress: (stats) => ({ current: Math.min(stats.caps_lock_messages ?? 0, 50), total: 50 }),
   },
-  {
-    key: "night_owl",
+  night_owl: {
     title: "Coruja Noturna",
     icon: "🦉",
     description: "Mandou 100 mensagens na madrugada (2h-6h)",
@@ -90,8 +85,7 @@ export const achievements = [
     check: (stats) => stats.night_owl_messages >= 100,
     progress: (stats) => ({ current: Math.min(stats.night_owl_messages ?? 0, 100), total: 100 }),
   },
-  {
-    key: "popular",
+  popular: {
     title: "Popularzinho",
     icon: "⭐",
     description: "200 menções recebidas",
@@ -102,8 +96,7 @@ export const achievements = [
     check: (stats) => stats.mentions_received >= 200,
     progress: (stats) => ({ current: Math.min(stats.mentions_received ?? 0, 200), total: 200 }),
   },
-  {
-    key: "stalker",
+  stalker: {
     title: "Stalker",
     icon: "👀",
     description: "Mencionou os outros 300 vezes",
@@ -114,8 +107,7 @@ export const achievements = [
     check: (stats) => stats.mentions_sent >= 300,
     progress: (stats) => ({ current: Math.min(stats.mentions_sent ?? 0, 300), total: 300 }),
   },
-  {
-    key: "question_everything",
+  question_everything: {
     title: "Curioso",
     icon: "❓",
     description: "Fez 150 perguntas no chat",
@@ -126,8 +118,7 @@ export const achievements = [
     check: (stats) => stats.question_marks >= 150,
     progress: (stats) => ({ current: Math.min(stats.question_marks ?? 0, 150), total: 150 }),
   },
-  {
-    key: "chatterbox",
+  chatterbox: {
     title: "Tagarela",
     icon: "💬",
     description: "1.000 mensagens enviadas",
@@ -138,8 +129,7 @@ export const achievements = [
     check: (stats) => stats.messages_sent >= 1000,
     progress: (stats) => ({ current: Math.min(stats.messages_sent ?? 0, 1000), total: 1000 }),
   },
-  {
-    key: "first_message",
+  first_message: {
     title: "Primeiro Passo",
     icon: customEmojis.hearts,
     description: "Enviou sua primeira mensagem",
@@ -150,8 +140,7 @@ export const achievements = [
     check: (stats) => stats.messages_sent >= 1,
     progress: (stats) => ({ current: Math.min(stats.messages_sent ?? 0, 1), total: 1 }),
   },
-  {
-    key: "good_morning",
+  good_morning: {
     title: "Acorda!!!",
     icon: customEmojis.hello,
     description: "Mandou 'bom dia' no chat",
@@ -162,8 +151,7 @@ export const achievements = [
     check: (stats) => stats.morning_messages >= 1,
     progress: (stats) => ({ current: Math.min(stats.morning_messages ?? 0, 1), total: 1 }),
   },
-  {
-    key: "monologo",
+  monologo: {
     title: "Esquizofrenico",
     icon: "🗣️",
     description: "10 mensagens seguidas falando sozinho",
@@ -174,8 +162,7 @@ export const achievements = [
     check: (stats) => stats.monologo_streak >= 10,
     progress: (stats) => ({ current: Math.min(stats.monologo_streak ?? 0, 10), total: 10 }),
   },
-  {
-    key: "devil_message",
+  devil_message: {
     title: "DIABOLICO",
     icon: customEmojis.pepeCruz,
     description: "Mandou mensagem exatamente às 03:33",
@@ -186,8 +173,7 @@ export const achievements = [
     check: (stats) => stats.specific_time_messages >= 1,
     progress: null,
   },
-  {
-    key: "reincarnation",
+  reincarnation: {
     title: "Reencarnou",
     icon: customEmojis.skullGlowing,
     description: "Voltou depois de 1 ano sem mandar mensagem",
@@ -198,8 +184,7 @@ export const achievements = [
     check: () => false,
     progress: null,
   },
-  {
-    key: "chat_legend",
+  chat_legend: {
     title: "Inimigo da Vida Social",
     icon: "🌱",
     description: "Enviou 10.000 mensagens",
@@ -210,8 +195,7 @@ export const achievements = [
     check: (stats) => stats.messages_sent >= 10000,
     progress: (stats) => ({ current: Math.min(stats.messages_sent ?? 0, 10000), total: 10000 }),
   },
-  {
-    key: "urgency",
+  urgency: {
     title: "Calma Calabreso",
     icon: "🚨",
     description: "5 mensagens seguidas em CAPS",
@@ -222,8 +206,7 @@ export const achievements = [
     check: (stats) => stats.caps_streak >= 5,
     progress: (stats) => ({ current: Math.min(stats.caps_streak ?? 0, 5), total: 5 }),
   },
-  {
-    key: "philosopher",
+  philosopher: {
     title: "Filósofo",
     icon: customEmojis.pepeThinking,
     description: "Pergunta com mais de 100 caracteres",
@@ -234,8 +217,7 @@ export const achievements = [
     check: (stats) => stats.long_questions >= 1,
     progress: (stats) => ({ current: Math.min(stats.long_questions ?? 0, 1), total: 1 }),
   },
-  {
-    key: "funny_today",
+  funny_today: {
     title: "paliasso",
     icon: customEmojis.pepeClown,
     description: "Deu uma risada muito longa (kkkkkk)",
@@ -246,8 +228,7 @@ export const achievements = [
     check: (stats) => stats.laught_messages >= 1,
     progress: (stats) => ({ current: Math.min(stats.laught_messages ?? 0, 1), total: 1 }),
   },
-  {
-    key: "dirty_mouth",
+  dirty_mouth: {
     title: "Boca Suja",
     icon: "🧼",
     description: "Falou palavrao 50 vezes",
@@ -258,8 +239,7 @@ export const achievements = [
     check: (stats) => stats.swears_count >= 50,
     progress: (stats) => ({ current: Math.min(stats.swears_count ?? 0, 50), total: 50 }),
   },
-  {
-    key: "bot_addicted",
+  bot_addicted: {
     title: "Entusiasta do Bot",
     icon: "🤖",
     description: "50 comandos usados",
@@ -270,8 +250,7 @@ export const achievements = [
     check: (stats) => stats.bot_commands_used >= 50,
     progress: (stats) => ({ current: Math.min(stats.bot_commands_used ?? 0, 50), total: 50 }),
   },
-  {
-    key: "misterioso",
+  misterioso: {
     title: "Misterioso",
     icon: customEmojis.pepeMysticCape,
     description: "15 Mensagens com reticências...",
@@ -282,8 +261,7 @@ export const achievements = [
     check: (stats) => stats.suspense_messages >= 15,
     progress: (stats) => ({ current: Math.min(stats.suspense_messages ?? 0, 15), total: 15 }),
   },
-  {
-    key: "textao_enem",
+  textao_enem: {
     title: "Escritor maldito",
     icon: customEmojis.writingGOOD,
     description: "Mandou um textão com mais de 600 caracteres",
@@ -294,8 +272,7 @@ export const achievements = [
     check: (stats) => stats.textao_messages >= 1,
     progress: (stats) => ({ current: Math.min(stats.textao_messages ?? 0, 1), total: 1 }),
   },
-  {
-    key: "insone",
+  insone: {
     title: "Insonia PLUS",
     icon: customEmojis.mineNightVision,
     description: "500 mensagens de madrugada (2h-6h).",
@@ -306,8 +283,7 @@ export const achievements = [
     check: (stats) => stats.night_owl_messages >= 500,
     progress: (stats) => ({ current: Math.min(stats.night_owl_messages ?? 0, 500), total: 500 }),
   },
-  {
-    key: "vocabulario_rico",
+  vocabulario_rico: {
     title: "Vocabulário Rico",
     icon: customEmojis.infested,
     description: "200 palavrões ditos",
@@ -318,8 +294,7 @@ export const achievements = [
     check: (stats) => stats.swears_count >= 200,
     progress: (stats) => ({ current: Math.min(stats.swears_count ?? 0, 200), total: 200 }),
   },
-  {
-    key: "dependente",
+  dependente: {
     title: "Ladrão profissional",
     icon: customEmojis.pepeJail,
     description: "Roubou 30 vezes no total.",
@@ -330,8 +305,7 @@ export const achievements = [
     check: (stats) => (stats.total_robberies || 0) >= 30,
     progress: (stats) => ({ current: Math.min(stats.total_robberies ?? 0, 30), total: 30 }),
   },
-  {
-    key: "apostador",
+  apostador: {
     title: "Apostador Ruim",
     icon: customEmojis.pepeSus,
     description: "Perdeu 20 vezes no tigre. Talento natural.",
@@ -342,8 +316,7 @@ export const achievements = [
     check: (stats) => (stats.tiger_losses || 0) >= 20,
     progress: (stats) => ({ current: Math.min(stats.tiger_losses ?? 0, 20), total: 20 }),
   },
-  {
-    key: "generoso",
+  generoso: {
     title: "Filantropo",
     icon: "🤲",
     description: "Doou 10.000 caracteres no total",
@@ -354,8 +327,7 @@ export const achievements = [
     check: (stats) => (stats.total_chars_donated || 0) >= 10000,
     progress: (stats) => ({ current: Math.min(stats.total_chars_donated ?? 0, 10000), total: 10000 }),
   },
-  {
-    key: "tigrinho_lenda",
+  tigrinho_lenda: {
     title: "CEO do tigrinho",
     icon: "🎰",
     description: "Ganhou 2 jackpots no tigre",
@@ -366,8 +338,7 @@ export const achievements = [
     check: (stats) => (stats.tiger_jackpots || 0) >= 2,
     progress: (stats) => ({ current: Math.min(stats.tiger_jackpots ?? 0, 2), total: 2 }),
   },
-  {
-    key: "tigre_centuria",
+  tigre_centuria: {
     title: "Viciado no Tigrinho",
     icon: "🐯",
     description: "Jogou o tigre 100 vezes no total",
@@ -378,8 +349,7 @@ export const achievements = [
     check: (stats) => (stats.lifetime_tiger_spins || 0) >= 100,
     progress: (stats) => ({ current: Math.min(stats.lifetime_tiger_spins ?? 0, 100), total: 100 }),
   },
-  {
-    key: "cacador_de_recompensas",
+  cacador_de_recompensas: {
     title: "CAÇADOR DE RECOMPENSAS",
     icon: "🏹",
     description: "Pegou 10 recompensas na cabeça de alguém",
@@ -390,8 +360,7 @@ export const achievements = [
     check: (stats) => (stats.bounties_claimed || 0) >= 10,
     progress: (stats) => ({ current: Math.min(stats.bounties_claimed ?? 0, 10), total: 10 }),
   },
-  {
-    key: "cacador_de_cabecas",
+  cacador_de_cabecas: {
     title: "CAÇADOR DE CABEÇAS",
     icon: customEmojis.skullAndRoses,
     description: "Pegou 20 recompensas como um verdadeiro carniceiro",
@@ -402,8 +371,7 @@ export const achievements = [
     check: (stats) => (stats.bounties_claimed || 0) >= 20,
     progress: (stats) => ({ current: Math.min(stats.bounties_claimed ?? 0, 20), total: 20 }),
   },
-  {
-    key: "xerife_do_oeste",
+  xerife_do_oeste: {
     title: "XERIFE DO OESTE",
     icon: customEmojis.pepePolice,
     description: "Pegou 50 recompensas. A lei é você agora, porra",
@@ -414,8 +382,7 @@ export const achievements = [
     check: (stats) => (stats.bounties_claimed || 0) >= 50,
     progress: (stats) => ({ current: Math.min(stats.bounties_claimed ?? 0, 50), total: 50 }),
   },
-  {
-    key: "patrocinador_do_caos",
+  patrocinador_do_caos: {
     title: "PATROCINADOR DO CAOS",
     icon: customEmojis.pepeSeenExplosion,
     description: "Pagou 10 recompensas na cabeça dos outros",
@@ -426,8 +393,7 @@ export const achievements = [
     check: (stats) => (stats.bounties_placed || 0) >= 10,
     progress: (stats) => ({ current: Math.min(stats.bounties_placed ?? 0, 10), total: 10 }),
   },
-  {
-    key: "agiota_profissional",
+  agiota_profissional: {
     title: "AGIOTA PROFISSIONAL",
     icon: customEmojis.agiotaFedora,
     description: "Pagou 20 recompensas.",
@@ -438,8 +404,7 @@ export const achievements = [
     check: (stats) => (stats.bounties_placed || 0) >= 20,
     progress: (stats) => ({ current: Math.min(stats.bounties_placed ?? 0, 20), total: 20 }),
   },
-  {
-    key: "el_capo",
+  el_capo: {
     title: "EL CAPO",
     icon: customEmojis.verifiedGolden,
     description: "Pagou 50 recompensas. O chefão do submundo",
@@ -450,8 +415,7 @@ export const achievements = [
     check: (stats) => (stats.bounties_placed || 0) >= 50,
     progress: (stats) => ({ current: Math.min(stats.bounties_placed ?? 0, 50), total: 50 }),
   },
-  {
-    key: "alvo_facil",
+  alvo_facil: {
     title: "ALVO FÁCIL",
     icon: customEmojis.rainbowSheep,
     description: "Recebeu 10 recompensas em sua cabeça.",
@@ -462,8 +426,7 @@ export const achievements = [
     check: (stats) => (stats.times_bountied || 0) >= 10,
     progress: (stats) => ({ current: Math.min(stats.times_bountied ?? 0, 10), total: 10 }),
   },
-  {
-    key: "alvo_procurado",
+  alvo_procurado: {
     title: "ALVO PROCURADO",
     icon: "💸",
     description: "Recebeu 25 recompensas em sua cabeça.",
@@ -474,8 +437,7 @@ export const achievements = [
     check: (stats) => (stats.times_bountied || 0) >= 25,
     progress: (stats) => ({ current: Math.min(stats.times_bountied ?? 0, 25), total: 25 }),
   },
-  {
-    key: "inimigo_publico_numero_um",
+  inimigo_publico_numero_um: {
     title: "INIMIGO PÚBLICO Nº 1",
     icon: customEmojis.pointingGun,
     description: "Recebeu 50 recompensas em sua cabeça.",
@@ -486,8 +448,7 @@ export const achievements = [
     check: (stats) => (stats.times_bountied || 0) >= 50,
     progress: (stats) => ({ current: Math.min(stats.times_bountied ?? 0, 50), total: 50 }),
   },
-  {
-    key: "primeiro_roubo",
+  primeiro_roubo: {
     title: "Iniciante do Crime",
     icon: "🦹",
     description: "Cometeu seu primeiro roubo.",
@@ -498,8 +459,7 @@ export const achievements = [
     check: (stats) => (stats.total_robberies || 0) >= 1,
     progress: (stats) => ({ current: Math.min(stats.total_robberies ?? 0, 1), total: 1 }),
   },
-  {
-    key: "sortudo_no_tigre",
+  sortudo_no_tigre: {
     title: "Sortudo no Tigre",
     icon: "🍀",
     description: "Ganhou no tigre 10 vezes.",
@@ -510,8 +470,7 @@ export const achievements = [
     check: (stats) => (stats.tiger_wins || 0) >= 10,
     progress: (stats) => ({ current: Math.min(stats.tiger_wins ?? 0, 10), total: 10 }),
   },
-  {
-    key: "tigreiro_nato",
+  tigreiro_nato: {
     title: "Tigreiro NATO",
     icon: "🐯",
     description: "Ganhou no tigre 50 vezes.",
@@ -522,8 +481,7 @@ export const achievements = [
     check: (stats) => (stats.tiger_wins || 0) >= 50,
     progress: (stats) => ({ current: Math.min(stats.tiger_wins ?? 0, 50), total: 50 }),
   },
-  {
-    key: "masoquista",
+  masoquista: {
     title: "Masoquista",
     icon: customEmojis.pepeCry,
     description: "Perdeu no tigre 100 vezes e continua jogando.",
@@ -534,8 +492,7 @@ export const achievements = [
     check: (stats) => (stats.tiger_losses || 0) >= 100,
     progress: (stats) => ({ current: Math.min(stats.tiger_losses ?? 0, 100), total: 100 }),
   },
-  {
-    key: "ladrao_pessimo",
+  ladrao_pessimo: {
     title: "PIOR LADRÃO",
     icon: customEmojis.sadge,
     description: "Falhou 10 roubos consecutivos",
@@ -546,83 +503,7 @@ export const achievements = [
     check: (stats) => (stats.consecutive_robbery_losses || 0) >= 10,
     progress: (stats) => ({ current: Math.min(stats.consecutive_robbery_losses ?? 0, 10), total: 10 }),
   },
-  {
-    key: "master_of_activity",
-    title: "Mestre da Atividade",
-    icon: customEmojis.mineLegendHero,
-    description: "Desbloqueou TODAS as conquistas de atividade",
-    charPoints: 15000,
-    category: "mastery",
-    secret: false,
-    hiddenDescription: null,
-    check: (stats) => {
-      const activityAchs = achievements.filter(a => a.category === "activity");
-      return activityAchs.length > 0 && activityAchs.every(a => a.check(stats));
-    },
-    progress: null,
-  },
-  {
-    key: "master_of_bounty",
-    title: "Mestre das Recompensas",
-    icon: customEmojis.pointingGun,
-    description: "Desbloqueou TODAS as conquistas de recompensas",
-    charPoints: 20000,
-    category: "mastery",
-    secret: false,
-    hiddenDescription: null,
-    check: (stats) => {
-      const bountyAchs = achievements.filter(a => a.category === "bounty");
-      return bountyAchs.length > 0 && bountyAchs.every(a => a.check(stats));
-    },
-    progress: null,
-  },
-  {
-    key: "master_of_tiger",
-    title: "Mestre do Tigrinho",
-    icon: "🐯",
-    description: "Desbloqueou TODAS as conquistas do tigrinho",
-    charPoints: 12000,
-    category: "mastery",
-    secret: false,
-    hiddenDescription: null,
-    check: (stats) => {
-      const tigerAchs = achievements.filter(a => a.category === "tiger");
-      return tigerAchs.length > 0 && tigerAchs.every(a => a.check(stats));
-    },
-    progress: null,
-  },
-  {
-    key: "master_of_robbery",
-    title: "Mestre da Criminalidade",
-    icon: customEmojis.pepeJail,
-    description: "Desbloqueou TODAS as conquistas de roubo",
-    charPoints: 10000,
-    category: "mastery",
-    secret: false,
-    hiddenDescription: null,
-    check: (stats) => {
-      const robberyAchs = achievements.filter(a => a.category === "robbery");
-      return robberyAchs.length > 0 && robberyAchs.every(a => a.check(stats));
-    },
-    progress: null,
-  },
-  {
-    key: "master_of_verbal",
-    title: "Mestre do Vocabulário Sujo",
-    icon: customEmojis.infested,
-    description: "Desbloqueou TODAS as conquistas verbais",
-    charPoints: 8000,
-    category: "mastery",
-    secret: false,
-    hiddenDescription: null,
-    check: (stats) => {
-      const verbalAchs = achievements.filter(a => a.category === "verbal");
-      return verbalAchs.length > 0 && verbalAchs.every(a => a.check(stats));
-    },
-    progress: null,
-  },
-  {
-    key: "shop_master",
+  shop_master: {
     title: "Mestre da Loja",
     icon: customEmojis.ironIngot,
     description: "Comprou todos os itens únicos disponíveis na loja",
@@ -633,8 +514,7 @@ export const achievements = [
     check: () => false,
     progress: null,
   },
-  {
-    key: "milionario_do_mes",
+  milionario_do_mes: {
     title: "💰 Milionário do Mês",
     icon: customEmojis.verifiedGolden,
     description: "Terminou o mês com mais chars que todos",
@@ -642,11 +522,10 @@ export const achievements = [
     category: "monthly",
     secret: false,
     hiddenDescription: null,
-    check: () => false, // Desbloqueado pelo sistema automaticamente
+    check: () => false,
     progress: null,
   },
-  {
-    key: "ricao_do_mes",
+  ricao_do_mes: {
     title: "🏦 Ricão do Mês",
     icon: customEmojis.verifiedGolden,
     description: "Ficou em 2º lugar em chars no final do mês",
@@ -654,11 +533,10 @@ export const achievements = [
     category: "monthly",
     secret: false,
     hiddenDescription: null,
-    check: () => false, // Desbloqueado pelo sistema automaticamente
+    check: () => false,
     progress: null,
   },
-  {
-    key: "abastado_do_mes",
+  abastado_do_mes: {
     title: "💸 Abastado do Mês",
     icon: customEmojis.ironIngot,
     description: "Ficou em 3º lugar em chars no final do mês",
@@ -666,11 +544,10 @@ export const achievements = [
     category: "monthly",
     secret: false,
     hiddenDescription: null,
-    check: () => false, // Desbloqueado pelo sistema automaticamente
+    check: () => false,
     progress: null,
   },
-  {
-    key: "milionario_reincidente",
+  milionario_reincidente: {
     title: "🌟 Milionário Reincidente",
     icon: customEmojis.mineLegendHero,
     description: "Ganhou o prêmio de milionário 5 vezes",
@@ -681,20 +558,90 @@ export const achievements = [
     check: () => false,
     progress: null,
   },
-];
+  master_of_activity: {
+    title: "Mestre da Atividade",
+    icon: customEmojis.mineLegendHero,
+    description: "Desbloqueou TODAS as conquistas de atividade",
+    charPoints: 15000,
+    category: "mastery",
+    secret: false,
+    hiddenDescription: null,
+    check: (stats) => {
+      const activityAchs = Object.values(achievements).filter(a => a.category === "activity");
+      return activityAchs.length > 0 && activityAchs.every(a => a.check(stats));
+    },
+    progress: null,
+  },
+  master_of_bounty: {
+    title: "Mestre das Recompensas",
+    icon: customEmojis.pointingGun,
+    description: "Desbloqueou TODAS as conquistas de recompensas",
+    charPoints: 20000,
+    category: "mastery",
+    secret: false,
+    hiddenDescription: null,
+    check: (stats) => {
+      const bountyAchs = Object.values(achievements).filter(a => a.category === "bounty");
+      return bountyAchs.length > 0 && bountyAchs.every(a => a.check(stats));
+    },
+    progress: null,
+  },
+  master_of_tiger: {
+    title: "Mestre do Tigrinho",
+    icon: "🐯",
+    description: "Desbloqueou TODAS as conquistas do tigrinho",
+    charPoints: 12000,
+    category: "mastery",
+    secret: false,
+    hiddenDescription: null,
+    check: (stats) => {
+      const tigerAchs = Object.values(achievements).filter(a => a.category === "tiger");
+      return tigerAchs.length > 0 && tigerAchs.every(a => a.check(stats));
+    },
+    progress: null,
+  },
+  master_of_robbery: {
+    title: "Mestre da Criminalidade",
+    icon: customEmojis.pepeJail,
+    description: "Desbloqueou TODAS as conquistas de roubo",
+    charPoints: 10000,
+    category: "mastery",
+    secret: false,
+    hiddenDescription: null,
+    check: (stats) => {
+      const robberyAchs = Object.values(achievements).filter(a => a.category === "robbery");
+      return robberyAchs.length > 0 && robberyAchs.every(a => a.check(stats));
+    },
+    progress: null,
+  },
+  master_of_verbal: {
+    title: "Mestre do Vocabulário Sujo",
+    icon: customEmojis.infested,
+    description: "Desbloqueou TODAS as conquistas verbais",
+    charPoints: 8000,
+    category: "mastery",
+    secret: false,
+    hiddenDescription: null,
+    check: (stats) => {
+      const verbalAchs = Object.values(achievements).filter(a => a.category === "verbal");
+      return verbalAchs.length > 0 && verbalAchs.every(a => a.check(stats));
+    },
+    progress: null,
+  },
+};
 
-export const getAchievementByKey = (key) =>
-  achievements.find((ach) => ach.key === key);
+// ===================== FUNÇÕES ATUALIZADAS =====================
+export const getAchievementByKey = (key) => achievements[key];
 
 export const getUnlockedAchievements = (stats) =>
-  achievements.filter((ach) => ach.check(stats));
+  Object.values(achievements).filter((ach) => ach.check(stats));
 
 export const getAchievementsByCategory = (category) =>
-  achievements.filter((ach) => ach.category === category);
+  Object.values(achievements).filter((ach) => ach.category === category);
 
 export const checkAllAchievements = (stats) => {
   const unlocked = [];
-  for (const ach of achievements) {
+  for (const ach of Object.values(achievements)) {
     if (ach.check(stats)) unlocked.push(ach);
   }
   return unlocked;

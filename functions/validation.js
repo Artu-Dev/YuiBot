@@ -69,53 +69,6 @@ export const validateConfigValue = (key, value) => {
 };
 
 /**
- * Sanitizes user input to prevent injection attacks
- * @param {string} input - User input
- * @param {number} maxLength - Maximum length
- * @returns {string} Sanitized string
- */
-export const sanitizeInput = (input, maxLength = 2000) => {
-  if (typeof input !== "string") return "";
-  return input.slice(0, maxLength).trim();
-};
-
-/**
- * Validates and normalizes a penalty name
- * @param {string} penalty - Penalty name
- * @returns {string|null} Normalized penalty or null if invalid
- */
-export const validatePenalty = (penalty) => {
-  if (typeof penalty !== "string") return null;
-  const normalized = penalty.trim().toLowerCase();
-  
-  const validPenalties = [
-    "estrangeiro",
-    "palavra_obrigatoria",
-    "eco",
-    "screamer",
-    "poeta_binario",
-    "redigido",
-    "sentido_invertido",
-    "minusculo",
-    "palavra_proibida",
-  ];
-
-  return validPenalties.includes(normalized) ? normalized : null;
-};
-
-/**
- * Safely formats an error message
- * @param {Error} error - Error object
- * @returns {string} Safe error message
- */
-export const formatErrorMessage = (error) => {
-  if (error instanceof Error) {
-    return error.message || "Erro desconhecido";
-  }
-  return String(error) || "Erro desconhecido";
-};
-
-/**
  * Validates character amount for transactions
  * @param {number} amount - Amount to validate
  * @param {number} available - Available amount

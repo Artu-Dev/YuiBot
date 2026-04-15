@@ -55,13 +55,13 @@ function checkMonthlyReset() {
 async function checkMonthlyEventExecution(client) {
   if (!shouldRunMonthlyEvent()) return;
 
-  log("🎉 EXECUTANDO EVENTO DE FIM DE MÊS");
+  const eventPromises = client.guilds.cache.map(guild => 
+    runMonthlyEvent(client, guild.id)
+  );
 
-  for (const [guildId] of client.guilds.cache) {
-    await runMonthlyEvent(client, guildId);
-  }
+  await Promise.allSettled(eventPromises);
+  log("EVENTO DE FIM DE MÊS CONCLUÍDO EM TODOS OS SERVIDORES");
 }
-
 async function main() {
   // === CARREGAR COMANDOS ===
   client.commands = new Map();
@@ -128,15 +128,17 @@ async function main() {
     await cleanupLeftUsers(client);
     await registerCommands(client.commands);
 
-    await Promise.all(client.guilds.cache.map(guild => guild.members.fetch().catch(() => null)));
+    await Promise.all(
+      client.guilds.cache.map((guild) =>
+        guild.members.fetch().catch(() => null),
+      ),
+    );
 
-    nodeCron.schedule("0 0 * * *", checkMonthlyReset, {
-      timezone: "America/Sao_Paulo",
-    });
-
-    nodeCron.schedule("* * * * *", () => checkMonthlyEventExecution(client), {
-      timezone: "America/Sao_Paulo",
-    });
+    nodeCron.schedule("0 0 * * *", () => {
+        checkMonthlyReset();
+        checkMonthlyEventExecution(client);
+      },{ timezone: "America/Sao_Paulo" },
+    );
   });
 
   // === LOGIN ===

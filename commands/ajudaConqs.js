@@ -91,8 +91,8 @@ function progressBar(current, total, size = 7) {
   return `${bar}  **${pctStr}%** (${current}/${total})`;
 }
 
-function formatBlock(ach, unlockedSet, userStats) {
-  const isUnlocked = unlockedSet.has(ach.key);
+function formatBlock(achKey, ach, unlockedSet, userStats) {
+  const isUnlocked = unlockedSet.has(achKey);
   const icon       = resolveIcon(ach);
 
   if (isUnlocked) {
@@ -170,10 +170,11 @@ function buildCategoryComponents(pageIdx, totalPages, userId) {
 
 function buildPageEmbed(pages, pageIdx, cat, discordUser, unlockedSet) {
   const catInfo        = CATEGORIES[cat];
-  const catAchs        = achievements.filter((a) => a.category === cat);
+  const catAchsEntries = Object.entries(achievements).filter(([_, a]) => a.category === cat);
+  const catAchs        = catAchsEntries.map(([_, a]) => a);
   const visible        = catAchs.filter((a) => !a.secret);
-  const unlockedInCat  = catAchs.filter((a) => unlockedSet.has(a.key));
-  const secretUnlocked = catAchs.filter((a) => a.secret && unlockedSet.has(a.key));
+  const unlockedInCat  = catAchsEntries.filter(([key, _]) => unlockedSet.has(key)).map(([_, a]) => a);
+  const secretUnlocked = catAchsEntries.filter(([key, a]) => a.secret && unlockedSet.has(key)).map(([_, a]) => a);
 
   const label = discordDisplayLabel(discordUser);
   const icon  = resolveDisplayAvatarURL(discordUser);
@@ -204,10 +205,12 @@ function buildPageEmbed(pages, pageIdx, cat, discordUser, unlockedSet) {
 }
 
 function buildOverviewEmbed(discordUser, unlockedSet) {
-  const totalSecrets   = achievements.filter((a) => a.secret).length;
-  const totalVisible   = achievements.length - totalSecrets;
+  const allAchsEntries = Object.entries(achievements);
+  const allAchs        = allAchsEntries.map(([_, a]) => a);
+  const totalSecrets   = allAchs.filter((a) => a.secret).length;
+  const totalVisible   = allAchs.length - totalSecrets;
   const unlockedTotal  = unlockedSet.size;
-  const secretsUnlocked = achievements.filter((a) => a.secret && unlockedSet.has(a.key)).length;
+  const secretsUnlocked = allAchsEntries.filter(([key, a]) => a.secret && unlockedSet.has(key)).length;
 
   const label  = discordDisplayLabel(discordUser);
   const icon   = resolveDisplayAvatarURL(discordUser);
@@ -217,10 +220,11 @@ function buildOverviewEmbed(discordUser, unlockedSet) {
   const globalBar = progressBar(unlockedTotal, totalVisible, 10);
 
   const categoryLines = CATEGORY_KEYS.map((cat) => {
-    const catAchs        = achievements.filter((a) => a.category === cat);
+    const catAchsEntries = allAchsEntries.filter(([_, a]) => a.category === cat);
+    const catAchs        = catAchsEntries.map(([_, a]) => a);
     const catVisible     = catAchs.filter((a) => !a.secret);
-    const catUnlocked    = catAchs.filter((a) => unlockedSet.has(a.key)).length;
-    const catSecrets     = catAchs.filter((a) => a.secret && unlockedSet.has(a.key)).length;
+    const catUnlocked    = catAchsEntries.filter(([key, _]) => unlockedSet.has(key)).length;
+    const catSecrets     = catAchsEntries.filter(([key, a]) => a.secret && unlockedSet.has(key)).length;
     const { emoji, label: catLabel } = CATEGORIES[cat];
 
     const total   = catVisible.length;
@@ -302,14 +306,12 @@ export async function execute(client, data) {
         };
       }
 
-      const catAchs = achievements.filter((a) => a.category === currentCat);
-      const entries = catAchs
-        .map((ach) => formatBlock(ach, unlockedSet, userData))
+      const catAchs = Object.entries(achievements)
+        .filter(([_, a]) => a.category === currentCat)
+        .map(([key, ach]) => formatBlock(key, ach, unlockedSet, userData))
         .filter(Boolean);
-
-      const pages = paginate(entries);
       currentPage = Math.max(0, Math.min(currentPage, pages.length - 1));
-
+catAch
       return {
         embeds: [buildPageEmbed(pages, currentPage, currentCat, discordUser, unlockedSet)],
         components: buildCategoryComponents(currentPage, pages.length, userId),

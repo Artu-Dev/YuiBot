@@ -84,11 +84,9 @@ function formatAchievements(unlocked) {
   const unlockedKeys = Object.keys(unlocked);
   if (!unlockedKeys.length) return "_Nenhuma ainda_";
 
-  const achMap = new Map(achievements.map(ach => [ach.key, ach]));
-
   return unlockedKeys
     .map(key => {
-      const ach = achMap.get(key);
+      const ach = achievements[key];
       return ach ? `• ${ach.icon} **${ach.title}**` : `• 🏆 ${key}`;
     })
     .join("\n");
@@ -100,7 +98,7 @@ function embedResumo(user, discordUser, guildId) {
   const { name, icon, thumb } = baseAuthor(discordUser);
   const unlocked = parseAchievements(user);
   const achCount = Object.keys(unlocked).length;
-  const totalAch = achievements.length;
+  const totalAch = Object.keys(achievements).length;
 
   const eb = new EmbedBuilder()
     .setColor("#8A2BE2")
@@ -142,7 +140,7 @@ function embedConquistas(user, discordUser) {
   const unlocked = parseAchievements(user);
   const pretty = formatAchievements(unlocked);
   const { icon, thumb } = baseAuthor(discordUser);
-  const total = achievements.length;
+  const total = Object.keys(achievements).length;
   const n = Object.keys(unlocked).length;
   const label = discordDisplayLabel(discordUser);
 
