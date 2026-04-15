@@ -16,7 +16,8 @@ import { awardAchievementInCommand } from "../functions/achievements.js";
 import { hasEffect, removeEffect } from "../functions/effects.js";
 import { sample } from "es-toolkit";
 import { getCurrentDailyEvent } from "../functions/getTodaysEvent.js";
-import { customEmojis } from "../functions/utils.js";  
+import { customEmojis } from "../functions/utils.js";
+import { isValidUserId, isValidGuildId } from "../functions/validation.js";  
 // ==================== CONFIG ====================
 const STEAL_PERCENTAGE_MIN = 0.05;
 const STEAL_PERCENTAGE_MAX = 0.3;
@@ -82,7 +83,16 @@ function parseArgs(data) {
 
 export async function execute(client, data) {
   const { userId, guildId, displayName } = data;
+  
+  if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
+    return data.reply("❌ Erro de configuração - IDs inválidos");
+  }
+
   const { mentionedUser } = parseArgs(data);
+
+  if (mentionedUser && !isValidUserId(mentionedUser.id)) {
+    return data.reply("❌ Usuário mencionado inválido");
+  }
 
   const now = new Date();
   const today = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
@@ -143,8 +153,18 @@ export async function execute(client, data) {
 
   await new Promise((resolve) => setTimeout(resolve, LOADING_TIME));
 
-  const userClass = user.user_class || "none";
-  const victimClass = victimData.user_class || "none";
+
+  const userRefresh = getOrCreateUser(userId, displayName, guildId);
+  const userCharsRefresh = Number(userRefresh.charLeft) || 0;
+  const victimDataRefresh = getUser(victimId, guildId);
+  const victimCharsRefresh = Number(victimDataRefresh.charLeft) || 0;
+
+  if (victimCharsRefresh <= 0) {
+    return data.reply(`${customEmojis.poor} ${victimName} ficou sem chars enquanto você preparava o roubo!`);
+  }
+
+  const userClass = userRefresh.user_class || "none";
+  const victimClass = victimDataRefresh.user_class || "none";
   const event = await getCurrentDailyEvent(guildId);
 
   let successChance = isTargeted

@@ -62,8 +62,8 @@ async function checkMonthlyEventExecution(client) {
   await Promise.allSettled(eventPromises);
   log("EVENTO DE FIM DE MÊS CONCLUÍDO EM TODOS OS SERVIDORES");
 }
+
 async function main() {
-  // === CARREGAR COMANDOS ===
   client.commands = new Map();
 
   const commandsPath = path.join(process.cwd(), "commands");
@@ -134,9 +134,13 @@ async function main() {
       ),
     );
 
-    nodeCron.schedule("0 0 * * *", () => {
-        checkMonthlyReset();
-        checkMonthlyEventExecution(client);
+    nodeCron.schedule("0 0 * * *", async () => {
+        try {
+          checkMonthlyReset();
+          await checkMonthlyEventExecution(client);
+        } catch (error) {
+          log(`❌ Erro no reset mensal: ${error.message}`, "Cron", 31);
+        }
       },{ timezone: "America/Sao_Paulo" },
     );
   });

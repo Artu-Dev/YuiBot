@@ -75,11 +75,18 @@ const checkRelevantAchievements = async (message, userId, stats, authorUserObj, 
     relevant.forEach((key) => keysToCheck.add(key));
   }
 
+  const giveAchievementPromises = [];
   for (const key of keysToCheck) {
     const achievement = achievements[key];
     if (achievement && achievement.check(stats)) {
-      await giveAchievement(message, userId, key, authorUserObj);
+      giveAchievementPromises.push(
+        giveAchievement(message, userId, key, authorUserObj)
+      );
     }
+  }
+
+  if (giveAchievementPromises.length > 0) {
+    await Promise.allSettled(giveAchievementPromises);
   }
 };
 
@@ -89,6 +96,8 @@ const handleMentions = async (message, guildId, userId, displayName, stats) => {
   const stalkerAch = achievements["stalker"];
   const popularAch = achievements["popular"];
 
+  const mentionedStatsMap = new Map();
+  
   for (const mentionedId of message.mentions.users.keys()) {
     if (mentionedId === userId) continue;
 
@@ -99,6 +108,17 @@ const handleMentions = async (message, guildId, userId, displayName, stats) => {
     const mentionedDisplayName =
       mentionedMember?.displayName || mentionedUser.globalName || mentionedUser.username;
 
+    if (!mentionedStatsMap.has(mentionedId)) {
+      mentionedStatsMap.set(mentionedId, getOrCreateUser(mentionedId, mentionedDisplayName, guildId));
+    }
+  }
+
+  for (const mentionedId of message.mentions.users.keys()) {
+    if (mentionedId === userId || !mentionedStatsMap.has(mentionedId)) continue;
+
+    const mentionedUser = message.mentions.users.get(mentionedId);
+    const mentionedStats = mentionedStatsMap.get(mentionedId);
+
     addUserProperty("mentions_sent", userId, guildId);
 
     if (stalkerAch && stalkerAch.check(stats)) {
@@ -106,8 +126,6 @@ const handleMentions = async (message, guildId, userId, displayName, stats) => {
     }
 
     addUserProperty("mentions_received", mentionedId, guildId);
-
-    const mentionedStats = getOrCreateUser(mentionedId, mentionedDisplayName, guildId);
 
     if (popularAch && popularAch.check(mentionedStats)) {
       await giveAchievement(message, mentionedId, "popular", mentionedUser);

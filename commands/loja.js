@@ -132,7 +132,13 @@ export const data = new SlashCommandBuilder()
   .setName('loja')
   .setDescription('🎴 Veja os itens disponíveis na loja de hoje');
 
+import { isValidUserId, isValidGuildId } from "../functions/validation.js";
+
 export async function execute(client, data) {
+  // Validar guildId
+  if (!isValidGuildId(data.guildId)) {
+    return await data.reply("❌ Erro de configuração do servidor");
+  }
 
   const guildId = data.guildId;
   const shop = getShop(guildId);

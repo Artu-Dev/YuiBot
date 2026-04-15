@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { getGuildUsers } from "../database.js";
+import { db } from "../database.js";
 
 export const name = "rank";
 export const aliases = ["ranking", "placar", "top", "leaderboard"]; 
@@ -10,14 +10,17 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(client, data) {
   const guildId = data.guildId;
-  const usersData = getGuildUsers(guildId);
+  
+  // Usar LIMIT no SQL para não trazer todos os usuários (mais eficiente)
+  const top10 = db.prepare(
+    "SELECT * FROM users WHERE guild_id = ? ORDER BY charLeft DESC LIMIT 10"
+  ).all(guildId);
 
-  if (!usersData || usersData.length === 0) {
+  if (!top10 || top10.length === 0) {
     return await data.reply("Nenhum usuário registrado neste servidor ainda.");
   }
-
-  const sortedUsers = usersData.sort((a, b) => b.charLeft - a.charLeft);
-  const top10 = sortedUsers.slice(0, 10);
+  
+  const usersData = db.prepare("SELECT COUNT(*) as total FROM users WHERE guild_id = ?").get(guildId);
 
   const embed = new EmbedBuilder()
     .setColor("#FFD700")
@@ -41,7 +44,7 @@ export async function execute(client, data) {
   embed.setDescription(description);
 
   embed.setFooter({ 
-    text: `Total de usuários: ${usersData.length}` 
+    text: `Top 10 de ${usersData.total} usuário(s)` 
   });
 
   return await data.reply({ embeds: [embed] });

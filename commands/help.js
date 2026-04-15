@@ -11,14 +11,19 @@ export const data = new SlashCommandBuilder()
 export async function execute(client, context) {
   const prefix = getServerConfig(context.guildId, 'prefix') || "$";
 
-  const commandsList = Array.from(client.commands.values())
-    .filter(cmd => cmd.name)
+  const uniqueCommands = new Map();
+  for (const [name, cmd] of client.commands) {
+    if (cmd.name && !uniqueCommands.has(cmd.name)) {
+      uniqueCommands.set(cmd.name, cmd);
+    }
+  }
+
+  const commandsList = Array.from(uniqueCommands.values())
     .map(cmd => {
       const cmdName = cmd.name;
       const description = cmd.description || cmd.data?.description || "Sem descrição";
       return `**${prefix}${cmdName}** - ${description}`;
     })
-    .filter((value, index, self) => self.indexOf(value) === index) // remove duplicatas
     .join("\n");
 
   const embed = new EmbedBuilder()

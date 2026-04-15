@@ -19,8 +19,6 @@ export const registerCommands = async (commandsMap) => {
       Routes.applicationCommands(process.env.CLIENT_ID),
       { body: slashCommands }
     );
-
-    log(`✅ ${data.length} comandos registrados com sucesso!`, "Registro", 34);
   } catch (error) {
     log(`❌ Erro ao registrar comandos: ${error.message}`, "Registro", 31);
     if (error.rawError) {

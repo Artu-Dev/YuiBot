@@ -27,6 +27,7 @@ import { log } from "../bot.js";
 dayjs.locale('pt-br');
 
 export const name = "messageCreate";
+export const cleanup = cleanupMessageCreateListeners;
 
 const AI_COOLDOWN_MS        = ms('12s');
 const COOLDOWN_CLEANUP_MS   = ms('1m');
@@ -37,13 +38,29 @@ const MENTION_REPLY_CHANCE  = 0.5;
 const RANDOM_REPLY_CHANCE   = 0.05;
 
 const aiCooldowns = new Map();
+let cooldownCleanupInterval = null;
 
-setInterval(() => {
-  const expiry = Date.now() - COOLDOWN_TTL_FACTOR * AI_COOLDOWN_MS;
-  for (const [userId, timestamp] of aiCooldowns) {
-    if (timestamp < expiry) aiCooldowns.delete(userId);
+function initCooldownCleanup() {
+  if (cooldownCleanupInterval) {
+    clearInterval(cooldownCleanupInterval);
   }
-}, COOLDOWN_CLEANUP_MS);
+  cooldownCleanupInterval = setInterval(() => {
+    const expiry = Date.now() - COOLDOWN_TTL_FACTOR * AI_COOLDOWN_MS;
+    for (const [userId, timestamp] of aiCooldowns) {
+      if (timestamp < expiry) aiCooldowns.delete(userId);
+    }
+  }, COOLDOWN_CLEANUP_MS);
+}
+
+export function cleanupMessageCreateListeners() {
+  if (cooldownCleanupInterval) {
+    clearInterval(cooldownCleanupInterval);
+    cooldownCleanupInterval = null;
+  }
+  aiCooldowns.clear();
+}
+
+initCooldownCleanup();
 
 function isOnCooldown(userId) {
   const last = aiCooldowns.get(userId) ?? 0;
@@ -109,11 +126,35 @@ async function tryHandleCommand(message, client, text) {
   try {
     await command.execute(client, contextFromMessage(message));
   } catch (error) {
-    log(`❌ Erro ao executar comando "${cmdName}": ${error.message}`, "Comando", 31);
+    // Diferenciar erros de API vs erros lógicos
+    const isApiError = error?.code === 'ERR_HTTP_REQUEST_TIMEOUT' || 
+                       error?.code === 50013 || // Missing Permissions
+                       error?.status >= 500;
+    
+    if (isApiError) {
+      log(`⚠️ Erro de API ao executar "${cmdName}": ${error.message}`, "Comando", 33);
+    } else {
+      log(`❌ Erro ao executar comando "${cmdName}": ${error.message}`, "Comando", 31);
+      // Log completo para debug
+      if (error.stack) {
+        console.error(error.stack);
+      }
+    }
+    
     try {
-      await safeReplyToMessage(message, "❌ Ocorreu um erro ao executar esse comando.");
+      const errorMsg = isApiError 
+        ? "⚠️ Erro de conexão com Discord, tenta de novo."
+        : "❌ Ocorreu um erro ao executar esse comando.";
+      
+      await safeReplyToMessage(message, errorMsg);
     } catch (e) {
       log(`❌ Falha ao enviar mensagem de erro: ${e.message}`, "Comando", 31);
+      // Último recurso: tentar reação apenas
+      try {
+        await message.react("❌").catch(() => {});
+      } catch (reactionError) {
+        log(`❌ Falha ao reagir com erro: ${reactionError.message}`, "Comando", 31);
+      }
     }
   }
 

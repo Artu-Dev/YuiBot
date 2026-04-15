@@ -83,7 +83,7 @@ export function getShopItem(guildId, itemId) {
 }
 
 /**
- * Decrementa o estoque de um item
+ * Decrementa o estoque de um item (com transaction para evitar race conditions)
  * @param {string} guildId - ID do servidor
  * @param {string} itemId - ID do item
  * @returns {boolean} Sucesso
@@ -91,18 +91,23 @@ export function getShopItem(guildId, itemId) {
 export function decrementStock(guildId, itemId) {
   if (!guildId || !itemId) return false;
   
-  const shop = getShop(guildId);
-  if (!shop || !shop.items) return false;
-  
-  const item = shop.items.find(i => i.id === itemId);
-  if (!item || item.stock <= 0) return false;
-  
-  item.stock -= 1;
-  
   try {
-    const weekKey = getWeekKey(guildId);
-    db.queries.setDailyShop.run(guildId, weekKey, JSON.stringify(shop.items));
-    return true;
+    // Usar transaction para garantir atomicidade
+    const decrementTransaction = db.transaction(() => {
+      const shop = getShop(guildId);
+      if (!shop || !shop.items) return false;
+      
+      const item = shop.items.find(i => i.id === itemId);
+      if (!item || item.stock <= 0) return false;
+      
+      item.stock -= 1;
+      
+      const weekKey = getWeekKey(guildId);
+      db.queries.setDailyShop.run(guildId, weekKey, JSON.stringify(shop.items));
+      return true;
+    });
+    
+    return decrementTransaction();
   } catch (error) {
     console.error('[decrementStock] Erro:', error);
     return false;

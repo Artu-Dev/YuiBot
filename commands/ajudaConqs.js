@@ -310,8 +310,11 @@ export async function execute(client, data) {
         .filter(([_, a]) => a.category === currentCat)
         .map(([key, ach]) => formatBlock(key, ach, unlockedSet, userData))
         .filter(Boolean);
+      
+      // Definir pages ANTES de usá-la
+      const pages = paginate(catAchs);
       currentPage = Math.max(0, Math.min(currentPage, pages.length - 1));
-catAch
+
       return {
         embeds: [buildPageEmbed(pages, currentPage, currentCat, discordUser, unlockedSet)],
         components: buildCategoryComponents(currentPage, pages.length, userId),

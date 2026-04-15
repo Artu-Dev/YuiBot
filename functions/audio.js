@@ -110,6 +110,11 @@ export function startRecording(connection, client) {
             clearTimeout(maxDurationTimeout);
             clearInterval(sizeInterval);
 
+            audioStream.removeListener("end", stopRecording);
+            audioStream.removeListener("close", stopRecording);
+            audioStream.removeListener("error", handleAudioError);
+            connection.removeListener("disconnect", handleDisconnect);
+
             try { audioStream.destroy(); } catch {}
             try { fileStream.end(); } catch {}
 
@@ -126,16 +131,20 @@ export function startRecording(connection, client) {
             }, 500); 
         }
 
-        audioStream.on("end", stopRecording);
-        audioStream.on("close", stopRecording);
-        audioStream.on("error", (err) => {
+        const handleAudioError = (err) => {
             log(`[${guildId}] Erro na stream: ${err.message}`, "Audio", 31);
             stopRecording();
-        });
+        };
 
-        connection.on("disconnect", () => {
+        const handleDisconnect = () => {
             stopRecording();
-        });
+        };
+
+        audioStream.on("end", stopRecording);
+        audioStream.on("close", stopRecording);
+        audioStream.on("error", handleAudioError);
+
+        connection.on("disconnect", handleDisconnect);
     });
 }
 

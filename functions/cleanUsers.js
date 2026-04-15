@@ -10,24 +10,23 @@ export async function cleanupLeftUsers(client) {
         await guild.members.fetch();
       }
 
-      const memberIds = new Set(guild.members.cache.keys());
-
-      const dbUsers = db.prepare("SELECT id FROM users WHERE guild_id = ?").all(guildId);
-
-      const toRemove = dbUsers.filter(u => !memberIds.has(u.id));
+      const memberIds = guild.members.cache.keys();
+      const memberArray = Array.from(memberIds);
       
-      if (toRemove.length > 0) { 
-        const deleteStmt = db.prepare("DELETE FROM users WHERE id = ? AND guild_id = ?");
-        const deleteAll = db.transaction((users) => {
-          for (const user of users) {
-            deleteStmt.run(user.id, guildId);
-          }
-        });
+      if (memberArray.length === 0) {
+        const result = db.prepare("DELETE FROM users WHERE guild_id = ?").run(guildId);
+        totalRemoved += result.changes;
+        log(`[${guild.name}] Todos os usuários removidos (guilda vazia)`, "Limpeza", 32);
+      } else {
+        const placeholders = memberArray.map(() => '?').join(',');
+        const stmt = db.prepare(`DELETE FROM users WHERE guild_id = ? AND id NOT IN (${placeholders})`);
         
-        deleteAll(toRemove);
-        totalRemoved += toRemove.length;
+        const result = stmt.run(guildId, ...memberArray);
+        totalRemoved += result.changes;
         
-        log(`[${guild.name}] ${toRemove.length} usuário(s) removido(s) do banco`, "Limpeza", 32);
+        if (result.changes > 0) {
+          log(`[${guild.name}] ${result.changes} usuário(s) removido(s) do banco`, "Limpeza", 32);
+        }
       }
     } catch (err) {
       log(`❌ Erro ao limpar guild ${guildId}: ${err.message}`, "Limpeza", 31);
