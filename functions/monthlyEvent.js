@@ -2,8 +2,17 @@ import dayjs from 'dayjs';
 import { db, unlockAchievement, getOrCreateUser } from '../database.js';
 import { EmbedBuilder } from 'discord.js';
 
+// Cache simples para evitar rodar o evento mais de 1x por mês
+const monthlyEventCache = new Map();
+
 export async function runMonthlyEvent(client, guildId) {
   if (!guildId) return;
+
+  // Previne execução duplicada no mesmo mês
+  const monthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  if (monthlyEventCache.get(guildId) === monthKey) {
+    return;
+  }
 
   try {
     const guild = client.guilds.cache.get(guildId);
@@ -93,6 +102,7 @@ export async function runMonthlyEvent(client, guildId) {
     }
 
     console.log(`[MonthlyEvent] ✅ Evento de fim de mês executado em ${guild.name}`);
+    monthlyEventCache.set(guildId, monthKey);
   } catch (error) {
     console.error('[MonthlyEvent] Erro:', error);
   }

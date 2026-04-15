@@ -52,7 +52,7 @@ function buildItemEmbed(shopItem, itemDef, index, total) {
     .setTitle(itemDef.name || 'Item Desconhecido')
     .setDescription(itemDef.description || '')
     .setColor(RARITY_COLOR[itemDef.rarity] ?? 0xc0392b)
-    .setThumbnail(itemDef.image || null)
+    .setImage(itemDef.image || null)
     .addFields(
       { name: '💰 Preço', value: priceLabel, inline: true },
       { name: '⏳ Duração', value: durationLabel, inline: true },
@@ -88,7 +88,7 @@ function buildNavRow(shopItem, index, total) {
 function buildDisabledRow() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('d1').setEmoji('◀️').setStyle(ButtonStyle.Secondary).setDisabled(true),
-    new ButtonBuilder().setCustomId('d2').setLabel('Comprar').setEmoji('🛒').setStyle(ButtonStyle.Success).setDisabled(true),
+    new ButtonBuilder().setCustomId('d2').setLabel('Comprar').setStyle(ButtonStyle.Success).setDisabled(true),
     new ButtonBuilder().setCustomId('d3').setEmoji('▶️').setStyle(ButtonStyle.Secondary).setDisabled(true),
   );
 }

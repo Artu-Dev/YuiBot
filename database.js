@@ -208,36 +208,6 @@ export const initializeDbBot = async () => {
       ON users(guild_id);
   `);
 
-  try {
-    const tableInfo = db.prepare("PRAGMA table_info(message_context)").all();
-    const timestampCol = tableInfo.find(c => c.name === "timestamp");
-    if (timestampCol && timestampCol.type.toUpperCase() === "TEXT") {
-      log("🔄 Migrando coluna timestamp de TEXT para INTEGER...", "Database", 33);
-      db.exec(`
-        ALTER TABLE message_context RENAME TO message_context_old;
-        CREATE TABLE message_context (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          userId TEXT,
-          channel_id TEXT,
-          guild_id TEXT,
-          author TEXT,
-          content TEXT,
-          timestamp INTEGER,
-          message_id TEXT,
-          image_url TEXT,
-          image_analysis TEXT
-        );
-        INSERT INTO message_context (id, userId, channel_id, guild_id, author, content, timestamp, message_id, image_url, image_analysis)
-        SELECT id, userId, channel_id, guild_id, author, content, CAST(timestamp AS INTEGER), message_id, image_url, image_analysis
-        FROM message_context_old;
-        DROP TABLE message_context_old;
-      `);
-      log("✅ Migração de timestamp concluída.", "Database", 33);
-    }
-  } catch (e) {
-    log(`⚠️ Erro na migração de timestamp (pode ignorar se a tabela já estiver correta): ${e.message}`, "Database", 33);
-  }
-
   //efeitosa tivos
   db.prepare(`
   CREATE TABLE IF NOT EXISTS active_effects (

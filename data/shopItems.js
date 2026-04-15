@@ -84,4 +84,22 @@ export const SHOP_ITEMS = {
     duration: () => null,
     effect: 'next_rob_takes_all',
   },
+  bomba_char: {
+    name: 'Bomba de Char',
+    description: 'Destroi 1000 chars do servidor inteiro.',
+    image: "https://placehold.co/400x300/e67e22/ffffff?text=💣+Bomba",
+    rarity: 'lendário',
+    price: () => randomInt(5000, 8000),
+    duration: () => null,
+    effect: 'char_bomb',
+  },
+  lixo_lendario: {
+    name: 'Lixo Lendário (??)',
+    description: 'Nem sabe o que faz... talvez seja útil? 🤔',
+    image: "https://placehold.co/400x300/7f8c8d/ffffff?text=🗑️+Lixo",
+    rarity: 'lendário',
+    price: () => randomInt(100, 500),
+    duration: () => null,
+    effect: 'mystery',
+  },
 };

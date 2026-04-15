@@ -11,6 +11,7 @@ import { getInventory, removeFromInventory } from '../functions/inventario.js';
 import { addEffect } from '../functions/effects.js';
 import {SHOP_ITEMS} from '../data/shopItems.js';
 import {db} from '../database.js';
+import { randomInt } from 'es-toolkit';
 
 // ───────────────────────── helpers ──────────────────────────
 
@@ -132,6 +133,115 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
     case 'next_rob_takes_all':
       addEffect(userId, guildId, 'next_rob_takes_all', expiresAt);
       return `🔫 **${itemDef.name}** ativado! Seu próximo roubo leva TUDO (válido para 1x roubo).`;
+
+    case 'char_bomb': {
+      const { getGuildUsers } = await import('../database.js');
+      const users = getGuildUsers(guildId);
+      
+      if (users.length === 0) {
+        return `💣 Ninguém pra destruir chars! 😅`;
+      }
+
+      const charParaDestruir = 1000;
+      const destruirPorPessoa = Math.floor(charParaDestruir / users.length);
+      
+      let totalDestruido = 0;
+      const afetados = [];
+      
+      for (const user of users) {
+        const charsAtuais = user.charLeft ?? 0;
+        const destruir = Math.min(destruirPorPessoa, charsAtuais);
+        
+        if (destruir > 0) {
+          setUserProperty('charLeft', user.id, guildId, charsAtuais - destruir);
+          totalDestruido += destruir;
+          afetados.push(`<@${user.id}>: -${destruir} chars`);
+        }
+      }
+      
+      return `💣 **BOMBA DETONADA!**\n\n🔥 ${totalDestruido} chars foram destruídos!\n\n${afetados.slice(0, 5).join('\n')}${afetados.length > 5 ? `\n... e mais ${afetados.length - 5}` : ''}`;
+    }
+
+    case 'mystery': {
+      const { getGuildUsers } = await import('../database.js');
+      
+      const effects = [
+        {
+          name: '🎉 Sorte!',
+          action: async () => {
+            const bonus = randomInt(2000, 5000);
+            const userData = getUser(userId, guildId);
+            setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) + bonus);
+            return `Você ganhou **${bonus}** chars! 💰`;
+          }
+        },
+        {
+          name: '💀 Azar!',
+          action: async () => {
+            const userData = getUser(userId, guildId);
+            const loss = Math.min(randomInt(1000, 3000), userData?.charLeft ?? 0);
+            setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) - loss);
+            return `Você perdeu **${loss}** chars! 😭`;
+          }
+        },
+        {
+          name: '📈 Multiplicador',
+          action: async () => {
+            addEffect(userId, guildId, 'message_multiplier', Date.now() + 6 * 60 * 60 * 1000);
+            return `Seus chars de mensagem estão em 2x por 6 horas! 🚀`;
+          }
+        },
+        {
+          name: '🎪 Caos Total',
+          action: async () => {
+            const users = getGuildUsers(guildId);
+            if (users.length > 1) {
+              const randomUser = users[randomInt(0, users.length - 1)];
+              const userData = getUser(userId, guildId);
+              const targetData = getUser(randomUser.id, guildId);
+              const userChars = userData?.charLeft ?? 0;
+              const targetChars = targetData?.charLeft ?? 0;
+              
+              setUserProperty('charLeft', userId, guildId, targetChars);
+              setUserProperty('charLeft', randomUser.id, guildId, userChars);
+              
+              return `Seus chars foram trocados com <@${randomUser.id}>! 🌀`;
+            }
+            return `Ninguém pra trocar com você! 😅`;
+          }
+        },
+        {
+          name: '🛡️ Proteção',
+          action: async () => {
+            addEffect(userId, guildId, 'immunity', Date.now() + 12 * 60 * 60 * 1000);
+            return `Você ganhou imunidade a penalidades por 12 horas! 🛡️`;
+          }
+        },
+        {
+          name: '🎲 Rouleta',
+          action: async () => {
+            const resultado = randomInt(1, 3);
+            if (resultado === 1) {
+              const userData = getUser(userId, guildId);
+              setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) * 2);
+              return `Você DUPLICOU seus chars! 🤑`;
+            } else if (resultado === 2) {
+              const userData = getUser(userId, guildId);
+              setUserProperty('charLeft', userId, guildId, Math.floor((userData?.charLeft ?? 0) / 2));
+              return `Você PERDEU METADE dos seus chars! 💸`;
+            } else {
+              return `Nada aconteceu... talvez próxima vez! 🎲`;
+            }
+          }
+        }
+      ];
+      
+      const chosen = effects[randomInt(0, effects.length - 1)];
+      addEffect(userId, guildId, 'lixo_collector');
+      
+      const result = await chosen.action();
+      return `🗑️ Lixo Lendário ativou: **${chosen.name}**\n\n${result}`;
+    }
 
     default:
       return `✅ Item **${itemDef.name}** usado com sucesso! ${durStr}`;
