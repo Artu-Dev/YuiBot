@@ -633,6 +633,54 @@ export const achievements = [
     check: () => false,
     progress: null,
   },
+  {
+    key: "milionario_do_mes",
+    title: "💰 Milionário do Mês",
+    icon: customEmojis.verifiedGolden,
+    description: "Terminou o mês com mais chars que todos",
+    charPoints: 5000,
+    category: "monthly",
+    secret: false,
+    hiddenDescription: null,
+    check: () => false, // Desbloqueado pelo sistema automaticamente
+    progress: null,
+  },
+  {
+    key: "ricao_do_mes",
+    title: "🏦 Ricão do Mês",
+    icon: customEmojis.verifiedGolden,
+    description: "Ficou em 2º lugar em chars no final do mês",
+    charPoints: 3000,
+    category: "monthly",
+    secret: false,
+    hiddenDescription: null,
+    check: () => false, // Desbloqueado pelo sistema automaticamente
+    progress: null,
+  },
+  {
+    key: "abastado_do_mes",
+    title: "💸 Abastado do Mês",
+    icon: customEmojis.ironIngot,
+    description: "Ficou em 3º lugar em chars no final do mês",
+    charPoints: 1500,
+    category: "monthly",
+    secret: false,
+    hiddenDescription: null,
+    check: () => false, // Desbloqueado pelo sistema automaticamente
+    progress: null,
+  },
+  {
+    key: "milionario_reincidente",
+    title: "🌟 Milionário Reincidente",
+    icon: customEmojis.mineLegendHero,
+    description: "Ganhou o prêmio de milionário 5 vezes",
+    charPoints: 100000,
+    category: "monthly",
+    secret: false,
+    hiddenDescription: null,
+    check: () => false,
+    progress: null,
+  },
 ];
 
 export const getAchievementByKey = (key) =>

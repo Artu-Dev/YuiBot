@@ -7,6 +7,7 @@ import { dbBot, getGuildUsers, addChars, getServerConfig, addCharsBulk, initiali
 import nodeCron from "node-cron";
 import { cleanupLeftUsers } from "./functions/cleanUsers.js";
 import { registerCommands } from "./registerCommands.js";
+import { runMonthlyEvent, shouldRunMonthlyEvent } from "./functions/monthlyEvent.js";
 import dayjs from "dayjs";
 
 dotenv.config();
@@ -48,6 +49,17 @@ function checkMonthlyReset() {
   dbBot.write();
 
   log(`--- RESET MENSAL CONCLUÍDO PARA ${monthYearNow} ---`);
+}
+
+// === EVENTO DE FIM DE MÊS ===
+async function checkMonthlyEventExecution(client) {
+  if (!shouldRunMonthlyEvent()) return;
+
+  log("🎉 EXECUTANDO EVENTO DE FIM DE MÊS");
+
+  for (const [guildId] of client.guilds.cache) {
+    await runMonthlyEvent(client, guildId);
+  }
 }
 
 async function main() {
@@ -119,6 +131,10 @@ async function main() {
     await Promise.all(client.guilds.cache.map(guild => guild.members.fetch().catch(() => null)));
 
     nodeCron.schedule("0 0 * * *", checkMonthlyReset, {
+      timezone: "America/Sao_Paulo",
+    });
+
+    nodeCron.schedule("* * * * *", () => checkMonthlyEventExecution(client), {
       timezone: "America/Sao_Paulo",
     });
   });
