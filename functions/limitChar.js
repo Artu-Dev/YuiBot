@@ -130,7 +130,7 @@ export const limitChar = async (message, userData) => {
   const wasPunished = await handlePenalities(message, userData);
   if (wasPunished) return false;
 
-  if (newValue <= 0 && !userData.penality) {
+  if (newValue <= 0 && !userData.penality ) {
     const randomPenality = penalities[Math.floor(Math.random() * penalities.length)];
     let randomWord = "";
 
@@ -146,7 +146,7 @@ export const limitChar = async (message, userData) => {
       `!${displayName} seus caracteres acabaram! Você recebeu a penalidade: **${randomPenality.nome}**`
     );
     await message.channel.send(`${randomPenality.description}${randomWord}`);
-  } else if (userData.penalitySetByAdmin !== 1) {
+  } else if (userData.penalitySetByAdmin !== 1 && newValue > 0 && userData.penality) {
     removeUserPenality(userId, guildId);
     setUserProperty("penalityWord", userId, guildId, "");
     await safeReplyToMessage(
