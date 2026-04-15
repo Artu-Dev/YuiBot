@@ -52,12 +52,12 @@ function buildItemEmbed(shopItem, itemDef, index, total) {
     .setTitle(itemDef.name || 'Item Desconhecido')
     .setDescription(itemDef.description || '')
     .setColor(RARITY_COLOR[itemDef.rarity] ?? 0xc0392b)
-    .setImage(itemDef.image || null)
     .addFields(
       { name: '💰 Preço', value: priceLabel, inline: true },
       { name: '⏳ Duração', value: durationLabel, inline: true },
     )
-    .setFooter({ text: `Item ${index + 1} de ${total} • ${RARITY_LABEL[itemDef.rarity] || 'Desconhecida'}` });
+    .setFooter({ text: `Item ${index + 1} de ${total} • ${RARITY_LABEL[itemDef.rarity] || 'Desconhecida'}` })
+    .setThumbnail(itemDef.image);
 }
 
 function buildNavRow(shopItem, index, total) {

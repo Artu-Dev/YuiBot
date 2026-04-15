@@ -14,7 +14,6 @@ const STOCK_PADRAO = {
   lendário: 1,
 };
 
-// Gera uma chave única por semana e servidor
 function getWeekKey(guildId) {
   const year = dayjs().year();
   const week = dayjs().week();
@@ -23,7 +22,6 @@ function getWeekKey(guildId) {
 
 function generateWeeklyShop() {
   const entries = Object.entries(SHOP_ITEMS);
-  // Embaralha o array (Fisher-Yates shuffle)
   for (let i = entries.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [entries[i], entries[j]] = [entries[j], entries[i]];
@@ -37,11 +35,6 @@ function generateWeeklyShop() {
   }));
 }
 
-/**
- * Obtém a loja semanal para um servidor específico
- * @param {string} guildId - ID do servidor
- * @returns {object} { weekKey, items }
- */
 export function getShop(guildId) {
   if (!guildId) {
     console.error('[getShop] guildId não fornecido');
@@ -69,12 +62,6 @@ export function getShop(guildId) {
   }
 }
 
-/**
- * Obtém um item específico da loja
- * @param {string} guildId - ID do servidor
- * @param {string} itemId - ID do item
- * @returns {object|null} Item com preço e estoque, ou null
- */
 export function getShopItem(guildId, itemId) {
   if (!guildId || !itemId) return null;
   const shop = getShop(guildId);
@@ -82,17 +69,10 @@ export function getShopItem(guildId, itemId) {
   return shop.items.find(i => i.id === itemId);
 }
 
-/**
- * Decrementa o estoque de um item (com transaction para evitar race conditions)
- * @param {string} guildId - ID do servidor
- * @param {string} itemId - ID do item
- * @returns {boolean} Sucesso
- */
 export function decrementStock(guildId, itemId) {
   if (!guildId || !itemId) return false;
   
   try {
-    // Usar transaction para garantir atomicidade
     const decrementTransaction = db.transaction(() => {
       const shop = getShop(guildId);
       if (!shop || !shop.items) return false;
