@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits } from "discord.js";
+import { Client, GatewayIntentBits, EmbedBuilder } from "discord.js";
 import { readdirSync } from "fs";
 import dotenv from "dotenv";
 import path from "path";
@@ -8,7 +8,6 @@ import nodeCron from "node-cron";
 import { cleanupLeftUsers } from "./functions/cleanUsers.js";
 import { registerCommands } from "./registerCommands.js";
 import dayjs from "dayjs";
-import { EmbedBuilder } from "discord.js";
 
 dotenv.config();
 Config.setupDirectories();

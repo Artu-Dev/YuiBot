@@ -38,36 +38,67 @@ export async function execute(client, data) {
   ];
 
   const classLucky = getClassModifier(user.user_class, "lucky");
-  const LUCK_WEIGHT = 0.25;
-  const adjustedOutcomes = outcomes.map((outcome) => {
-    const modifier = outcome.type === "loss"
-      ? 1 - classLucky * LUCK_WEIGHT
-      : 1 + classLucky * LUCK_WEIGHT;
-    return { ...outcome, chance: outcome.chance * modifier };
+  const LUCK_WEIGHT = 0.40;
+  const event = await getCurrentDailyEvent(guildId);
+  const successMult = event?.tigerSuccess ?? 1.0; 
+
+  let adjusted = outcomes.map(outcome => {
+    let chance = outcome.baseChance;
+    if (outcome.type === "loss") {
+      chance *= (1 - classLucky * LUCK_WEIGHT);
+    } else {
+      chance *= (1 + classLucky * LUCK_WEIGHT);
+    }
+    if ((outcome.type === "win" || outcome.type === "jackpot") && successMult !== 1.0) {
+      chance *= successMult;
+    }
+
+    return { ...outcome, chance };
   });
 
-  const totalChance = adjustedOutcomes.reduce((sum, o) => sum + o.chance, 0);
-  let cumulativeChance = 0;
+  const total = adjusted.reduce((sum, o) => sum + o.chance, 0);
+  adjusted = adjusted.map(o => ({ ...o, chance: o.chance / total }));
+
+  // const adjustedOutcomes = outcomes.map((outcome) => {
+  //   const modifier = outcome.type === "loss"
+  //     ? 1 - classLucky * LUCK_WEIGHT
+  //     : 1 + classLucky * LUCK_WEIGHT;
+  //   return { ...outcome, chance: outcome.chance * modifier };
+  // });
+  // const totalChance = adjustedOutcomes.reduce((sum, o) => sum + o.chance, 0);
+
+
+
+
   const rand = Math.random();
-  let selectedOutcome;
+  let cumulativeChance = 0;
+  let selectedOutcome = null;
   
-  const event = await getCurrentDailyEvent(guildId);
   if (event && event.tigerSuccess !== null) {
     TIGRE_SUCCESS_MULTIPLIER = event.tigerSuccess;
   }
 
-  for (const outcome of adjustedOutcomes) {
-    if(outcome.type === "win" || outcome.type === "jackpot") {
-      outcome.chance *= TIGRE_SUCCESS_MULTIPLIER;
-    }
-    cumulativeChance += outcome.chance / totalChance;
+  for (const outcome of adjusted) {
+    cumulativeChance += outcome.chance;
     if (rand <= cumulativeChance) {
       selectedOutcome = outcome;
       break;
     }
   }
 
-  if (!selectedOutcome) selectedOutcome = adjustedOutcomes[0];
+  // for (const outcome of adjustedOutcomes) {
+  //   if(outcome.type === "win" || outcome.type === "jackpot") {
+  //     outcome.chance *= TIGRE_SUCCESS_MULTIPLIER;
+  //   }
+  //   cumulativeChance += outcome.chance / totalChance;
+  //   if (rand <= cumulativeChance) {
+  //     selectedOutcome = outcome;
+  //     break;
+  //   }
+  // }
+
+  // if (!selectedOutcome) selectedOutcome = adjustedOutcomes[0];
+  if (!selectedOutcome) selectedOutcome = adjusted[0];
 
   let newPending = pendingStacks;
   let jackpotInc = 0;

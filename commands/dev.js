@@ -33,6 +33,21 @@ export const data = new SlashCommandBuilder()
       .setName("user-info")
       .setDescription("Ver info de um usuário")
       .addUserOption(opt => opt.setName("user").setDescription("Usuário alvo").setRequired(true))
+  )
+  .addSubcommand(sub =>
+    sub
+      .setName("random-achievement")
+      .setDescription("Mostra imagem de uma conquista aleatória")
+  )
+  .addSubcommand(sub =>
+    sub
+      .setName("servers")
+      .setDescription("Lista todos os servidores onde o bot está")
+  )
+  .addSubcommand(sub =>
+    sub
+      .setName("reload-config")
+      .setDescription("Recarrega a configuração do bot")
   );
 
 export async function execute(client, data) {
@@ -59,6 +74,12 @@ export async function execute(client, data) {
       return await handleShopReset(data, guildId);
     } else if (subcommand === "user-info") {
       return await handleUserInfo(data, guildId);
+    } else if (subcommand === "random-achievement") {
+      return await handleRandomAchievement(data);
+    } else if (subcommand === "servers") {
+      return await handleServers(data, client);
+    } else if (subcommand === "reload-config") {
+      return await handleReloadConfig(data);
     }
   } catch (error) {
     log(`❌ Erro em dev/${subcommand}: ${error.message}`, "Dev", 31);
@@ -74,8 +95,8 @@ export async function execute(client, data) {
 }
 
 async function handleAchievement(data, guildId) {
-  const targetUser = data.options?.getUser?.("user") || data.mentions?.users?.first();
-  const achievementId = data.options?.getString?.("achievement") || data.args?.[1];
+  const targetUser = data.options?.getUser?.("user");
+  const achievementId = data.options?.getString?.("achievement");
 
   if (!targetUser || !achievementId) {
     throw new Error("User ou achievement não fornecido");
@@ -98,11 +119,15 @@ async function handleAchievement(data, guildId) {
 }
 
 async function handleChars(data, guildId) {
-  const targetUser = data.options?.getUser?.("user") || data.mentions?.users?.first();
-  const amount = data.options?.getInteger?.("amount") ?? parseInt(data.args?.[1]) ?? 0;
+  const targetUser = data.options?.getUser?.("user");
+  const amount = data.options?.getInteger?.("amount");
 
   if (!targetUser) {
     throw new Error("User não fornecido");
+  }
+
+  if (amount === null || amount === undefined) {
+    throw new Error("Amount não fornecido");
   }
 
   // Atualizar chars diretamente
@@ -140,7 +165,7 @@ async function handleShopReset(data, guildId) {
 }
 
 async function handleUserInfo(data, guildId) {
-  const targetUser = data.options?.getUser?.("user") || data.mentions?.users?.first();
+  const targetUser = data.options?.getUser?.("user");
 
   if (!targetUser) {
     throw new Error("User não fornecido");
@@ -165,4 +190,73 @@ async function handleUserInfo(data, guildId) {
   const replyOpts = { embeds: [embed] };
   if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
   return await data.reply(replyOpts);
+}
+
+async function handleRandomAchievement(data) {
+  const { achievements } = await import("../functions/achievmentsData.js");
+  
+  const achKeys = Object.keys(achievements);
+  if (achKeys.length === 0) {
+    throw new Error("Nenhuma conquista encontrada");
+  }
+
+  const randomKey = achKeys[Math.floor(Math.random() * achKeys.length)];
+  const ach = achievements[randomKey];
+
+  const embed = new EmbedBuilder()
+    .setColor(0xffaa00)
+    .setTitle(`${ach.icon} ${ach.title}`)
+    .setDescription(ach.description)
+    .addFields(
+      { name: "ID", value: `\`${randomKey}\``, inline: true },
+      { name: "Categoria", value: ach.category || "geral", inline: true },
+      { name: "Chars Reward", value: String(ach.charPoints || 0), inline: true }
+    );
+
+  if (ach.secret) {
+    embed.setFooter({ text: "🤫 Conquista Secreta" });
+  }
+
+  const replyOpts = { embeds: [embed] };
+  if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
+  return await data.reply(replyOpts);
+}
+
+async function handleServers(data, client) {
+  const servers = client.guilds.cache.map(guild => ({
+    name: guild.name,
+    id: guild.id,
+    members: guild.memberCount,
+    owner: guild.ownerId
+  }));
+
+  const serverList = servers
+    .map((s, idx) => `${idx + 1}. **${s.name}** (\`${s.id}\`) - ${s.members} membros`)
+    .join("\n");
+
+  const embed = new EmbedBuilder()
+    .setColor(0x7289da)
+    .setTitle(`🖥️ Servidores do Bot`)
+    .setDescription(serverList || "Nenhum servidor")
+    .setFooter({ text: `Total: ${servers.length} servidores` });
+
+  const replyOpts = { embeds: [embed] };
+  if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
+  return await data.reply(replyOpts);
+}
+
+async function handleReloadConfig(data) {
+  try {
+    const Config = await import("../data/config.js");
+    const embed = new EmbedBuilder()
+      .setColor(0x00ff00)
+      .setTitle("✅ Config Recarregada")
+      .setDescription("Configuração do bot foi recarregada com sucesso!");
+
+    const replyOpts = { embeds: [embed] };
+    if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
+    return await data.reply(replyOpts);
+  } catch (err) {
+    throw new Error(`Erro ao recarregar config: ${err.message}`);
+  }
 }

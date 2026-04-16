@@ -6,6 +6,7 @@ import {
   ButtonStyle,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
+  ChannelFlags,
 } from "discord.js";
 import { achievements } from "../functions/achievmentsData.js";
 import { getOrCreateUser } from "../database.js";

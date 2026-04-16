@@ -1,4 +1,4 @@
-import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } from "discord.js";
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder, ChannelFlags } from "discord.js";
 import { getOrCreateUser, getBotPrefix } from "../database.js";
 import { CLASSES, CLASS_KEYS_ORDERED, unlockClass, formatModifier } from "../functions/classes.js";
 import { customEmojis } from "../functions/utils.js";

@@ -60,25 +60,40 @@ function buildItemEmbed(shopItem, itemDef, index, total) {
     .setThumbnail(itemDef.image);
 }
 
-function buildNavRow(shopItem, index, total) {
+function buildNavRow(shopItem, index, total, userChars = 0) {
   const outOfStock = !shopItem || (shopItem.stock || 0) <= 0;
-  
+  const price = shopItem?.price ?? 0;
+  const canAfford = userChars >= price;
+
+  let buyLabel = 'Comprar';
+  let buyStyle = ButtonStyle.Success;
+  let buyDisabled = outOfStock;
+
+  if (outOfStock) {
+    buyLabel = 'Esgotado';
+    buyStyle = ButtonStyle.Danger;
+  } else if (!canAfford) {
+    buyLabel = `Faltam ${price - userChars} chars`;
+    buyStyle = ButtonStyle.Secondary;
+    buyDisabled = true;
+  }
+
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('shop_prev')
-      .setEmoji('◀️')
+      .setEmoji('Left Arrow')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(index === 0),
 
     new ButtonBuilder()
       .setCustomId(`shop_buy_${shopItem?.id || 'unknown'}`)
-      .setLabel(outOfStock ? 'Esgotado' : 'Comprar')
-      .setStyle(outOfStock ? ButtonStyle.Danger : ButtonStyle.Success)
-      .setDisabled(outOfStock),
+      .setLabel(buyLabel)
+      .setStyle(buyStyle)
+      .setDisabled(buyDisabled),
 
     new ButtonBuilder()
       .setCustomId('shop_next')
-      .setEmoji('▶️')
+      .setEmoji('Right Arrow')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(index === total - 1),
   );
@@ -134,35 +149,38 @@ export const data = new SlashCommandBuilder()
 import { isValidUserId, isValidGuildId } from "../functions/validation.js";
 
 export async function execute(client, data) {
-  // Validar guildId
   if (!isValidGuildId(data.guildId)) {
-    return await data.reply("❌ Erro de configuração do servidor");
+    return await data.reply("Erro de configuração do servidor");
   }
 
   const guildId = data.guildId;
   const shop = getShop(guildId);
 
   if (!shop || !shop.items || shop.items.length === 0) {
-    return data.reply({ content: '❌ A loja está vazia hoje ou houve um erro ao carregar!', flags: ChannelFlags.Ephemeral });
+    return data.reply({ content: 'A loja está vazia hoje ou houve um erro ao carregar!', flags: ChannelFlags.Ephemeral });
   }
+
+  // === NOVA PARTE: pegar chars do usuário que abriu a loja ===
+  const userId = data.userId;  
+  const userData = getUser(userId, guildId);
+  const userChars = userData?.charLeft ?? 0;
+  // ========================================================
 
   let index = 0;
 
-  // Funções seguras
   const getCurrentItem = () => shop.items[index] || null;
   const getCurrentDef = () => {
     const item = getCurrentItem();
     return item ? (SHOP_ITEMS[item.id] || null) : null;
   };
 
-  // Verifica se o primeiro item é válido
   if (!getCurrentItem() || !getCurrentDef()) {
-    return data.reply({ content: '❌ Erro ao carregar itens da loja!', flags: ChannelFlags.Ephemeral });
+    return data.reply({ content: 'Erro ao carregar itens da loja!', flags: ChannelFlags.Ephemeral });
   }
 
   const reply = await data.reply({
     embeds:     [buildItemEmbed(getCurrentItem(), getCurrentDef(), index, shop.items.length)],
-    components: [buildNavRow(getCurrentItem(), index, shop.items.length)],
+    components: [buildNavRow(getCurrentItem(), index, shop.items.length, userChars)],
     fetchReply: true,
   });
 
@@ -188,7 +206,7 @@ export async function execute(client, data) {
 
       return btn.update({
         embeds:     [buildItemEmbed(currItem, currDef, index, shop.items.length)],
-        components: [buildNavRow(currItem, index, shop.items.length)],
+        components: [buildNavRow(currItem, index, shop.items.length, userChars)],
       });
     }
 
@@ -208,7 +226,7 @@ export async function execute(client, data) {
 
       await btn.update({
         embeds:     [buildItemEmbed(getCurrentItem(), getCurrentDef(), index, shop.items.length)],
-        components: [buildNavRow(getCurrentItem(), index, shop.items.length)],
+        components: [buildNavRow(getCurrentItem(), index, shop.items.length, userChars)],
       });
 
       return btn.followUp({ content: result, flags: ChannelFlags.Ephemeral });
