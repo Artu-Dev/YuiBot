@@ -13,7 +13,7 @@ import { log } from "../bot.js";
 import { getInventory } from "../functions/inventario.js";
 import { getActiveEffects } from "../functions/effects.js";
 import { SHOP_ITEMS } from "../data/shopItems.js";
-import { ALLOWED_MESSAGE_BOT_ID } from "../constants.js";
+import { ALLOWED_MESSAGE_BOT_ID } from "../data/config.js";
 
 export const name = "stats";
 export const aliases = ["estatísticas", "stat", "perfil", "profile", "dados"];

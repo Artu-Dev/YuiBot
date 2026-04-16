@@ -11,10 +11,10 @@ import {
 import { handleAchievements } from "../functions/achievements.js";
 import { generateAiRes } from "../functions/ai/generateResponse.js";
 import { limitChar } from "../functions/limitChar.js";
-import { sayInCall } from "../functions/voice/sayInCall.js";
+import { sayInCall } from "../functions/voice/tts.js";
 import { parseMessage, replaceMentions, contextFromMessage, safeReplyToMessage, messageContainsDailyWord } from "../functions/utils.js";
 import { randomResend } from "../functions/randomActions.js";
-import { ALLOWED_MESSAGE_BOT_ID } from "../constants.js";
+import { ALLOWED_MESSAGE_BOT_ID } from "../data/config.js";
 
 import ms from 'ms';
 import { getCurrentDailyEvent } from "../functions/getTodaysEvent.js"; 

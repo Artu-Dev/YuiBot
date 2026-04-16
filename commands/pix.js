@@ -9,7 +9,7 @@ import {
 } from "../database.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { sample } from 'es-toolkit';
-import { ALLOWED_MESSAGE_BOT_ID } from "../constants.js";
+import { ALLOWED_MESSAGE_BOT_ID } from "../data/config.js";
 
 export const name = "pix";
 export const aliases = ["doar", "donate", "give", "transferir"];

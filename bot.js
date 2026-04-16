@@ -2,13 +2,13 @@ import { Client, GatewayIntentBits } from "discord.js";
 import { readdirSync } from "fs";
 import dotenv from "dotenv";
 import path from "path";
-import Config from "./config.js";
-import { dbBot, getGuildUsers, addChars, getServerConfig, addCharsBulk, initializeDbBot } from "./database.js";
+import Config from "./data/config.js";
+import { dbBot, getGuildUsers, addChars, getServerConfig, addCharsBulk, initializeDbBot, db, unlockAchievement } from "./database.js";
 import nodeCron from "node-cron";
 import { cleanupLeftUsers } from "./functions/cleanUsers.js";
 import { registerCommands } from "./registerCommands.js";
-import { runMonthlyEvent, shouldRunMonthlyEvent } from "./functions/monthlyEvent.js";
 import dayjs from "dayjs";
+import { EmbedBuilder } from "discord.js";
 
 dotenv.config();
 Config.setupDirectories();
@@ -52,15 +52,137 @@ function checkMonthlyReset() {
 }
 
 // === EVENTO DE FIM DE MÊS ===
-async function checkMonthlyEventExecution(client) {
+// Cache simples para evitar rodar o evento mais de 1x por mês
+const monthlyEventCache = new Map();
+
+function isLastDayOfMonth() {
+  const today = dayjs();
+  const tomorrow = today.add(1, 'day');
+  return today.month() !== tomorrow.month();
+}
+
+function shouldRunMonthlyEvent() {
+  const now = dayjs();
+  const isLastDay = isLastDayOfMonth();
+  const hour = now.hour();
+  const minute = now.minute();
+  
+  // Roda entre 23:55 e 23:59 do último dia do mês
+  return isLastDay && hour === 23 && minute >= 55;
+}
+
+async function runMonthlyEvent(botClient, guildId) {
+  if (!guildId) return;
+
+  // Previne execução duplicada no mesmo mês
+  const monthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  if (monthlyEventCache.get(guildId) === monthKey) {
+    return;
+  }
+
+  try {
+    const guild = botClient.guilds.cache.get(guildId);
+    if (!guild) {
+      log(`[MonthlyEvent] Guild ${guildId} não encontrada`, "Bot", 31);
+      return;
+    }
+
+    // Pega todos os usuários do servidor
+    const users = db.prepare(`
+      SELECT id, display_name, charLeft 
+      FROM users 
+      WHERE guild_id = ? 
+      ORDER BY charLeft DESC 
+      LIMIT 3
+    `).all(guildId);
+
+    if (users.length === 0) {
+      log(`[MonthlyEvent] Nenhum usuário encontrado em ${guildId}`, "Bot", 31);
+      return;
+    }
+
+    // Define os rankings
+    const rankings = [
+      { position: 1, achievement: 'milionario_do_mes', emoji: '🥇', title: 'Milionário do Mês' },
+      { position: 2, achievement: 'ricao_do_mes', emoji: '🥈', title: 'Ricão do Mês' },
+      { position: 3, achievement: 'abastado_do_mes', emoji: '🥉', title: 'Abastado do Mês' },
+    ];
+
+    // Desbloqueia as conquistas
+    const winners = [];
+    for (let i = 0; i < Math.min(users.length, 3); i++) {
+      const user = users[i];
+      const ranking = rankings[i];
+
+      // Desbloqueia a conquista
+      unlockAchievement(user.id, guildId, ranking.achievement);
+      
+      // Verifica se é a 1ª vez ganhando (para milestone)
+      const achData = db.prepare(`
+        SELECT achievements_unlocked FROM users WHERE id = ? AND guild_id = ?
+      `).get(user.id, guildId);
+
+      const achieved = JSON.parse(achData?.achievements_unlocked || '{}');
+      
+      // Se tem milionario_do_mes e ricao_do_mes e abastado_do_mes, pode premiar reincidente
+      if (achieved.milionario_do_mes && achieved.ricao_do_mes && achieved.abastado_do_mes) {
+        // Conta quantos meses ganhou milionario
+        const milCount = (achieved.milionario_dos_meses_count || 0) + 1;
+        if (milCount >= 5 && ranking.position === 1) {
+          unlockAchievement(user.id, guildId, 'milionario_reincidente');
+        }
+      }
+
+      winners.push({
+        userId: user.id,
+        displayName: user.display_name,
+        chars: user.charLeft,
+        ...ranking,
+      });
+    }
+
+    // Cria embed de anúncio
+    const embed = new EmbedBuilder()
+      .setTitle('📊 FIM DE MÊS - RANKING DE CHARS')
+      .setColor(0xFFD700)
+      .setDescription(`**${dayjs().format('MMMM YYYY')}**\n\nOs 3 mais ricos do servidor:`)
+      .setTimestamp();
+
+    for (const winner of winners) {
+      embed.addFields({
+        name: `${winner.emoji} ${winner.title}`,
+        value: `<@${winner.userId}> — **${winner.chars.toLocaleString()}** chars 💰`,
+        inline: false,
+      });
+    }
+
+    // Posta em todos os canais (tenta postar em channels com permissão)
+    const channels = guild.channels.cache.filter(ch => 
+      ch.isTextBased() && 
+      ch.permissionsFor(guild.members.me).has('SendMessages')
+    );
+
+    if (channels.size > 0) {
+      const channel = channels.first();
+      await channel.send({ embeds: [embed] }).catch(() => {});
+    }
+
+    log(`[MonthlyEvent] ✅ Evento de fim de mês executado em ${guild.name}`, "Bot", 36);
+    monthlyEventCache.set(guildId, monthKey);
+  } catch (error) {
+    log(`[MonthlyEvent] Erro: ${error.message}`, "Bot", 31);
+  }
+}
+
+async function checkMonthlyEventExecution(botClient) {
   if (!shouldRunMonthlyEvent()) return;
 
-  const eventPromises = client.guilds.cache.map(guild => 
-    runMonthlyEvent(client, guild.id)
+  const eventPromises = botClient.guilds.cache.map(guild => 
+    runMonthlyEvent(botClient, guild.id)
   );
 
   await Promise.allSettled(eventPromises);
-  log("EVENTO DE FIM DE MÊS CONCLUÍDO EM TODOS OS SERVIDORES");
+  log("EVENTO DE FIM DE MÊS CONCLUÍDO EM TODOS OS SERVIDORES", "Bot", 36);
 }
 
 async function main() {

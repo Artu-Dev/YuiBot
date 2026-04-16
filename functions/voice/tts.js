@@ -2,23 +2,47 @@ import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { config } from "dotenv";
 import { createWriteStream } from "fs";
 import { Readable } from "stream";
-import { joinCall } from "./voice.js";
-import { AudioPlayerStatus, createAudioPlayer, createAudioResource } from "@discordjs/voice";
+import { AudioPlayerStatus, createAudioPlayer, createAudioResource, getVoiceConnection, joinVoiceChannel } from "@discordjs/voice";
 import { unlinkSync } from "fs";
 import { dbBot } from "../../database.js";
 import { log } from "../../bot.js";
+
 config();
 
 const elevenlabs = new ElevenLabsClient({
   apiKey: process.env.ELEVENLABS_API_KEY,
 });
 
+// ==================== VOICE CONNECTION ====================
+
+export function joinCall(message) {
+  const voiceChannel = message.member?.voice.channel;
+  if (!voiceChannel) {
+    message.reply("Você precisa estar em um canal de voz.");
+    return null;
+  }
+  if (!voiceChannel.joinable) {
+    message.reply("Não tenho permissão para entrar no canal de voz.");
+    return null;
+  }
+  if (getVoiceConnection(message.guild.id)) {
+     message.reply("Já estou gravando.");
+    return null;
+  }
+
+  return joinVoiceChannel({
+    channelId: voiceChannel.id,
+    guildId: message.guild.id,
+    adapterCreator: message.guild.voiceAdapterCreator,
+  });
+}
+
+// ==================== TEXT-TO-SPEECH ====================
 
 const createAudioFileTTSElevenLabs = async (text) => {
   return new Promise(async (resolve, reject) => {
     try {
-
-        const voiceId = dbBot.data.AiConfig.voiceId;
+      const voiceId = dbBot.data.AiConfig.voiceId;
       const audio = await elevenlabs.textToSpeech.convert(
         voiceId,
         {
@@ -47,6 +71,7 @@ const createAudioFileTTSElevenLabs = async (text) => {
     }
   });
 };
+
 function fixText(text) {
   let finalText = text.replace(/^[\s\S]*?<\/think>/, "");
 

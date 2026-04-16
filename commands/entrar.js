@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { playRandomAudio, startRecording } from "../functions/audio.js";
-import { joinCall } from "../functions/voice/voice.js";
+import { joinCall } from "../functions/voice/tts.js";
 import { getVoiceConnection } from "@discordjs/voice";
 
 export const name = "entrar";
