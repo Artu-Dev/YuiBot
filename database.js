@@ -5,6 +5,78 @@ import { isValidUserId, isValidGuildId, isValidChannelId } from "./functions/val
 import dayjs from "dayjs";
 import { log } from "./bot.js";
 
+// ==================== RE-EXPORT ALL DATABASE MODULES ====================
+// Users
+export {
+  getUser,
+  deleteUser,
+  getOrCreateUser,
+  addUserProperty,
+  setUserProperty,
+  addUserPropertyByAmount,
+  reduceChars,
+  addChars,
+  addCharsBulk,
+  getRandomUserId,
+  getGuildUsers,
+  getPoorestGuildUsers,
+} from "./functions/database/users.js";
+
+// Penalties
+export {
+  getUserPenality,
+  setUserPenality,
+  removeUserPenality,
+} from "./functions/database/penalties.js";
+
+// Achievements
+export {
+  getAchievements,
+  unlockAchievement,
+} from "./functions/database/achievements.js";
+
+// Messages
+export {
+  saveMessageContext,
+  getRecentMessages,
+  getRecentMessagesArray,
+  getLastAuthorMessage,
+  getMessageContextByMessageId,
+  setMessageImageAnalysis,
+  getPreviousMessageAuthor,
+} from "./functions/database/messages.js";
+
+// Settings
+export {
+  getServerConfig,
+  setServerConfig,
+  isGuildAiSilenced,
+  extendGuildAiSilenceMs,
+  getChannels,
+  addChannel,
+  removeChannel,
+  getBotPrefix,
+} from "./functions/database/settings.js";
+
+// Events
+export {
+  getDailyEventFromDB,
+  saveDailyEvent,
+  shouldAnnounceDailyEvent,
+  markDailyEventAsAnnounced,
+  getHolidaysForYear,
+  saveHolidays,
+} from "./functions/database/events.js";
+
+// Words
+export {
+  getProhibitedWords,
+  reloadProhibitedWords,
+  getRandomProhibitedWord,
+} from "./functions/database/words.js";
+
+// ==================== CORE DATABASE EXPORTS ====================
+
 function logInvalidId(userId, guildId, functionName) {
   log(`[${guildId}] ⚠️  Invalid IDs in ${functionName}: userId=${userId}, guildId=${guildId}`, "Database", 31);
 }
@@ -27,12 +99,7 @@ export const dbBot = new Low(new JSONFile("./data/dbBot.json"), {
 export const db = new Database("./data/data.db");
 db.pragma("journal_mode = WAL");
 
-const palavrasDb = new Database("./data/palavras_proibidas.db", { readonly: true });
-
-// ==============================================
-// ESQUEMA USERS
-// ==============================================
-
+// User schema for dynamic column creation
 const USERS_SCHEMA = {
   display_name: "TEXT",
   charLeft: `INTEGER DEFAULT 4000`,
@@ -327,475 +394,3 @@ export const initializeDbBot = async () => {
     `),
   };
 };
-
-// ==============================================
-// DAILY EVENTS E HOLIDAYS
-// ==============================================
-
-export const getDailyEventFromDB = (guildId) => {
-  if (!guildId || !isValidGuildId(guildId)) return null;
-  const today = dayjs().format("YYYY-MM-DD");
-  return db.prepare("SELECT * FROM daily_events WHERE guildId = ? AND date = ?").get(guildId, today);
-};
-
-export const saveDailyEvent = (guildId, eventData) => {
-  if (!guildId || !isValidGuildId(guildId)) return;
-  const today = dayjs().format("YYYY-MM-DD");
-  db.prepare(`
-    INSERT OR REPLACE INTO daily_events 
-      (guildId, date, eventKey, charMultiplier, casinoMultiplier, robSuccess, name, description, hasBeenAnnounced)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-  `).run(
-    guildId,
-    today,
-    eventData.eventKey ?? "normal",
-    eventData.charMultiplier ?? 1.0,
-    eventData.casinoMultiplier ?? 1.0,
-    eventData.robSuccess ?? null,
-    eventData.name ?? "Dia Normal",
-    eventData.description ?? "Tudo normal hoje"
-  );
-};
-
-export const shouldAnnounceDailyEvent = (guildId) => {
-  if (!guildId || !isValidGuildId(guildId)) return false;
-  const today = dayjs().format("YYYY-MM-DD");
-  const row = db.prepare("SELECT hasBeenAnnounced FROM daily_events WHERE guildId = ? AND date = ?").get(guildId, today);
-  return !row || row.hasBeenAnnounced === 0;
-};
-
-export const markDailyEventAsAnnounced = (guildId) => {
-  if (!guildId || !isValidGuildId(guildId)) return;
-  const today = dayjs().format("YYYY-MM-DD");
-  db.prepare("INSERT OR REPLACE INTO daily_events (guildId, date, hasBeenAnnounced) VALUES (?, ?, 1)").run(guildId, today);
-};
-
-export const getHolidaysForYear = (year) => {
-  const rows = db.prepare("SELECT date, name FROM holidays_cache WHERE year = ?").all(year);
-  return new Map(rows.map(r => [r.date, r.name]));
-};
-
-export const saveHolidays = (holidays, year) => {
-  const insert = db.prepare("INSERT OR REPLACE INTO holidays_cache (date, name, year) VALUES (?, ?, ?)");
-  const insertAll = db.transaction((holidays) => {
-    for (const [date, name] of holidays.entries()) {
-      insert.run(date, name, year);
-    }
-  });
-  insertAll(holidays);
-};
-
-// ==============================================
-// USUÁRIOS
-// ==============================================
-
-export const getUser = (userId, guildId) => {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
-    logInvalidId(userId, guildId, "getUser");
-    return null;
-  }
-  return db.queries.getUserById.get(userId, guildId);
-};
-
-export const deleteUser = (userId, guildId) => {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
-    logInvalidId(userId, guildId, "deleteUser");
-    return false;
-  }
-  const result = db.queries.deleteUser.run(userId, guildId);
-  return result.changes > 0;
-};
-
-export const getUserPenality = (userId, guildId) => {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
-    logInvalidId(userId, guildId, "getUserPenality");
-    return null;
-  }
-  const user = getUser(userId, guildId);
-  return user?.penality || null;
-};
-
-export const setUserPenality = (userId, guildId, penality, penalitySetByAdmin = false) => {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
-    logInvalidId(userId, guildId, "setUserPenality");
-    return false;
-  }
-  try {
-    db.queries.addUserPenalty.run(penality, penalitySetByAdmin ? 1 : 0, userId, guildId);
-    return true;
-  } catch (error) {
-    log(`❌ Erro ao atualizar penalidade: ${error.message}`, "Database", 31);
-    return false;
-  }
-};
-
-export const removeUserPenality = (userId, guildId) => {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
-    logInvalidId(userId, guildId, "removeUserPenality");
-    return false;
-  }
-  try {
-    db.queries.removeUserPenalty.run(userId, guildId);
-    return true;
-  } catch (error) {
-    log(`❌ Erro ao remover penalidade: ${error.message}`, "Database", 31);
-    return false;
-  }
-};
-
-export const getOrCreateUser = (userId, displayName, guildId) => {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
-    logInvalidId(userId, guildId, "getOrCreateUser");
-    return null;
-  }
-
-  db.queries.insertUser.run(userId, displayName || "Unknown", guildId);
-  return db.queries.getUserById.get(userId, guildId);
-};
-
-
-
-// ==============================================
-// CONTEXTO DE MENSAGENS
-// ==============================================
-
-export function saveMessageContext(channelId, guildId, author, content, userId, messageId = null, imageUrl = null) {
-  if (!content && !imageUrl) return;
-  if (!isValidChannelId(channelId) || !isValidGuildId(guildId)) return;
-
-  try {
-    const timestamp = dayjs().valueOf(); 
-
-    const transaction = db.transaction(() => {
-      db.queries.saveMessageContext.run(channelId, guildId, author, content, timestamp, userId, messageId, imageUrl);
-
-      const countRow = db.queries.countMessagesInChannel.get(channelId, guildId);
-      if (countRow && countRow.total > 110) {
-        db.queries.deleteExcessMessages.run(channelId, guildId, channelId, guildId);
-      }
-    });
-    transaction();
-  } catch (error) {
-    console.error('[saveMessageContext] Erro ao salvar mensagem:', error);
-  }
-}
-
-export function getRecentMessages(channelId, guildId, limit = 20) {
-  try {
-    const rows = db.queries.getRecentMessages.all(channelId, guildId, limit);
-    return rows
-      .reverse()
-      .map((row) => {
-        const date = new Date(row.timestamp);
-        const time = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-        let messageLine = `[${time}] ${row.author}: ${row.content}`;
-        if (row.image_analysis) {
-          messageLine += ` [IMAGEM DESCRITA: ${row.image_analysis}]`;
-        }
-        return messageLine;
-      })
-      .join("\n");
-  } catch (error) {
-    log('Erro ao buscar mensagens:' + error, "getRecentMessages", 31);
-    return '';
-  }
-}
-
-export const getRecentMessagesArray = (channelId, guildId, limit = 20) => {
-  try {
-    const rows = db.queries.getRecentMessagesArray.all(channelId, guildId, limit);
-    return rows.reverse();
-  } catch (error) {
-    console.error('[getRecentMessagesArray] Erro:', error);
-    return [];
-  }
-};
-
-export const getLastAuthorMessage = (channelId, guildId, userId) => {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId) || !isValidChannelId(channelId)) {
-    return null;
-  }
-  try {
-    const row = db.queries.getLastAuthorMessage.get(userId, guildId, channelId);
-    return row ? row.timestamp : null;
-  } catch (error) {
-    console.error('[getLastAuthorMessage] Erro:', error);
-    return null;
-  }
-};
-
-export function getMessageContextByMessageId(messageId, guildId) {
-  try {
-    return db.queries.getMessageContextByMessageId.get(messageId, guildId);
-  } catch (error) {
-    console.error('[getMessageContextByMessageId] Erro:', error);
-    return null;
-  }
-}
-
-export function setMessageImageAnalysis(messageId, guildId, analysis) {
-  try {
-    db.queries.setMessageImageAnalysis.run(analysis, messageId, guildId);
-  } catch (error) {
-    console.error('[setMessageImageAnalysis] Erro:', error);
-  }
-}
-
-export function getPreviousMessageAuthor(channelId, guildId) {
-  if (!isValidChannelId(channelId) || !isValidGuildId(guildId)) {
-    return null;
-  }
-  try {
-    const row = db.queries.getPreviousMessageAuthor.get(channelId, guildId);
-    return row?.userId ?? null;
-  } catch (error) {
-    console.error('[getPreviousMessageAuthor] Erro:', error);
-    return null;
-  }
-}
-
-// ==============================================
-// SERVER CONFIGS
-// ==============================================
-
-const DEFAULT_CONFIGS = {
-  limitChar: 4000,
-  speakMessage: 0,
-  charLimitEnabled: 1,
-  generateMessage: 1,
-  maxSavedAudios: 50,
-  prefix: '$',
-  guildSilenceUntil: '0'
-};
-
-export function getServerConfig(guildId, key) {
-  if (!guildId) return DEFAULT_CONFIGS[key];
-  const row = db.queries.getServerConfig.get(guildId);
-  if (!row) {
-    db.queries.setServerConfig.run(
-      guildId,
-      DEFAULT_CONFIGS.limitChar,
-      DEFAULT_CONFIGS.speakMessage,
-      DEFAULT_CONFIGS.charLimitEnabled,
-      DEFAULT_CONFIGS.generateMessage,
-      DEFAULT_CONFIGS.maxSavedAudios,
-      DEFAULT_CONFIGS.prefix,
-      DEFAULT_CONFIGS.guildSilenceUntil
-    );
-    return DEFAULT_CONFIGS[key];
-  }
- 
-  if (key === 'speakMessage' || key === 'charLimitEnabled' || key === 'generateMessage') {
-    return row[key] === 1;
-  }
-  return row[key];
-}
-
-export function setServerConfig(guildId, key, value) {
-  if (!guildId) return;
-  const row = db.queries.getServerConfig.get(guildId);
-  const config = row ? { ...row } : { ...DEFAULT_CONFIGS, guild_id: guildId };
-
-  if (key === 'speakMessage' || key === 'charLimitEnabled' || key === 'generateMessage') {
-    config[key] = value ? 1 : 0;
-  } else {
-    config[key] = value;
-  }
-
-  db.queries.setServerConfig.run(
-    guildId,
-    config.limitChar,
-    config.speakMessage,
-    config.charLimitEnabled,
-    config.generateMessage,
-    config.maxSavedAudios,
-    config.prefix,
-    config.guildSilenceUntil
-  );
-}
-
-// ==============================================
-// CONQUISTAS
-// ==============================================
-
-export function getAchievements(userId, guildId) {
-  const row = db.queries.getAchievements.get(userId, guildId);
-  if (!row) return {};
-  try {
-    const parsed = JSON.parse(row.achievements_unlocked);
-    return (parsed && typeof parsed === "object" && !Array.isArray(parsed)) ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-export function unlockAchievement(userId, guildId, achievementKey) {
-  return db.transaction(() => {
-    const row = db.queries.getAchievements.get(userId, guildId);
-    let current = {};
-    if (row?.achievements_unlocked) {
-      try {
-        const parsed = JSON.parse(row.achievements_unlocked);
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          current = parsed;
-        }
-      } catch {}
-    }
-    if (current[achievementKey]) return false;
-    current[achievementKey] = true;
-    db.prepare("UPDATE users SET achievements_unlocked = ? WHERE id = ? AND guild_id = ?")
-      .run(JSON.stringify(current), userId, guildId);
-    return true;
-  })();
-}
-
-// ==============================================
-// CANAIS
-// ==============================================
-
-export function isGuildAiSilenced(guildId) {
-  if (!guildId) return false;
-  const until = getServerConfig(guildId, 'guildSilenceUntil');
-  const timestamp = parseInt(until, 10) || 0;
-  return Date.now() < timestamp;
-}
-
-export async function extendGuildAiSilenceMs(guildId, ms) {
-  const now = Date.now();
-  const cur = parseInt(getServerConfig(guildId, 'guildSilenceUntil'), 10) || 0;
-  const base = Math.max(now, cur);
-  setServerConfig(guildId, 'guildSilenceUntil', (base + ms).toString());
-}
-
-export const getChannels = (guildId) => {
-  const row = db.queries.getChannels.get(guildId);
-  return row ? JSON.parse(row.channel_id || "[]") : [];
-};
-
-export const addChannel = (guildId, channelId) => {
-  let channels = getChannels(guildId);
-  if (!channels.length) {
-    db.prepare("INSERT OR IGNORE INTO bot_channels (guild_id, channel_id) VALUES (?, ?)")
-      .run(guildId, "[]");
-  }
-  if (!channels.includes(channelId)) channels.push(channelId);
-  db.prepare("UPDATE bot_channels SET channel_id = ? WHERE guild_id = ?")
-    .run(JSON.stringify(channels), guildId);
-};
-
-export const removeChannel = (guildId, channelId) => {
-  const currentChannels = getChannels(guildId);
-  const updated = currentChannels.filter((id) => id !== channelId);
-  db.prepare("UPDATE bot_channels SET channel_id = ? WHERE guild_id = ?")
-    .run(JSON.stringify(updated), guildId);
-};
-
-// ==============================================
-// PROPRIEDADES DE USUÁRIO
-// ==============================================
-
-export const addUserProperty = (property, userId, guildId) => {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) return;
-  db.prepare(`UPDATE users SET ${property} = ${property} + 1 WHERE id = ? AND guild_id = ?`)
-    .run(userId, guildId);
-};
-
-export function setUserProperty(prop, userId, guildId, value) {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) return;
-  db.prepare(`UPDATE users SET ${prop} = ? WHERE id = ? AND guild_id = ?`)
-    .run(value, userId, guildId);
-}
-
-export function addUserPropertyByAmount(prop, userId, guildId, amount) {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) return;
-  db.prepare(`UPDATE users SET ${prop} = ${prop} + ? WHERE id = ? AND guild_id = ?`)
-    .run(amount, userId, guildId);
-}
-
-export const reduceChars = (userId, guildId, amount) => {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) return 0;
-  const date = new Date().toISOString();
-  const result = db.queries.reduceChars.run(amount, date, userId, guildId);
-  const user = getUser(userId, guildId);
-  return user?.charLeft ?? 0;
-};
-
-export const addChars = (userId, guildId, amount) => {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) return;
-  db.queries.addChars.run(parseInt(amount), userId, guildId);
-};
-
-export const addCharsBulk = (updates) => {
-  const stmt = db.queries.addChars;
-  const runAll = db.transaction((updates) => {
-    for (const { userId, guildId, amount } of updates) {
-      if (isValidUserId(userId) && isValidGuildId(guildId)) {
-        stmt.run(parseInt(amount), userId, guildId);
-      }
-    }
-  });
-  runAll(updates);
-};
-
-export const getRandomUserId = (guildId, excludeUserId) => {
-  if (!guildId) return null;
-  const row = db.queries.getGuildRandomUser.get(guildId, excludeUserId || "");
-  return row?.id || null;
-};
-
-export const getGuildUsers = (guildId) => {
-  if (!guildId) return [];
-  return db.queries.getGuildAllUsers.all(guildId);
-};
-
-export const getPoorestGuildUsers = (guildId, excludeUserId, limit = 10) => {
-  if (!guildId) return [];
-  return db.prepare(`
-    SELECT id, charLeft, display_name
-    FROM users
-    WHERE guild_id = ? AND id != ?
-    ORDER BY charLeft ASC
-    LIMIT ?
-  `).all(guildId, excludeUserId || "", limit);
-};
-
-export const getBotPrefix = (guildId) => {
-  return getServerConfig(guildId, 'prefix') || '$';
-};
-
-// ==============================================
-// PALAVRAS PROIBIDAS
-// ==============================================
-
-let prohibitedWordsCache = null;
-
-function loadProhibitedWordsSet() {
-  try {
-    const rows = palavrasDb.prepare("SELECT palavra FROM palavras_proibidas").all();
-    return new Set(
-      rows
-        .map((row) => String(row.palavra || "").trim().toLowerCase())
-        .filter((word) => word.length > 0)
-    );
-  } catch (error) {
-    log("erro ao carregar palavras proibidas", "Database", 31);
-    return new Set(["capeta"]);
-  }
-}
-
-export function getProhibitedWords() {
-  if (!prohibitedWordsCache) {
-    prohibitedWordsCache = loadProhibitedWordsSet();
-  }
-  return prohibitedWordsCache;
-}
-
-export function reloadProhibitedWords() {
-  prohibitedWordsCache = loadProhibitedWordsSet();
-  log("📚 Cache de palavras proibidas recarregado.", "Database", 33);
-}
-
-export function getRandomProhibitedWord() {
-  const result = palavrasDb.prepare("SELECT palavra FROM palavras_proibidas ORDER BY RANDOM() LIMIT 1").get();
-  return result ? result.palavra : "capeta";
-}
