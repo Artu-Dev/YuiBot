@@ -5,6 +5,7 @@ import {
   ButtonStyle,
   ActionRowBuilder,
   ComponentType,
+  ChannelFlags,
 } from 'discord.js';
 import { getShop, getShopItem, decrementStock } from '../functions/shop.js';
 import { addToInventory, getInventory } from '../functions/inventario.js';
@@ -72,7 +73,6 @@ function buildNavRow(shopItem, index, total) {
     new ButtonBuilder()
       .setCustomId(`shop_buy_${shopItem?.id || 'unknown'}`)
       .setLabel(outOfStock ? 'Esgotado' : 'Comprar')
-      .setEmoji('🛒')
       .setStyle(outOfStock ? ButtonStyle.Danger : ButtonStyle.Success)
       .setDisabled(outOfStock),
 
@@ -129,7 +129,7 @@ async function handleBuy(user, guildId, itemId) {
 
 export const data = new SlashCommandBuilder()
   .setName('loja')
-  .setDescription('🎴 Veja os itens disponíveis na loja de hoje');
+  .setDescription('Veja os itens disponíveis na loja de hoje');
 
 import { isValidUserId, isValidGuildId } from "../functions/validation.js";
 

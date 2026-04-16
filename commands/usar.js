@@ -168,7 +168,7 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
       
       const effects = [
         {
-          name: '🎉 Sorte!',
+          name: 'Renda extra!',
           action: async () => {
             const bonus = randomInt(2000, 5000);
             const userData = getUser(userId, guildId);
@@ -177,23 +177,23 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
           }
         },
         {
-          name: '💀 Azar!',
+          name: 'IMPOSTO!!!',
           action: async () => {
             const userData = getUser(userId, guildId);
             const loss = Math.min(randomInt(1000, 3000), userData?.charLeft ?? 0);
             setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) - loss);
-            return `Você perdeu **${loss}** chars! 😭`;
+            return `Você perdeu **${loss}** chars de imposto pra Yui! 😭`;
           }
         },
         {
-          name: '📈 Multiplicador',
+          name: 'Dobro de gasto',
           action: async () => {
-            addEffect(userId, guildId, 'message_multiplier', Date.now() + 6 * 60 * 60 * 1000);
-            return `Seus chars de mensagem estão em 2x por 6 horas! 🚀`;
+            addEffect(userId, guildId, 'char_double_cost', Date.now() + 6 * 60 * 60 * 1000);
+            return `Voce ta gastando 2x mais chars por 6 horas!`;
           }
         },
         {
-          name: '🎪 Caos Total',
+          name: 'Troca aleatória',
           action: async () => {
             const users = getGuildUsers(guildId);
             if (users.length > 1) {
@@ -206,20 +206,20 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
               setUserProperty('charLeft', userId, guildId, targetChars);
               setUserProperty('charLeft', randomUser.id, guildId, userChars);
               
-              return `Seus chars foram trocados com <@${randomUser.id}>! 🌀`;
+              return `Seus chars foram trocados com <@${randomUser.id}>! \n\n Agora você tem **${targetChars}** chars e eles têm **${userChars}** chars! 🔄`;
             }
             return `Ninguém pra trocar com você! 😅`;
           }
         },
         {
-          name: '🛡️ Proteção',
+          name: 'Proteção',
           action: async () => {
             addEffect(userId, guildId, 'immunity', Date.now() + 12 * 60 * 60 * 1000);
             return `Você ganhou imunidade a penalidades por 12 horas! 🛡️`;
           }
         },
         {
-          name: '🎲 Rouleta',
+          name: 'Roleta do Silvio santos',
           action: async () => {
             const resultado = randomInt(1, 3);
             if (resultado === 1) {
@@ -238,7 +238,6 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
       ];
       
       const chosen = effects[randomInt(0, effects.length - 1)];
-      addEffect(userId, guildId, 'lixo_collector');
       
       const result = await chosen.action();
       return `🗑️ Lixo Lendário ativou: **${chosen.name}**\n\n${result}`;
@@ -252,7 +251,7 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
 // ───────────────────────── comando ──────────────────────────
 export const data = new SlashCommandBuilder()
   .setName('usar')
-  .setDescription('🎒 Abre seu inventário e usa um item');
+  .setDescription('Abre seu inventário e usa um item');
 
 export async function execute(client, data) {
   const userId = data.userId;
