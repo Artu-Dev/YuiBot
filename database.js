@@ -33,6 +33,7 @@ export {
 export {
   getAchievements,
   unlockAchievement,
+  resetAchievement,
 } from "./functions/database/achievements.js";
 
 // Messages

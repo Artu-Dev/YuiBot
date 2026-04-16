@@ -7,6 +7,7 @@ import {
   UserSelectMenuBuilder,
   ComponentType,
   ChannelFlags,
+  StringSelectMenuBuilder,
 } from 'discord.js';
 import { getInventory, removeFromInventory } from '../functions/inventario.js';
 import { addEffect } from '../functions/effects.js';
@@ -93,9 +94,28 @@ function buildPaginationButtons(inventory, displayStartIndex = 0) {
 // ───────────────────────── aplicar item ─────────────────────
 async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
   const { getUser, setUserProperty } = await import('../database.js');
+  const { hasEffect } = await import('../functions/effects.js');
   
   const expiresAt = item.duration ? Date.now() + item.duration : null;
   const durStr = expiresAt ? `<t:${Math.floor(expiresAt / 1000)}:R>` : 'permanente';
+
+  // Verificar se é não-stackável e se o usuário já tem o efeito
+  if (itemDef.nonStackable && hasEffect(userId, guildId, itemDef.effect)) {
+    return `❌ **${itemDef.name}** não é stackável! Você já tem esse efeito ativo.`;
+  }
+
+  // Definir efeitos negativos que podem ser bloqueados
+  const negativeEffects = ['char_double_cost'];
+
+  // Verificar se target tem blockNegativeEffects (Fora da Lei)
+  if (itemDef.requiresTarget && targetId !== userId && negativeEffects.includes(itemDef.effect)) {
+    // Verificar se target tem immunity ativo (efeito do Fora da Lei)
+    const hasBlockEffect = hasEffect(targetId, guildId, 'immunity');
+    
+    if (hasBlockEffect) {
+      return `🛡️ <@${targetId}> está protegido com "Fora da Lei"! Você não pode lançar efeitos negativos nele!`;
+    }
+  }
 
   switch (itemDef.effect) {
     case 'char_double_cost':
@@ -117,11 +137,11 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
     }
 
     case 'reset_achievement':
-      return `🔄 Conquista de <@${targetId}> resetada! (implemente conforme seu sistema de conquistas)`;
+      return `🔄 Selecione uma conquista para resetar`;
 
     case 'char_discount':
       addEffect(userId, guildId, 'char_discount', expiresAt);
-      return `☕ **${itemDef.name}** ativado! Suas mensagens custam 50% menos (expira ${durStr}).`;
+      return `☕ **${itemDef.name}** ativado! Suas mensagens gastam 50% menos (expira ${durStr}).`;
 
     case 'immunity':
       addEffect(userId, guildId, 'immunity', expiresAt);
@@ -243,6 +263,64 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
       return `🗑️ Lixo Lendário ativou: **${chosen.name}**\n\n${result}`;
     }
 
+    case 'tiger_luck': {
+      const existingEffect = hasEffect(userId, guildId, 'tiger_luck');
+      if (existingEffect) {
+        return `❌ Você já tem esse efeito! A Moeda da Sorte não é stackável.`;
+      }
+      addEffect(userId, guildId, 'tiger_luck', expiresAt);
+      return `🍀 **${itemDef.name}** ativada! Sua sorte no tigre aumentou em 20% (expira ${durStr}).`;
+    }
+
+    case 'robbery_luck':
+      addEffect(userId, guildId, 'robbery_luck', expiresAt);
+      return `📖 **${itemDef.name}** aprendido! Seu próximo roubo tem +15% de sucesso!`;
+
+    case 'robbery_damage_boost':
+      addEffect(userId, guildId, 'robbery_damage_boost', expiresAt);
+      return `🗡️ **${itemDef.name}** equipada! Seu dano em roubos aumentou em 35% (expira ${durStr}).`;
+
+    case 'guaranteed_rob': {
+      const targetData = getUser(targetId, guildId);
+      if (!targetData) {
+        return `❌ Usuário alvo não encontrado no banco de dados.`;
+      }
+      addEffect(userId, guildId, 'guaranteed_rob', expiresAt);
+      return `🎓 **${itemDef.name}** concluído! Seu próximo roubo em <@${targetId}> é 100% garantido!`;
+    }
+
+    case 'halve_wealth': {
+      const targetData = getUser(targetId, guildId);
+      const currentChars = targetData?.charLeft ?? 0;
+      const half = Math.floor(currentChars / 2);
+      const destroyed = currentChars - half;
+
+      setUserProperty('charLeft', targetId, guildId, half);
+
+      return `💸 **${itemDef.name}** ativado!\n\n<@${targetId}> perdeu **${destroyed}** chars (ficou com ${half})`;
+    }
+
+    case 'server_chaos': {
+      const { getGuildUsers } = await import('../database.js');
+      const { randomEventsData } = await import('../data/eventsData.js');
+      
+      const users = getGuildUsers(guildId);
+      const randomEvent = randomEventsData[Math.floor(Math.random() * randomEventsData.length)];
+      
+      let message = `🌪️ **CAOS DA YUI ATIVADO!**\n\n`;
+      message += `**${randomEvent.name}**\n`;
+      message += `${randomEvent.description}\n\n`;
+      message += `Duração: ${randomEvent.charMultiplier}x chars, ${randomEvent.casinoMultiplier}x cassino`;
+
+      // Aplicar evento para todos do servidor
+      for (const user of users) {
+        // Aqui você poderia salvar o evento no banco de dados para toda a guild
+        // Por enquanto, apenas notificamos
+      }
+
+      return message;
+    }
+
     default:
       return `✅ Item **${itemDef.name}** usado com sucesso! ${durStr}`;
   }
@@ -350,6 +428,79 @@ export async function execute(client, data) {
       }
 
       // Item sem alvo → usa direto
+      if (itemDef.effect === 'reset_achievement') {
+        const { getAchievements } = await import('../database.js');
+        const { achievements } = await import('../functions/achievmentsData.js');
+        
+        const userAchievements = getAchievements(userId, guildId);
+        const unlockedKeys = Object.keys(userAchievements).filter(k => userAchievements[k]);
+        
+        if (unlockedKeys.length === 0) {
+          return comp.update({
+            content: '🔄 Você não tem nenhuma conquista pra resetar! 😅',
+            embeds: [],
+            components: [],
+          });
+        }
+
+        // Get unique categories the user has achievements in
+        const userCategories = new Set();
+        for (const key of unlockedKeys) {
+          const achData = achievements[key];
+          if (achData?.category) {
+            userCategories.add(achData.category);
+          }
+        }
+
+        if (userCategories.size === 0) {
+          return comp.update({
+            content: '🔄 Nenhuma categoria válida encontrada.',
+            embeds: [],
+            components: [],
+          });
+        }
+
+        // Build select menu for categories
+        const select = new StringSelectMenuBuilder()
+          .setCustomId('inv_select_achievement')
+          .setPlaceholder('Selecione uma categoria para resetar');
+        
+        const categoryNames = {
+          special: '✨ Especiais',
+          activity: '💬 Atividade',
+          social: '👥 Social',
+          verbal: '🗣️ Verbal',
+          robbery: '🔫 Roubo',
+          tiger: '🐯 Tigre',
+          bounty: '💰 Recompensas',
+        };
+
+        for (const category of userCategories) {
+          const achInCategory = unlockedKeys.filter(k => achievements[k]?.category === category);
+          select.addOptions({
+            label: categoryNames[category] || category,
+            value: category,
+            description: `${achInCategory.length} conquista(s) nesta categoria`,
+          });
+        }
+
+        pendingSlot = slotIndex; // Store for later
+
+        return comp.update({
+          content: `🏆 **${itemDef.name}** — Qual categoria deseja resetar?`,
+          embeds: [],
+          components: [
+            new ActionRowBuilder().addComponents(select),
+            new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                .setCustomId('inv_cancel')
+                .setLabel('Cancelar')
+                .setStyle(ButtonStyle.Secondary)
+            ),
+          ],
+        });
+      }
+
       const result = await applyInventoryItem(userId, guildId, item, itemDef, userId);
       removeFromInventory(userId, guildId, slotIndex);
       
@@ -378,6 +529,72 @@ export async function execute(client, data) {
       removeFromInventory(userId, guildId, pendingSlot);
       
       // Remove from local inventory
+      inventory.splice(pendingSlot, 1);
+      
+      pendingSlot = null;
+      collector.stop();
+      return comp.update({ content: result, embeds: [], components: [] });
+    }
+
+    // ── Selecionou uma categoria para resetar ──
+    if (comp.customId === 'inv_select_achievement' && pendingSlot !== null) {
+      const categoryToReset = comp.values[0];
+      const { achievements } = await import('../functions/achievmentsData.js');
+      const { getAchievements } = await import('../database.js');
+      const { db } = await import('../database.js');
+
+      // Get user's current achievements
+      const userAchievements = getAchievements(userId, guildId);
+      
+      // Find all achievements in this category
+      const achievementsInCategory = Object.entries(achievements)
+        .filter(([_, achData]) => achData.category === categoryToReset)
+        .map(([key, _]) => key);
+      
+      if (achievementsInCategory.length === 0) {
+        return comp.update({
+          content: '❌ Nenhuma conquista encontrada nesta categoria.',
+          embeds: [],
+          components: [],
+        });
+      }
+
+      // Remove all achievements in this category
+      let removedCount = 0;
+      for (const achKey of achievementsInCategory) {
+        if (userAchievements[achKey]) {
+          delete userAchievements[achKey];
+          removedCount++;
+        }
+      }
+
+      if (removedCount === 0) {
+        return comp.update({
+          content: `ℹ️ Você não tinha nenhuma conquista da categoria **${categoryToReset}** pra resetar.`,
+          embeds: [],
+          components: [],
+        });
+      }
+
+      // Update database with cleaned achievements
+      db.prepare('UPDATE users SET achievements_unlocked = ? WHERE id = ? AND guild_id = ?')
+        .run(JSON.stringify(userAchievements), userId, guildId);
+
+      const item = inventory[pendingSlot];
+      const itemDef = SHOP_ITEMS[item.id];
+      const categoryNames = {
+        special: '✨ Especiais',
+        activity: '💬 Atividade',
+        social: '👥 Social',
+        verbal: '🗣️ Verbal',
+        robbery: '🔫 Roubo',
+        tiger: '🐯 Tigre',
+        bounty: '💰 Recompensas',
+      };
+
+      const result = `🔄 ✅ **${removedCount}** conquista(s) da categoria **${categoryNames[categoryToReset]}** foram resetadas!`;
+
+      removeFromInventory(userId, guildId, pendingSlot);
       inventory.splice(pendingSlot, 1);
       
       pendingSlot = null;

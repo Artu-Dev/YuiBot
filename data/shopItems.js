@@ -12,12 +12,13 @@ export const SHOP_ITEMS = {
   },
   fora_da_lei: { 
     name: 'Fora da Lei',
-    description: 'Imunidade total a penalidades.',
+    description: 'Imunidade total a penalidades (itens e do sistema).',
     image: "https://c.tenor.com/EwNcnly8WSEAAAAC/tenor.gif",
     rarity: 'raro',
     price: () => randomInt(1200, 2000),
     duration: () => (Math.random() < 0.5 ? 24 : 48) * 60 * 60 * 1000,
     effect: 'immunity',
+    blockNegativeEffects: true,
   },
   guarda_costas: {
     name: 'Guarda costas',
@@ -110,5 +111,67 @@ export const SHOP_ITEMS = {
     price: () => randomInt(100, 2000),
     duration: () => null,
     effect: 'mystery',
+  },
+  moeda_da_sorte: {
+    name: 'Moeda da Sorte',
+    description: 'Aumenta sua sorte no tigre em 20% por 12h. Não é stackável!',
+    image: "https://c.tenor.com/uSl-YPiT9NUAAAAC/tenor.gif",
+    rarity: 'comum',
+    price: () => randomInt(150, 400),
+    duration: () => 12 * 60 * 60 * 1000,
+    effect: 'tiger_luck',
+    nonStackable: true,
+  },
+
+  manual_do_roubo: {
+    name: 'Manual do Roubo',
+    description: 'Seu próximo roubo tem +15% de chance de sucesso.',
+    image: "https://c.tenor.com/x5w2E3FaGr4AAAAC/tenor.gif",
+    rarity: 'incomum',
+    price: () => randomInt(300, 800),
+    duration: () => null,
+    effect: 'robbery_luck',
+  },
+
+  arma_de_prata: {
+    name: 'Arma de Prata',
+    description: 'Aumenta seu dano em roubos em 35% por 24h.',
+    image: "https://c.tenor.com/t3-kZyuRxs4AAAAC/tenor.gif",
+    rarity: 'incomum',
+    price: () => randomInt(400, 900),
+    duration: () => 24 * 60 * 60 * 1000,
+    effect: 'robbery_damage_boost',
+  },
+
+  curso_de_roubo: {
+    name: 'Curso de Roubo',
+    description: 'Proximo roubo 100% garantido!',
+    image: "https://c.tenor.com/LcPeC0c8vQkAAAAd/tenor.gif",
+    rarity: 'raro',
+    price: () => randomInt(1500, 3000),
+    duration: () => null,
+    effect: 'guaranteed_rob',
+    requiresTarget: true,
+  },
+
+  divisor_de_riqueza: {
+    name: 'Divisor de Riqueza',
+    description: 'Divide os chars de alguém pela metade',
+    image: "https://media.tenor.com/8EXL_NXPYe0AAAAC/tenor.gif",
+    rarity: 'lendário',
+    price: () => randomInt(2500, 4500),
+    duration: () => null,
+    effect: 'halve_wealth',
+    requiresTarget: true,
+  },
+
+  caos_da_yui: {
+    name: 'CAOS DA YUI',
+    description: 'Caos absoluto! Causa evento completamente aleatório em TODOS do servidor! 🌪️',
+    image: "https://media.tenor.com/r3BYcEJvI3EAAAAC/tenor.gif",
+    rarity: 'lendário',
+    price: () => randomInt(5000, 8000),
+    duration: () => null,
+    effect: 'server_chaos',
   },
 };

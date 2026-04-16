@@ -5,24 +5,11 @@ import { hasEffect } from "../effects.js";
 import ms from 'ms';
 import { log } from "../../bot.js";
 import dayjs from "dayjs";
+import { penaltiesData, randomWordsData } from "../../data/penaltiesData.js";
 
+export const randomWords = randomWordsData;
 
-export const randomWords = [
-  "meu labubu", "papai", "meu xibiuzinho", "amor", "porra", "?",
-  "pneumoultramicroscopicosilicovulcanoconiose", "capeta",
-  "seu merda", "seu bosta", "caralho", "puta","desculpa",
-];
-
-export const penalities = [
-  { nome: "estrangeiro",         description: "Voce agora nao pode usar vogais nas mensagens" },
-  { nome: "palavra_obrigatoria", description: "Voce agora precisa terminar suas mensagens com: " },
-  { nome: "eco",                 description: "suas mensagens serao apagadas em 5 segundos" },
-  { nome: "screamer",            description: "Voce agora só pode enviar mensagens em letras maiúsculas" },
-  { nome: "poeta_binario",       description: "Voce agora só pode enviar mensagens com uma única palavra" },
-  { nome: "redigido",            description: "Todas as letras de suas mensagens agora sao spoilers!!" },
-  { nome: "sentido_invertido",   description: "Suas mensagens serão reescritas com o sentido invertido" },
-  { nome: "slowmode",            description: "Você agora está em slowmode e só pode enviar mensagem a cada 10 segundos" },
-];
+export const penalities = penaltiesData;
 
 // ==================== CONSTANTES ====================
 const INVERT_TIMEOUT_MS = ms('5s');

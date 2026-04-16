@@ -183,6 +183,12 @@ export async function execute(client, data) {
     if (event.eventKey === "rob_0") successChance = 0.0;
   }
 
+  // Check for guaranteed_rob effect (from Curso de Roubo item)
+  if (hasEffect(userId, guildId, 'guaranteed_rob')) {
+    successChance = 1.0;
+    removeEffect(userId, guildId, 'guaranteed_rob');
+  }
+
   const penalty = applyClassModifier(
     isTargeted ? PENALTY_TARGETED : PENALTY_RANDOM,
     "robCost",

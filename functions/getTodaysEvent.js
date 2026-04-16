@@ -2,77 +2,12 @@ import dayjs from "dayjs";
 import { 
   getDailyEventFromDB, 
   getHolidaysForYear, 
-  saveDailyEvent
+  saveDailyEvent,
+  saveHolidays
 } from "../database.js";
 import { log } from "../bot.js";
 import { isValidGuildId } from "./validation.js";
-
-const randomEvents = [
-  {
-    key: "no_limit",
-    name: "Dia Livre",
-    charMultiplier: 0,
-    casinoMultiplier: 1.0,
-    robSuccess: null,
-    description: "Hoje vocês não perdem caracteres por falar!!!",
-  },
-  {
-    key: "half_chars",
-    name: "Dia da economia",
-    charMultiplier: 0.5,
-    casinoMultiplier: 1.0,
-    robSuccess: null,
-    description: "Caracteres gastam só metade hoje!",
-  },
-  {
-    key: "char_1_5x",
-    name: "Dia da inflação",
-    charMultiplier: 1.5,
-    casinoMultiplier: 1.0,
-    robSuccess: null,
-    description: "Caracteres gastam 1.5x mais",
-  },
-  {
-    key: "char_2x",
-    name: "Dia AMALDIÇOADO",
-    charMultiplier: 2.0,
-    casinoMultiplier: 1.0,
-    robSuccess: null,
-    description: "Caracteres gastam o DOBRO hoje",
-  },
-  {
-    key: "casino_2x",
-    name: "Dia do Tigrinho",
-    charMultiplier: 1.0,
-    casinoMultiplier: 2.0,
-    robSuccess: null,
-    description: "Cassinos pagam 2x mais!",
-  },
-  {
-    key: "rob_100",
-    name: "Dia do Roubo",
-    charMultiplier: 1.0,
-    casinoMultiplier: 1.0,
-    robSuccess: 1.0,
-    description: "Roubo 100% garantido hoje!",
-  },
-  {
-    key: "rob_0",
-    name: "Dia da honestidade",
-    charMultiplier: 1.0,
-    casinoMultiplier: 1.0,
-    robSuccess: 0,
-    description: "A taxa de sucesso de roubo hoje é de 0%!",
-  },
-  {
-    key: "normal",
-    name: "Dia Normal",
-    charMultiplier: 1.0,
-    casinoMultiplier: 1.0,
-    robSuccess: null,
-    description: "Tudo normal hoje",
-  },
-];
+import { randomEventsData } from "../data/eventsData.js";
 
 function createNormalEvent() {
   return {
@@ -102,36 +37,40 @@ async function generateDailyEvent(today) {
     };
   }
 
+  // Halloween (outubro / mês 9)
   if (dayjs().month() === 9) {
-    const base = randomEvents[Math.floor(Math.random() * randomEvents.length)];
+    const base = randomEventsData[Math.floor(Math.random() * randomEventsData.length)];
     return {
       eventKey: "halloween",
       charMultiplier: base.charMultiplier || 1.5,
       casinoMultiplier: base.casinoMultiplier,
       robSuccess: base.robSuccess,
-      name: "Halloween do MEDO!!",
-      description: "Evento especial de Halloween! 👻",
+      name: "Halloween do MEDO!! 👻",
+      description: "Evento especial de Halloween!",
     };
   }
 
+  // Natal (dezembro / mês 11, a partir do dia 25)
   if (dayjs().month() === 11 && dayjs().date() >= 25) {
     return {
       eventKey: "natal",
       charMultiplier: 0.5,
       casinoMultiplier: 2.0,
       robSuccess: null,
-      name: "Final de ano da Yui",
+      name: "Final de ano da Yui 🎄",
       description: "Final de ano!! Gasta menos chars e cassino paga mais!",
     };
   }
 
+  // 80% de chance de dia normal
   if (Math.random() < 0.8) {
     return createNormalEvent();
   }
 
-  const random = randomEvents[Math.floor(Math.random() * randomEvents.length)];
+  // 20% de chance de evento aleatório
+  const random = randomEventsData[Math.floor(Math.random() * randomEventsData.length)];
   return {
-    eventKey: random.key,
+    eventKey: random.eventKey,
     charMultiplier: random.charMultiplier,
     casinoMultiplier: random.casinoMultiplier,
     robSuccess: random.robSuccess,
@@ -153,7 +92,7 @@ export async function getCurrentDailyEvent(guildId) {
   event = await generateDailyEvent(today);
   saveDailyEvent(guildId, event);
 
-  return event;
+  return event || createNormalEvent();
 }
 
 async function loadHolidays(year) {
