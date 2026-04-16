@@ -9,6 +9,7 @@ import {
 
 export const name = "calar";
 export const aliases = ["silenciar", "shut"];
+export const requiresCharLimit = true;
 
 const CALAR_CUSTO = 500;
 const SILENCIO_MS = 3 * 60 * 60 * 1000;
@@ -25,6 +26,10 @@ export async function execute(client, data) {
 
   if (!guildId) {
     return data.reply("Isso só funciona em servidor.");
+  }
+
+  if (!getServerConfig(guildId, 'charLimitEnabled')) {
+    return await data.reply("❌ O sistema de caracteres está desligado neste servidor!");
   }
 
   const user = getOrCreateUser(userId, displayName, guildId);

@@ -10,6 +10,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(client, context) {
   const prefix = getServerConfig(context.guildId, 'prefix') || "$";
+  const charLimitEnabled = getServerConfig(context.guildId, 'charLimitEnabled');
 
   const uniqueCommands = new Map();
   for (const [name, cmd] of client.commands) {
@@ -19,6 +20,12 @@ export async function execute(client, context) {
   }
 
   const commandsList = Array.from(uniqueCommands.values())
+    .filter(cmd => {
+      if (cmd.requiresCharLimit && !charLimitEnabled) {
+        return false;
+      }
+      return true;
+    })
     .map(cmd => {
       const cmdName = cmd.name;
       const description = cmd.description || cmd.data?.description || "Sem descrição";

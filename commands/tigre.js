@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { getOrCreateUser, getUser, reduceChars, addChars, db, addUserPropertyByAmount } from "../database.js";
+import { getOrCreateUser, getUser, reduceChars, addChars, db, addUserPropertyByAmount, getServerConfig } from "../database.js";
 import { getClassModifier } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { randomInt } from 'es-toolkit';
@@ -7,6 +7,7 @@ import { getCurrentDailyEvent } from "../functions/getTodaysEvent.js";
 
 export const name = "tigre";
 export const aliases = ["tigrinho", "casino", "slot", "slots", "apostar"];
+export const requiresCharLimit = true;
 
 const TIGRE_CUSTO = 350;
 let TIGRE_SUCCESS_MULTIPLIER = 1.0;
@@ -19,6 +20,11 @@ export async function execute(client, data) {
   const userId = data.userId;
   const guildId = data.guildId;
   const displayName = data.displayName;
+  
+  if (!getServerConfig(guildId, 'charLimitEnabled')) {
+    return await data.reply("❌ O sistema de caracteres está desligado neste servidor!");
+  }
+
   const user = getOrCreateUser(userId, displayName, guildId);
 
   if (user.charLeft < TIGRE_CUSTO) {

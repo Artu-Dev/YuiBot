@@ -115,7 +115,7 @@ export const SHOP_ITEMS = {
   moeda_da_sorte: {
     name: 'Moeda da Sorte',
     description: 'Aumenta sua sorte no tigre em 20% por 12h. Não é stackável!',
-    image: "https://c.tenor.com/uSl-YPiT9NUAAAAC/tenor.gif",
+    image: "https://media.tenor.com/aU6UpE2dXbYAAAAj/money-coin.gif",
     rarity: 'comum',
     price: () => randomInt(150, 400),
     duration: () => 12 * 60 * 60 * 1000,
@@ -126,7 +126,7 @@ export const SHOP_ITEMS = {
   manual_do_roubo: {
     name: 'Manual do Roubo',
     description: 'Seu próximo roubo tem +15% de chance de sucesso.',
-    image: "https://c.tenor.com/x5w2E3FaGr4AAAAC/tenor.gif",
+    image: "https://media.tenor.com/1aTxYPqs6zsAAAAi/minecraft-enchanted-book.gif",
     rarity: 'incomum',
     price: () => randomInt(300, 800),
     duration: () => null,
@@ -136,17 +136,17 @@ export const SHOP_ITEMS = {
   arma_de_prata: {
     name: 'Arma de Prata',
     description: 'Aumenta seu dano em roubos em 35% por 24h.',
-    image: "https://c.tenor.com/t3-kZyuRxs4AAAAC/tenor.gif",
+    image: "https://d1oc7rwabkmy5g.cloudfront.net/uploads/published_image/the_image/1730820/medium_4172678_1.jpg",
     rarity: 'incomum',
     price: () => randomInt(400, 900),
     duration: () => 24 * 60 * 60 * 1000,
     effect: 'robbery_damage_boost',
   },
 
-  curso_de_roubo: {
-    name: 'Curso de Roubo',
+  cargo_politico: {
+    name: 'Cargo Político',
     description: 'Proximo roubo 100% garantido!',
-    image: "https://c.tenor.com/LcPeC0c8vQkAAAAd/tenor.gif",
+    image: "https://c.tenor.com/Hi9CBlo402oAAAAd/tenor.gif",
     rarity: 'raro',
     price: () => randomInt(1500, 3000),
     duration: () => null,
@@ -157,7 +157,7 @@ export const SHOP_ITEMS = {
   divisor_de_riqueza: {
     name: 'Divisor de Riqueza',
     description: 'Divide os chars de alguém pela metade',
-    image: "https://media.tenor.com/8EXL_NXPYe0AAAAC/tenor.gif",
+    image: "https://c.tenor.com/5nUis3dkh7sAAAAC/tenor.gif",
     rarity: 'lendário',
     price: () => randomInt(2500, 4500),
     duration: () => null,
@@ -168,7 +168,7 @@ export const SHOP_ITEMS = {
   caos_da_yui: {
     name: 'CAOS DA YUI',
     description: 'Caos absoluto! Causa evento completamente aleatório em TODOS do servidor! 🌪️',
-    image: "https://media.tenor.com/r3BYcEJvI3EAAAAC/tenor.gif",
+    image: "https://media.tenor.com/OwPXSfWFzekAAAAi/fake-item-box-artwork.gif",
     rarity: 'lendário',
     price: () => randomInt(5000, 8000),
     duration: () => null,

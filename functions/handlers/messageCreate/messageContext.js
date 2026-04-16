@@ -11,18 +11,15 @@ import { replaceMentions } from "../../utils.js";
  */
 
 export async function processMessageContext(message, userId, displayName, guildId, channelId, imageUrl) {
-  // Verificar se canal está no whitelist
   const channelSet = new Set(getChannels(guildId));
   if (!channelSet.has(channelId)) return false;
 
-  // Verificar limite de chars
   const userData = getOrCreateUser(userId, displayName, guildId);
   if (!userData) return false;
 
   const validCharsMessage = await limitChar(message, userData);
   if (!validCharsMessage) return false;
 
-  // Salvar contexto
   try {
     await saveMessageContext(
       channelId,

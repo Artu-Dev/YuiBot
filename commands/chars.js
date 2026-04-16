@@ -1,8 +1,9 @@
 import { SlashCommandBuilder } from "discord.js";
-import { getOrCreateUser } from "../database.js";
+import { getOrCreateUser, getServerConfig } from "../database.js";
 
 export const name = "chars";
 export const aliases = ["char", "caracteres", "saldo"];
+export const requiresCharLimit = true;
 
 export const data = new SlashCommandBuilder()
   .setName("chars")
@@ -27,6 +28,11 @@ function parseArgs(data) {
 
 export async function execute(client, data) {
   const { userId, guildId, displayName } = data;
+  
+  if (!getServerConfig(guildId, 'charLimitEnabled')) {
+    return await data.reply("❌ O sistema de caracteres está desligado neste servidor!");
+  }
+
   const { mentionedUser } = parseArgs(data);
 
   const targetDisplayName = mentionedUser?.username || displayName;

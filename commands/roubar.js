@@ -7,6 +7,7 @@ import {
   getUser,
   reduceChars,
   setUserProperty,
+  getServerConfig,
 } from "../database.js";
 import {
   applyClassModifier,
@@ -31,6 +32,7 @@ const LOADING_TIME = 5000;
 
 export const name = "roubar";
 export const aliases = ["steal", "rob", "assaltar", "roubo"];
+export const requiresCharLimit = true;
 
 export const data = new SlashCommandBuilder()
   .setName("roubar")
@@ -83,6 +85,10 @@ function parseArgs(data) {
 
 export async function execute(client, data) {
   const { userId, guildId, displayName } = data;
+  
+  if (!getServerConfig(guildId, 'charLimitEnabled')) {
+    return await data.reply("❌ O sistema de caracteres está desligado neste servidor!");
+  }
   
   if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
     return data.reply("❌ Erro de configuração - IDs inválidos");

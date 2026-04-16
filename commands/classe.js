@@ -1,10 +1,11 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder, ChannelFlags } from "discord.js";
-import { getOrCreateUser, getBotPrefix } from "../database.js";
+import { getOrCreateUser, getBotPrefix, getServerConfig } from "../database.js";
 import { CLASSES, CLASS_KEYS_ORDERED, unlockClass, formatModifier } from "../functions/classes.js";
 import { customEmojis } from "../functions/utils.js";
 
 export const name = "classe";
 export const aliases = ["classes", "class", "cls"];
+export const requiresCharLimit = true;
 
 const attributeDescriptions = {
   lucky: "Sorte no tigre",
@@ -64,6 +65,11 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(client, data) {
   const { userId, guildId, displayName } = data;
+  
+  if (!getServerConfig(guildId, 'charLimitEnabled')) {
+    return await data.reply("❌ O sistema de caracteres está desligado neste servidor!");
+  }
+
   const userData = getOrCreateUser(userId, displayName, guildId);
 
   const currentClassKey = userData.user_class ?? "none";

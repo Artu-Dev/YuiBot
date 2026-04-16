@@ -108,7 +108,6 @@ export const limitChar = async (message, userData) => {
   const oldValue = Number(userData.charLeft) || 0;
   const newValue = reduceChars(userId, guildId, textSize);
 
-  // ====================== REAÇÃO DE TIER ======================
   const getTier = (value) => (value > 1000 ? "green" : value > 500 ? "yellow" : "red");
 
   const tierEmoji = { green: "🟢", yellow: "🟡", red: "🔴" };
@@ -145,7 +144,7 @@ export const limitChar = async (message, userData) => {
       message,
       `!${displayName} seus caracteres acabaram! Você recebeu a penalidade: **${randomPenality.nome}**`
     );
-    await message.channel.send(`${randomPenality.description}${randomWord}`);
+    await message.channel.send(`${randomPenality.description} ${randomWord}`);
   } else if (userData.penalitySetByAdmin !== 1 && newValue > 0 && userData.penality) {
     removeUserPenality(userId, guildId);
     setUserProperty("penalityWord", userId, guildId, "");

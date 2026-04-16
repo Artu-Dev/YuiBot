@@ -8,6 +8,7 @@ import {
   addUserPropertyByAmount,
   setUserProperty,
   addUserProperty,
+  getServerConfig,
 } from "../database.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { sample } from 'es-toolkit';
@@ -15,6 +16,7 @@ import { ALLOWED_MESSAGE_BOT_ID } from "../data/config.js";
 
 export const name = "recompensa";
 export const aliases = ["bounty", "bountyhead", "recompensas"];
+export const requiresCharLimit = true;
 
 export const data = new SlashCommandBuilder()
   .setName("recompensa")
@@ -58,6 +60,11 @@ function parseArgs(data) {
 
 export async function execute(client, data) {
   const { userId, displayName, guildId, content } = data;
+  
+  if (!getServerConfig(guildId, 'charLimitEnabled')) {
+    return await data.reply("❌ O sistema de caracteres está desligado neste servidor!");
+  }
+
   const { targetUser, amount } = parseArgs(data);
 
   if (!targetUser) {

@@ -12,13 +12,14 @@ import {
 import { getInventory, removeFromInventory } from '../functions/inventario.js';
 import { addEffect } from '../functions/effects.js';
 import {SHOP_ITEMS} from '../data/shopItems.js';
-import {db} from '../database.js';
+import {db, getServerConfig} from '../database.js';
 import { randomInt } from 'es-toolkit';
 
 // ───────────────────────── helpers ──────────────────────────
 
 export const name = "usar";
 export const aliases = ["ativar", "use", "equipar"];
+export const requiresCharLimit = true;
 
 const SLOT_EMOJI = ['1️⃣', '2️⃣', '3️⃣'];
 const MAX_DISPLAY = 3;
@@ -254,6 +255,31 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
               return `Nada aconteceu... talvez próxima vez! 🎲`;
             }
           }
+        },
+        {
+          name: 'Premio pela cabeça!',
+          action: async () => {
+            const { getGuildUsers } = await import('../database.js');
+            const users = getGuildUsers(guildId);
+            if (users.length === 0) {
+              return `Não há ninguém pra colocar uma recompensa! 😅`;
+            }
+            
+            const targetUser = users[randomInt(0, users.length - 1)];
+            const bountyAmount = randomInt(500, 2500);
+            const userData = getUser(userId, guildId);
+            
+            setUserProperty('bounty_placer', targetUser.id, guildId, userData?.display_name || 'Usuário Desconhecido');
+            setUserProperty('total_bounty_value', targetUser.id, guildId, bountyAmount);
+            
+            const message = targetUser.id === userId
+              ? `Uma recompensa de **${bountyAmount}** chars foi colocada na SUA cabeça! Cuidado!
+              \n\nQue começe a caçada! `
+              : `Uma recompensa de **${bountyAmount}** chars foi colocada na cabeça de <@${targetUser.id}>!
+              \n\nQue começe a caçada! `;
+
+            return message;
+          }
         }
       ];
       
@@ -334,6 +360,14 @@ export const data = new SlashCommandBuilder()
 export async function execute(client, data) {
   const userId = data.userId;
   const guildId = data.guildId;
+  
+  if (!getServerConfig(guildId, 'charLimitEnabled')) {
+    return await data.reply({
+      content: "❌ O sistema de caracteres está desligado neste servidor!",
+      flags: ChannelFlags.Ephemeral
+    });
+  }
+
   const inventory = getInventory(userId, guildId);
 
   let displayStart = 0;

@@ -1,10 +1,11 @@
 import dayjs from "dayjs";
-import { addChars, getOrCreateUser, setUserProperty } from "../database.js";
+import { addChars, getOrCreateUser, setUserProperty, getServerConfig } from "../database.js";
 import { getClassModifier } from "../functions/classes.js";
 import { SlashCommandBuilder, ChannelFlags } from "discord.js";
 
 export const name = "dia";
 export const aliases = ["daily", "diario", "bonusdiario"];
+export const requiresCharLimit = true;
 
 export const data = new SlashCommandBuilder()
   .setName("dia")
@@ -12,6 +13,13 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(client, data) {
     const { userId, guildId, displayName } = data;
+
+    if (!getServerConfig(guildId, 'charLimitEnabled')) {
+        return await data.reply({ 
+            content: "❌ O sistema de caracteres está desligado neste servidor!", 
+            flags: ChannelFlags.Ephemeral 
+        });
+    }
 
     const userData = getOrCreateUser(userId, displayName, guildId);
     const lastDaily = userData.lastDailyBonus || 0;

@@ -3,7 +3,8 @@ import {
   getOrCreateUser, 
   addChars, 
   reduceChars, 
-  addUserPropertyByAmount 
+  addUserPropertyByAmount,
+  getServerConfig 
 } from "../database.js";
 import { getClassModifier } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
@@ -11,6 +12,7 @@ import { getCurrentDailyEvent } from "../functions/getTodaysEvent.js";
 
 export const name = "crash";
 export const aliases = ["crashgame", "cg", "aviaozinho"];
+export const requiresCharLimit = true;
 
 // ========== CONFIGURAÇÕES DO CRASH ==========
 const LUCK_FACTOR = 1.0;      
@@ -106,6 +108,10 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(client, data) {
   const { userId, guildId, displayName, fromInteraction } = data;
+
+  if (!getServerConfig(guildId, 'charLimitEnabled')) {
+    return await data.reply("❌ O sistema de caracteres está desligado neste servidor!");
+  }
 
   let aposta;
   if (fromInteraction) {

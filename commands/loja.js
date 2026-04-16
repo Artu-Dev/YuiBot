@@ -9,12 +9,13 @@ import {
 } from 'discord.js';
 import { getShop, getShopItem, decrementStock } from '../functions/shop.js';
 import { addToInventory, getInventory } from '../functions/inventario.js';
-import { getUser, reduceChars } from '../database.js';
+import { getUser, reduceChars, getServerConfig } from '../database.js';
 import {SHOP_ITEMS} from '../data/shopItems.js';
 import { customEmojis } from '../functions/utils.js';
 
 export const name = "loja";
 export const aliases = ['shop', 'mall', 'comprar', 'mercado'];
+export const requiresCharLimit = true;
 
 const RARITY_COLOR = {
   comum:    0x95a5a6,
@@ -81,7 +82,7 @@ function buildNavRow(shopItem, index, total, userChars = 0) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('shop_prev')
-      .setEmoji('Left Arrow')
+      .setEmoji('◀️')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(index === 0),
 
@@ -93,7 +94,7 @@ function buildNavRow(shopItem, index, total, userChars = 0) {
 
     new ButtonBuilder()
       .setCustomId('shop_next')
-      .setEmoji('Right Arrow')
+      .setEmoji('▶️')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(index === total - 1),
   );
@@ -149,11 +150,16 @@ export const data = new SlashCommandBuilder()
 import { isValidUserId, isValidGuildId } from "../functions/validation.js";
 
 export async function execute(client, data) {
+  const guildId = data.guildId;
+  
+  if (!getServerConfig(guildId, 'charLimitEnabled')) {
+    return await data.reply("❌ O sistema de caracteres está desligado neste servidor!");
+  }
+  
   if (!isValidGuildId(data.guildId)) {
     return await data.reply("Erro de configuração do servidor");
   }
 
-  const guildId = data.guildId;
   const shop = getShop(guildId);
 
   if (!shop || !shop.items || shop.items.length === 0) {

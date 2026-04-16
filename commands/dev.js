@@ -1,14 +1,15 @@
 import { SlashCommandBuilder, EmbedBuilder, ChannelFlags } from "discord.js";
-import { unlockAchievement, addChars, getUser } from "../database.js";
+import { unlockAchievement, getUser } from "../database.js";
 import { log } from "../bot.js";
 
 const OWNER_ID = "924279308900499457";
 
 export const name = "dev";
+export const aliases = ["d"];
 
 export const data = new SlashCommandBuilder()
   .setName("dev")
-  .setDescription("🔧 Comandos de desenvolvimento (apenas owner)")
+  .setDescription("Comandos de desenvolvimento (apenas owner)")
   .addSubcommand(sub =>
     sub
       .setName("achievement")
@@ -50,56 +51,101 @@ export const data = new SlashCommandBuilder()
       .setDescription("Recarrega a configuração do bot")
   );
 
+function parseArgs(data) {
+  if (data.fromInteraction) {
+    const subcommand = data.options.getSubcommand();
+    return {
+      subcommand,
+      targetUser: data.options.getUser("user"),
+      achievementId: data.options.getString("achievement"),
+      amount: data.options.getInteger("amount"),
+    };
+  }
+
+  const args = data.content?.split(/\s+/).slice(1) ?? [];
+  return {
+    subcommand: args[0]?.toLowerCase(),
+    args,
+    targetUser: data.mentions?.users?.first(),
+  };
+}
+
 export async function execute(client, data) {
-  if (data.userId !== OWNER_ID) {
+  const { userId, guildId } = data;
+
+  if (userId !== OWNER_ID) {
     const embed = new EmbedBuilder()
       .setColor(0xff0000)
       .setTitle("❌ Acesso Negado")
       .setDescription("Apenas o owner pode usar esses comandos!");
 
-    const replyOpts = { embeds: [embed] };
-    if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
-    return await data.reply(replyOpts);
+    const opts = { embeds: [embed] };
+    if (data.isEphemeral) opts.flags = ChannelFlags.Ephemeral;
+    return data.reply(opts);
   }
 
-  const subcommand = data.options?.getSubcommand?.() || data.args?.[0];
-  const guildId = data.guildId || data.guild?.id;
+  const { subcommand, targetUser, achievementId, amount, args } = parseArgs(data);
+
+  if (!subcommand) {
+    return data.reply("❌ Use: `$dev <subcomando> [argumentos]`\nExemplo: `$dev chars @usuário 3000`");
+  }
 
   try {
-    if (subcommand === "achievement") {
-      return await handleAchievement(data, guildId);
-    } else if (subcommand === "chars") {
-      return await handleChars(data, guildId);
-    } else if (subcommand === "shop-reset") {
-      return await handleShopReset(data, guildId);
-    } else if (subcommand === "user-info") {
-      return await handleUserInfo(data, guildId);
-    } else if (subcommand === "random-achievement") {
-      return await handleRandomAchievement(data);
-    } else if (subcommand === "servers") {
-      return await handleServers(data, client);
-    } else if (subcommand === "reload-config") {
-      return await handleReloadConfig(data);
+    switch (subcommand) {
+      case "achievement":
+        return await handleAchievement(data, guildId, targetUser, achievementId, args);
+
+      case "chars":
+        return await handleChars(data, guildId, targetUser, amount, args);
+
+      case "shop-reset":
+        return await handleShopReset(data, guildId);
+
+      case "user-info":
+        return await handleUserInfo(data, guildId, targetUser, args);
+
+      case "random-achievement":
+        return await handleRandomAchievement(data);
+
+      case "servers":
+        return await handleServers(data, client);
+
+      case "reload-config":
+        return await handleReloadConfig(data);
+
+      default:
+        return data.reply(`❌ Subcomando inválido: **${subcommand}**`);
     }
   } catch (error) {
     log(`❌ Erro em dev/${subcommand}: ${error.message}`, "Dev", 31);
+
     const embed = new EmbedBuilder()
       .setColor(0xff0000)
       .setTitle("❌ Erro")
-      .setDescription(`\`\`\`${error.message}\`\`\``);
+      .setDescription(`\`\`\`js\n${error.message}\n\`\`\``);
 
-    const replyOpts = { embeds: [embed] };
-    if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
-    return await data.reply(replyOpts);
+    const opts = { embeds: [embed] };
+    if (data.isEphemeral) opts.flags = ChannelFlags.Ephemeral;
+    return data.reply(opts);
   }
 }
 
-async function handleAchievement(data, guildId) {
-  const targetUser = data.options?.getUser?.("user");
-  const achievementId = data.options?.getString?.("achievement");
+// ====================== HANDLERS ======================
 
-  if (!targetUser || !achievementId) {
-    throw new Error("User ou achievement não fornecido");
+async function handleAchievement(data, guildId, targetUser, achievementId, args = []) {
+  if (data.fromInteraction) {
+    if (!targetUser || !achievementId) {
+      throw new Error("Usuário e/ou ID da conquista não informados.");
+    }
+  } else {
+    if (!targetUser && args[1]) {
+      targetUser = await data.client.users.fetch(args[1]).catch(() => null);
+    }
+    achievementId = achievementId || args[2];
+
+    if (!targetUser || !achievementId) {
+      throw new Error("Uso: `$dev achievement @usuário <achievementID>`");
+    }
   }
 
   const success = unlockAchievement(targetUser.id, guildId, achievementId);
@@ -109,29 +155,33 @@ async function handleAchievement(data, guildId) {
     .setTitle("🏆 Conquista")
     .setDescription(
       success
-        ? `Conquista **${achievementId}** desbloqueada para ${targetUser.username}!`
-        : `Conquista **${achievementId}** já estava desbloqueada para ${targetUser.username}.`
+        ? `Conquista **${achievementId}** desbloqueada para **${targetUser.username}**!`
+        : `Conquista **${achievementId}** já estava desbloqueada para **${targetUser.username}**.`
     );
 
-  const replyOpts = { embeds: [embed] };
-  if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
-  return await data.reply(replyOpts);
+  const opts = { embeds: [embed] };
+  if (data.isEphemeral) opts.flags = ChannelFlags.Ephemeral;
+  return data.reply(opts);
 }
 
-async function handleChars(data, guildId) {
-  const targetUser = data.options?.getUser?.("user");
-  const amount = data.options?.getInteger?.("amount");
+async function handleChars(data, guildId, targetUser, amount, args = []) {
+  if (data.fromInteraction) {
+    if (!targetUser || amount === null) {
+      throw new Error("Usuário e/ou quantidade não informados.");
+    }
+  } else {
+    if (!targetUser && args[1]) {
+      targetUser = await data.client.users.fetch(args[1]).catch(() => null);
+    }
+    amount = amount || parseInt(args[2]);
 
-  if (!targetUser) {
-    throw new Error("User não fornecido");
+    if (!targetUser || isNaN(amount) || amount < 0) {
+      throw new Error("Uso: `$dev chars @usuário 3000`");
+    }
   }
 
-  if (amount === null || amount === undefined) {
-    throw new Error("Amount não fornecido");
-  }
-
-  // Atualizar chars diretamente
   const { db } = await import("../database.js");
+
   db.prepare("UPDATE users SET charLeft = ? WHERE id = ? AND guild_id = ?").run(
     amount,
     targetUser.id,
@@ -140,72 +190,72 @@ async function handleChars(data, guildId) {
 
   const embed = new EmbedBuilder()
     .setColor(0x00ff00)
-    .setTitle("💰 Chars Ajustado")
-    .setDescription(`Chars de ${targetUser.username} agora: **${amount}**`);
+    .setTitle("💰 Chars Atualizados")
+    .setDescription(`Chars de **${targetUser.username}** definidos para **${amount}**.`);
 
-  const replyOpts = { embeds: [embed] };
-  if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
-  return await data.reply(replyOpts);
+  const opts = { embeds: [embed] };
+  if (data.isEphemeral) opts.flags = ChannelFlags.Ephemeral;
+  return data.reply(opts);
 }
 
 async function handleShopReset(data, guildId) {
   const { db } = await import("../database.js");
-
-  // Deletar todos os itens da loja diária
   db.prepare("DELETE FROM daily_shop WHERE guild_id = ?").run(guildId);
 
   const embed = new EmbedBuilder()
     .setColor(0x00ff00)
-    .setTitle("🏪 Loja Resetada")
-    .setDescription("Loja diária foi resetada para este servidor!");
+    .setTitle("🏪 Loja Diária Resetada")
+    .setDescription("A loja diária deste servidor foi resetada com sucesso!");
 
-  const replyOpts = { embeds: [embed] };
-  if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
-  return await data.reply(replyOpts);
+  const opts = { embeds: [embed] };
+  if (data.isEphemeral) opts.flags = ChannelFlags.Ephemeral;
+  return data.reply(opts);
 }
 
-async function handleUserInfo(data, guildId) {
-  const targetUser = data.options?.getUser?.("user");
+async function handleUserInfo(data, guildId, targetUser, args = []) {
+  if (!data.fromInteraction) {
+    if (!targetUser && args[1]) {
+      targetUser = await data.client.users.fetch(args[1]).catch(() => null);
+    }
+  }
 
   if (!targetUser) {
-    throw new Error("User não fornecido");
+    throw new Error("Uso: `$dev user-info @usuário` ou `/dev user-info user:@usuário`");
   }
 
   const user = getUser(targetUser.id, guildId);
   if (!user) {
-    throw new Error(`Usuário ${targetUser.username} não encontrado no BD`);
+    throw new Error(`Usuário ${targetUser.username} não encontrado no banco de dados.`);
   }
 
   const embed = new EmbedBuilder()
     .setColor(0x0099ff)
     .setTitle(`👤 ${targetUser.username}`)
     .addFields(
-      { name: "ID", value: user.id },
-      { name: "Chars", value: String(user.charLeft), inline: true },
-      { name: "Mensagens", value: String(user.messages_sent), inline: true },
+      { name: "ID", value: user.id, inline: true },
+      { name: "Chars", value: String(user.charLeft || 0), inline: true },
+      { name: "Mensagens", value: String(user.messages_sent || 0), inline: true },
       { name: "Penalidade", value: user.penality || "Nenhuma", inline: true },
-      { name: "Conquistas", value: String(Object.keys(JSON.parse(user.achievements_unlocked || "{}")).length) }
+      { name: "Conquistas", value: String(Object.keys(JSON.parse(user.achievements_unlocked || "{}")).length), inline: true }
     );
 
-  const replyOpts = { embeds: [embed] };
-  if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
-  return await data.reply(replyOpts);
+  const opts = { embeds: [embed] };
+  if (data.isEphemeral) opts.flags = ChannelFlags.Ephemeral;
+  return data.reply(opts);
 }
 
 async function handleRandomAchievement(data) {
   const { achievements } = await import("../functions/achievmentsData.js");
-  
   const achKeys = Object.keys(achievements);
-  if (achKeys.length === 0) {
-    throw new Error("Nenhuma conquista encontrada");
-  }
+
+  if (achKeys.length === 0) throw new Error("Nenhuma conquista encontrada.");
 
   const randomKey = achKeys[Math.floor(Math.random() * achKeys.length)];
   const ach = achievements[randomKey];
 
   const embed = new EmbedBuilder()
     .setColor(0xffaa00)
-    .setTitle(`${ach.icon} ${ach.title}`)
+    .setTitle(`${ach.icon || "🏆"} ${ach.title}`)
     .setDescription(ach.description)
     .addFields(
       { name: "ID", value: `\`${randomKey}\``, inline: true },
@@ -213,13 +263,11 @@ async function handleRandomAchievement(data) {
       { name: "Chars Reward", value: String(ach.charPoints || 0), inline: true }
     );
 
-  if (ach.secret) {
-    embed.setFooter({ text: "🤫 Conquista Secreta" });
-  }
+  if (ach.secret) embed.setFooter({ text: "🤫 Conquista Secreta" });
 
-  const replyOpts = { embeds: [embed] };
-  if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
-  return await data.reply(replyOpts);
+  const opts = { embeds: [embed] };
+  if (data.isEphemeral) opts.flags = ChannelFlags.Ephemeral;
+  return data.reply(opts);
 }
 
 async function handleServers(data, client) {
@@ -231,32 +279,29 @@ async function handleServers(data, client) {
   }));
 
   const serverList = servers
-    .map((s, idx) => `${idx + 1}. **${s.name}** (\`${s.id}\`) - ${s.members} membros`)
+    .map((s, i) => `${i + 1}. **${s.name}** (\`${s.id}\`) - ${s.members} membros`)
     .join("\n");
 
   const embed = new EmbedBuilder()
     .setColor(0x7289da)
-    .setTitle(`🖥️ Servidores do Bot`)
-    .setDescription(serverList || "Nenhum servidor")
+    .setTitle("🖥️ Servidores do Bot")
+    .setDescription(serverList || "Nenhum servidor encontrado")
     .setFooter({ text: `Total: ${servers.length} servidores` });
 
-  const replyOpts = { embeds: [embed] };
-  if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
-  return await data.reply(replyOpts);
+  const opts = { embeds: [embed] };
+  if (data.isEphemeral) opts.flags = ChannelFlags.Ephemeral;
+  return data.reply(opts);
 }
 
 async function handleReloadConfig(data) {
-  try {
-    const Config = await import("../data/config.js");
-    const embed = new EmbedBuilder()
-      .setColor(0x00ff00)
-      .setTitle("✅ Config Recarregada")
-      .setDescription("Configuração do bot foi recarregada com sucesso!");
+  const Config = await import("../data/config.js");
 
-    const replyOpts = { embeds: [embed] };
-    if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
-    return await data.reply(replyOpts);
-  } catch (err) {
-    throw new Error(`Erro ao recarregar config: ${err.message}`);
-  }
+  const embed = new EmbedBuilder()
+    .setColor(0x00ff00)
+    .setTitle("✅ Config Recarregada")
+    .setDescription("A configuração do bot foi recarregada com sucesso!");
+
+  const opts = { embeds: [embed] };
+  if (data.isEphemeral) opts.flags = ChannelFlags.Ephemeral;
+  return data.reply(opts);
 }

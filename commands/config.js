@@ -42,6 +42,12 @@ const configOptions = [
     value: "limitChar",
     description: "Limite inicial por usuário",
     type: "number"
+  },
+  {
+    label: "Sistema de limitador de chars",
+    value: "charLimitEnabled",
+    description: "Habilitar/desabilitar economia de chars",
+    type: "boolean"
   }
 ];
 
@@ -50,6 +56,7 @@ function buildMainEmbed(guildId) {
   const generate = getServerConfig(guildId, 'generateMessage') ?? false;
   const speak = getServerConfig(guildId, 'speakMessage') ?? false;
   const limit = getServerConfig(guildId, 'limitChar') ?? 4000;
+  const charLimitEnabled = getServerConfig(guildId, 'charLimitEnabled') ?? true;
 
   return new EmbedBuilder()
     .setColor("#5865F2")
@@ -59,7 +66,8 @@ function buildMainEmbed(guildId) {
       { name: "Prefixo", value: `\`${prefix}\``, inline: true },
       { name: "IA no Chat", value: generate ? "✅ Ligado" : "❌ Desligado", inline: true },
       { name: "TTS no Voice", value: speak ? "✅ Ligado" : "❌ Desligado", inline: true },
-      { name: "Limite de Chars", value: `${limit}`, inline: true }
+      { name: "Limite de Chars", value: `${limit}`, inline: true },
+      { name: "Limitador de Chars", value: charLimitEnabled ? "✅ Ligado" : "❌ Desligado", inline: true }
     )
     .setFooter({ text: "Apenas administradores podem alterar • Expira em 60 segundos" });
 }

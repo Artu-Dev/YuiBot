@@ -6,6 +6,7 @@ import {
   reduceChars,
   getBotPrefix,
   addUserPropertyByAmount,
+  getServerConfig,
 } from "../database.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { sample } from 'es-toolkit';
@@ -13,6 +14,7 @@ import { ALLOWED_MESSAGE_BOT_ID } from "../data/config.js";
 
 export const name = "pix";
 export const aliases = ["doar", "donate", "give", "transferir"];
+export const requiresCharLimit = true;
 
 export const data = new SlashCommandBuilder()
   .setName("pix")
@@ -56,6 +58,11 @@ function parseArgs(data) {
 
 export async function execute(client, data) {
   const { userId, displayName, guildId, content } = data;
+  
+  if (!getServerConfig(guildId, 'charLimitEnabled')) {
+    return await data.reply("❌ O sistema de caracteres está desligado neste servidor!");
+  }
+
   const { targetUser, amount } = parseArgs(data);
 
   if (!targetUser) {
