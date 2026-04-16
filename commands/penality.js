@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from "discord.js";
 import { getOrCreateUser, getUserPenality } from "../database.js";
-import { penalities } from "../functions/penalities.js";
+import { penalities } from "../functions/penalties/penalities.js";
 
 export const name = "penality";
 export const aliases = ["penalidade", "penalidades", "penalitys"];

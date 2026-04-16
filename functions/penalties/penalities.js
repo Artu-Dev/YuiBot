@@ -1,9 +1,9 @@
-import { getLastAuthorMessage, reduceChars, setUserProperty } from "../database.js";
-import { getOrCreateWebhook } from "./utils.js";
-import { invertMessage } from "./generateRes.js";
-import { hasEffect } from "./effects.js";
+import { getLastAuthorMessage, reduceChars, setUserProperty } from "../../database.js";
+import { getOrCreateWebhook } from "../utils.js";
+import { invertMessage } from "../ai/generateResponse.js";
+import { hasEffect } from "../effects.js";
 import ms from 'ms';
-import { log } from "../bot.js";
+import { log } from "../../bot.js";
 import dayjs from "dayjs";
 
 

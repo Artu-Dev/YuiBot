@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } from "discord.js";
-import { generateFakeNews, generateFullArticle } from "../functions/generateNews.js";
+import { generateFakeNews, generateFullArticle } from "../functions/ai/generateNews.js";
 import { createNewsImage } from "../functions/newsImage.js";
 import { log } from "../bot.js";
 

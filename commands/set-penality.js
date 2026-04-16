@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, ChannelFlags } from "discord.js";
 import { getOrCreateUser, getBotPrefix, setUserPenality } from "../database.js";
-import { penalities } from "../functions/penalities.js";
+import { penalities } from "../functions/penalties/penalities.js";
 
 export const name = "set-penality";
 export const aliases = ["set-penalidade", "add-penality", "add-penalidade", "add-p", "set-p"];

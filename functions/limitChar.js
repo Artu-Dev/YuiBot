@@ -1,6 +1,6 @@
 import { dbBot, reduceChars, setUserProperty, addChars, getRandomProhibitedWord, getServerConfig, getPoorestGuildUsers, addCharsBulk, removeUserPenality } from "../database.js";
 import { parseMessage, safeReplyToMessage } from "./utils.js";
-import { penalities, handlePenalities, randomWords } from "./penalities.js";
+import { penalities, handlePenalities, randomWords } from "./penalties/penalities.js";
 import { getCurrentDailyEvent } from "./getTodaysEvent.js";
 import { getCharMultiplier } from "./effects.js";
 import dayjs from "dayjs";

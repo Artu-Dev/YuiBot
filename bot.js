@@ -107,6 +107,9 @@ async function main() {
   const eventsPath = path.join(process.cwd(), "events");
 
   for (const file of readdirSync(eventsPath)) {
+    // Skip directories (handlers/ will be used in Phase 3)
+    if (file.startsWith(".") || !file.endsWith(".js")) continue;
+    
     try {
       const event = await import(`./events/${file}`);
       if (!event.name || !event.execute) {

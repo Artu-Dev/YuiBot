@@ -2,11 +2,11 @@ import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { config } from "dotenv";
 import { createWriteStream } from "fs";
 import { Readable } from "stream";
-import { joinCall } from "../functions/voice.js";
+import { joinCall } from "./voice.js";
 import { AudioPlayerStatus, createAudioPlayer, createAudioResource } from "@discordjs/voice";
 import { unlinkSync } from "fs";
-import { dbBot } from "../database.js";
-import { log } from "../bot.js";
+import { dbBot } from "../../database.js";
+import { log } from "../../bot.js";
 config();
 
 const elevenlabs = new ElevenLabsClient({
@@ -56,7 +56,7 @@ function fixText(text) {
     if (count <= 5) {
       return "<laugh>hahahahahaha</laugh>";
     } else {
-      return "<laughing>HAHAHAHHAHAHHAHAHAHHAHAHAHHAHAHAHHAHAHHAHAHAHHAHAHAH<laughing>";
+      return "<laughing>HAHAHAHHAHAHAHAHHAHAHAH<laughing>";
     }
   });
 

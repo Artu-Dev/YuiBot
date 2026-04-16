@@ -1,5 +1,5 @@
-import { dbBot, getRecentMessages } from "../database.js";
-import ollama, { ollamaGenerateQueued } from "./ollamaClient.js";
+import { dbBot, getRecentMessages } from "../../database.js";
+import ollama, { ollamaGenerateQueued } from "./clients/ollamaClient.js";
 import { sample } from 'es-toolkit';
 
 // ==================== TEMPLATES ====================

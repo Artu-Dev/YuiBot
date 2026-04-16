@@ -1,5 +1,5 @@
 import { log } from "../bot.js";
-import { invertMessage } from "./generateRes.js";
+import { invertMessage } from "./ai/generateResponse.js";
 import { getOrCreateWebhook, messageContainsDailyWord } from "./utils.js";
 
 async function randomResend(message) {

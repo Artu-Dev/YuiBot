@@ -1,5 +1,5 @@
 import Groq from "groq-sdk";
-import { dbBot } from "../database.js";
+import { dbBot } from "../../../database.js";
 
 export function hasGroqApiKey() {
   return Boolean(process.env.GROQ_API_KEY?.trim());

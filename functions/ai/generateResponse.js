@@ -3,16 +3,16 @@ import {
   getRecentMessages,
   getMessageContextByMessageId,
   setMessageImageAnalysis,
-} from "../database.js";
-import { parseMessage, replaceMentions } from "./utils.js";
-import ollama, { ollamaGenerateQueued } from "./ollamaClient.js";
+} from "../../database.js";
+import { parseMessage, replaceMentions } from "../utils.js";
+import ollama, { ollamaGenerateQueued } from "./clients/ollamaClient.js";
 import {
   chatCompletion,
   hasGroqApiKey,
   resolveGroqChatModel,
   resolveGroqInvertModel,
-} from "./groqClient.js";
-import { log } from "../bot.js";
+} from "./clients/groqClient.js";
+import { log } from "../../bot.js";
 
 // ==================== CONSTANTES ====================
 const DISCORD_MESSAGE_MAX = 2000;
