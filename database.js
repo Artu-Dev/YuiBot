@@ -74,7 +74,6 @@ const USERS_SCHEMA = {
   total_robberies: "INTEGER DEFAULT 0",
   daily_robberies: "INTEGER DEFAULT 0",
 
-  luck_stat: "INTEGER DEFAULT 0",
   tiger_pending_double: "INTEGER DEFAULT 0",
   lifetime_tiger_spins: "INTEGER DEFAULT 0",
   tiger_jackpots: "INTEGER DEFAULT 0",

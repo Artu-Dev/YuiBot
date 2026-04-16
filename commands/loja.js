@@ -32,7 +32,6 @@ const RARITY_LABEL = {
 const MAX_INVENTORY = 3;
 
 function buildItemEmbed(shopItem, itemDef, index, total) {
-  // Verificações de segurança
   if (!shopItem || !itemDef) {
     return new EmbedBuilder()
       .setTitle('❌ Erro')
@@ -144,7 +143,7 @@ export async function execute(client, data) {
   const shop = getShop(guildId);
 
   if (!shop || !shop.items || shop.items.length === 0) {
-    return data.reply({ content: '❌ A loja está vazia hoje ou houve um erro ao carregar!', ephemeral: true });
+    return data.reply({ content: '❌ A loja está vazia hoje ou houve um erro ao carregar!', flags: ChannelFlags.Ephemeral });
   }
 
   let index = 0;
@@ -158,7 +157,7 @@ export async function execute(client, data) {
 
   // Verifica se o primeiro item é válido
   if (!getCurrentItem() || !getCurrentDef()) {
-    return data.reply({ content: '❌ Erro ao carregar itens da loja!', ephemeral: true });
+    return data.reply({ content: '❌ Erro ao carregar itens da loja!', flags: ChannelFlags.Ephemeral });
   }
 
   const reply = await data.reply({
@@ -174,7 +173,7 @@ export async function execute(client, data) {
 
   collector.on('collect', async (btn) => {
     if (btn.user.id !== data.userId)
-      return btn.reply({ content: '❌ Só quem abriu a loja pode interagir.', ephemeral: true });
+      return btn.reply({ content: '❌ Só quem abriu a loja pode interagir.', flags: ChannelFlags.Ephemeral });
 
     if (btn.customId === 'shop_prev' || btn.customId === 'shop_next') {
       if (btn.customId === 'shop_prev') index = Math.max(0, index - 1);
@@ -184,7 +183,7 @@ export async function execute(client, data) {
       const currDef = getCurrentDef();
       
       if (!currItem || !currDef) {
-        return btn.reply({ content: '❌ Erro ao navegar entre os itens!', ephemeral: true });
+        return btn.reply({ content: '❌ Erro ao navegar entre os itens!', flags: ChannelFlags.Ephemeral });
       }
 
       return btn.update({
@@ -197,7 +196,7 @@ export async function execute(client, data) {
       const itemId = btn.customId.replace('shop_buy_', '');
       
       if (itemId === 'unknown') {
-        return btn.reply({ content: '❌ Item inválido!', ephemeral: true });
+        return btn.reply({ content: '❌ Item inválido!', flags: ChannelFlags.Ephemeral });
       }
       
       const result = await handleBuy(btn.user, guildId, itemId);
@@ -212,7 +211,7 @@ export async function execute(client, data) {
         components: [buildNavRow(getCurrentItem(), index, shop.items.length)],
       });
 
-      return btn.followUp({ content: result, ephemeral: true });
+      return btn.followUp({ content: result, flags: ChannelFlags.Ephemeral });
     }
   });
 

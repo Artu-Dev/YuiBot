@@ -6,6 +6,7 @@ import {
   ActionRowBuilder,
   UserSelectMenuBuilder,
   ComponentType,
+  ChannelFlags,
 } from 'discord.js';
 import { getInventory, removeFromInventory } from '../functions/inventario.js';
 import { addEffect } from '../functions/effects.js';
@@ -269,7 +270,7 @@ export async function execute(client, data) {
   const reply = await data.reply({
     embeds: [embed],
     components: components.length ? components : [],
-    ephemeral: true,
+    flags: ChannelFlags.Ephemeral,
     fetchReply: true,
   });
 

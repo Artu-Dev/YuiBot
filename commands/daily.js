@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import { addChars, getOrCreateUser, setUserProperty } from "../database.js";
 import { getClassModifier } from "../functions/classes.js";
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, ChannelFlags } from "discord.js";
 
 export const name = "dia";
 export const aliases = ["daily", "diario", "bonusdiario"];
@@ -30,7 +30,7 @@ export async function execute(client, data) {
 
         await data.reply({ 
             content: `Você já resgatou seu prêmio diário. Tente novamente em **${timeString}**.`, 
-            ephemeral: true 
+            flags: ChannelFlags.Ephemeral 
         });
         return;
     }
@@ -43,6 +43,6 @@ export async function execute(client, data) {
 
     await data.reply({ 
         content: `Você resgatou seu prêmio diário de **${randomChars} chars**!`, 
-        ephemeral: true 
+        flags: ChannelFlags.Ephemeral 
     });
 }

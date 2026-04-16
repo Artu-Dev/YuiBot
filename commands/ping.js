@@ -1,5 +1,5 @@
 
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder, ChannelFlags } from "discord.js";
 
 export const name = "ping";
 
@@ -21,7 +21,7 @@ export async function execute(client, data) {
       content: "Calculando ping...",
       fetchReply: true,
     };
-    if (data.isEphemeral) replyOpts.ephemeral = true;
+    if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
     sent = await data.reply(replyOpts);
   } else {
     sent = await data.reply("Calculando ping...");

@@ -86,7 +86,7 @@ export async function execute(client, data) {
 
   collector.on("collect", async (interaction) => {
     if (interaction.user.id !== userId) {
-      return interaction.reply({ content: "❌ Apenas quem executou o comando pode usar os botões.", ephemeral: true });
+      return interaction.reply({ content: "❌ Apenas quem executou o comando pode usar os botões.", flags: ChannelFlags.Ephemeral });
     }
 
     let currentIndex = CLASS_KEYS_ORDERED.indexOf(
@@ -103,20 +103,20 @@ export async function execute(client, data) {
       const freshUserData = getOrCreateUser(userId, displayName, guildId);
 
       if (classKey === freshUserData.user_class) {
-        return interaction.reply({ content: `ℹ️ Você já é **${targetClass.name}**!`, ephemeral: true });
+        return interaction.reply({ content: `ℹ️ Você já é **${targetClass.name}**!`, flags: ChannelFlags.Ephemeral });
       }
 
       if (classKey !== "none" && freshUserData.charLeft < targetClass.unlockCost) {
         const falta = (targetClass.unlockCost - freshUserData.charLeft).toLocaleString();
         return interaction.reply({
           content: `❌ Chars insuficientes. Faltam **${falta}** para liberar **${targetClass.name}**.`,
-          ephemeral: true
+          flags: ChannelFlags.Ephemeral
         });
       }
 
       const success = unlockClass(userId, guildId, classKey);
       if (!success) {
-        return interaction.reply({ content: "❌ Ocorreu um erro ao desbloquear a classe.", ephemeral: true });
+        return interaction.reply({ content: "❌ Ocorreu um erro ao desbloquear a classe.", flags: ChannelFlags.Ephemeral });
       }
 
       const updatedUser = getOrCreateUser(userId, displayName, guildId);
@@ -127,7 +127,7 @@ export async function execute(client, data) {
 
       return interaction.followUp({
         content: `✅ Classe **${targetClass.name}** desbloqueada com sucesso!`,
-        ephemeral: true
+        flags: ChannelFlags.Ephemeral
       });
     }
 

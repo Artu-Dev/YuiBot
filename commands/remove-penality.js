@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, ChannelFlags } from "discord.js";
 import {
   removeUserPenality,
   getOrCreateUser,
@@ -35,7 +35,7 @@ export async function execute(client, data) {
   const isAdmin = data.isAdmin();
 
   if (!isAdmin) {
-    return data.reply({ content: "❌ Apenas administradores podem usar este comando.", ephemeral: true });
+    return data.reply({ content: "❌ Apenas administradores podem usar este comando.", flags: ChannelFlags.Ephemeral });
   }
 
   const finalTargetUser = targetUser || { id: userId, username };

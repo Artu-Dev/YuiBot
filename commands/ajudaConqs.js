@@ -327,7 +327,7 @@ export async function execute(client, data) {
     const collector = message.createMessageComponentCollector({
       filter: (i) => {
         if (i.user.id !== userId) {
-          i.reply({ content: "Esses botões não são seus.", ephemeral: true });
+          i.reply({ content: "Esses botões não são seus.", flags: ChannelFlags.Ephemeral });
           return false;
         }
         return i.customId.endsWith(`_${userId}`);

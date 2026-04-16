@@ -1,9 +1,9 @@
 import { db } from '../database.js';
 import { SHOP_ITEMS } from '../data/shopItems.js';
 import dayjs from 'dayjs';
-import weekOfYear from 'dayjs/plugin/weekOfYear.js';
 
-dayjs.extend(weekOfYear);
+// 'day'  'week' 'month'
+const RESTART_SHOP = 'day';
 
 const ITEMS_POR_SEMANA = 3;
 
@@ -14,10 +14,11 @@ const STOCK_PADRAO = {
   lendário: 1,
 };
 
-function getWeekKey(guildId) {
-  const year = dayjs().year();
-  const week = dayjs().week();
-  return `${guildId}_${year}_W${week}`;
+function getPeriodKey(guildId) {
+  const periodStart = dayjs().startOf(RESTART_SHOP);
+  const dateStr = periodStart.format('YYYYMMDD');
+  const periodLabel = RESTART_SHOP.toUpperCase();
+  return `${guildId}_${dateStr}_${periodLabel}`;
 }
 
 function generateWeeklyShop() {
@@ -38,27 +39,27 @@ function generateWeeklyShop() {
 export function getShop(guildId) {
   if (!guildId) {
     console.error('[getShop] guildId não fornecido');
-    return { weekKey: '', items: [] };
+    return { periodKey: '', items: [] };
   }
   
-  const weekKey = getWeekKey(guildId);
+  const periodKey = getPeriodKey(guildId);
   
   try {
-    const row = db.queries.getDailyShop.get(guildId, weekKey);
+    const row = db.queries.getDailyShop.get(guildId, periodKey);
 
     if (!row) {
       const newShop = { items: generateWeeklyShop() };
-      db.queries.setDailyShop.run(guildId, weekKey, JSON.stringify(newShop.items));
-      return { weekKey, items: newShop.items };
+      db.queries.setDailyShop.run(guildId, periodKey, JSON.stringify(newShop.items));
+      return { periodKey, items: newShop.items };
     }
 
     return {
-      weekKey,
+      periodKey,
       items: JSON.parse(row.items || '[]')
     };
   } catch (error) {
     console.error('[getShop] Erro:', error);
-    return { weekKey, items: [] };
+    return { periodKey, items: [] };
   }
 }
 
@@ -82,8 +83,8 @@ export function decrementStock(guildId, itemId) {
       
       item.stock -= 1;
       
-      const weekKey = getWeekKey(guildId);
-      db.queries.setDailyShop.run(guildId, weekKey, JSON.stringify(shop.items));
+      const periodKey = getPeriodKey(guildId);
+      db.queries.setDailyShop.run(guildId, periodKey, JSON.stringify(shop.items));
       return true;
     });
     

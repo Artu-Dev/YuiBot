@@ -5,7 +5,8 @@ import {
   StringSelectMenuBuilder, 
   ButtonBuilder, 
   ButtonStyle,
-  ComponentType 
+  ComponentType,
+  ChannelFlags 
 } from "discord.js";
 
 import { getServerConfig, setServerConfig } from "../database.js";
@@ -71,7 +72,7 @@ export async function execute(client, data) {
   if (!isAdmin) {
     return data.reply({ 
       content: "❌ Apenas administradores podem usar este comando.", 
-      ephemeral: true 
+      flags: ChannelFlags.Ephemeral 
     });
   }
 
@@ -99,7 +100,7 @@ export async function execute(client, data) {
   const response = await data.reply({
     embeds: [embed],
     components: [row1, row2],
-    ephemeral: true 
+    flags: ChannelFlags.Ephemeral 
   });
 
   const collector = response.createMessageComponentCollector({
