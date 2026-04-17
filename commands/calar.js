@@ -3,6 +3,8 @@ import {
   dbBot,
   getOrCreateUser,
   reduceChars,
+  reduceCharsWithCredit,
+  getSpendableChars,
   extendGuildAiSilenceMs,
   getServerConfig,
 } from "../database.js";
@@ -33,13 +35,15 @@ export async function execute(client, data) {
   }
 
   const user = getOrCreateUser(userId, displayName, guildId);
-  if ((user.charLeft || 0) < CALAR_CUSTO) {
+  const spendableChars = await getSpendableChars(userId, guildId);
+  
+  if (spendableChars < CALAR_CUSTO) {
     return data.reply(
       `Você precisa de **${CALAR_CUSTO}** chars. Saldo: **${user.charLeft ?? 0}**.`
     );
   }
 
-  reduceChars(userId, guildId, CALAR_CUSTO);
+  await reduceCharsWithCredit(userId, guildId, CALAR_CUSTO);
 
   if (Math.random() < CHANCE_SUCESSO) {
     await extendGuildAiSilenceMs(guildId, SILENCIO_MS);

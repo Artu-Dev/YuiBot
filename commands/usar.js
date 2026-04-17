@@ -5,15 +5,15 @@ import {
   ButtonStyle,
   ActionRowBuilder,
   UserSelectMenuBuilder,
-  ComponentType,
   ChannelFlags,
   StringSelectMenuBuilder,
 } from 'discord.js';
 import { getInventory, removeFromInventory } from '../functions/inventario.js';
 import { addEffect } from '../functions/effects.js';
-import {SHOP_ITEMS} from '../data/shopItems.js';
-import {db, getServerConfig} from '../database.js';
+import { SHOP_ITEMS } from '../data/shopItems.js';
+import { db, getServerConfig } from '../database.js';
 import { randomInt } from 'es-toolkit';
+import { setCharsBulk } from '../functions/database/users.js';
 
 // ───────────────────────── helpers ──────────────────────────
 
@@ -24,24 +24,26 @@ export const requiresCharLimit = true;
 const SLOT_EMOJI = ['1️⃣', '2️⃣', '3️⃣'];
 const MAX_DISPLAY = 3;
 
-function buildInventoryEmbed(userId, guildId, inventory, displayStartIndex = 0) {
-  const displayItems = inventory.slice(displayStartIndex, displayStartIndex + MAX_DISPLAY);
-  
+function buildInventoryEmbed(userId, guildId, inventory) {
   const embed = new EmbedBuilder()
-    .setTitle('🎒 Seu Inventário')
+    .setTitle('Seu Inventário')
     .setColor(0xf39c12)
-    .setFooter({ text: `${inventory.length}/3 slots usados • Página ${Math.floor(displayStartIndex / MAX_DISPLAY) + 1}` });
+    .setFooter({ 
+      text: `${inventory.length}/3 slots usados` 
+    });
 
   if (!inventory.length) {
-    embed.setDescription('Seu inventário está vazio. Compre itens na `/loja`!');
+    embed.setDescription('Seu inventário está vazio. Compre itens na /loja!');
     return embed;
   }
 
-  for (let i = 0; i < displayItems.length; i++) {
-    const item = displayItems[i];
+  for (let i = 0; i < inventory.length; i++) {
+    const item = inventory[i];
     const itemDef = SHOP_ITEMS[item.id];
     const added = `<t:${Math.floor(item.addedAt / 1000)}:R>`;
-    const durStamp = item.duration ? `\n⏳ Expira em ${Math.floor(item.duration / 1000 / 60)} minutos` : '';
+    const durStamp = item.duration 
+      ? `\n⏳ Expira em ${Math.floor(item.duration / 1000 / 60)} minutos` 
+      : '';
 
     embed.addFields({
       name: `${SLOT_EMOJI[i]} ${itemDef?.name ?? item.id}`,
@@ -53,92 +55,83 @@ function buildInventoryEmbed(userId, guildId, inventory, displayStartIndex = 0) 
   return embed;
 }
 
-function buildInventoryButtons(inventory, displayStartIndex = 0) {
-  const displayItems = inventory.slice(displayStartIndex, displayStartIndex + MAX_DISPLAY);
-  const row = new ActionRowBuilder();
-
-  for (let i = 0; i < displayItems.length; i++) {
-    row.addComponents(
-      new ButtonBuilder()
-        .setCustomId(`inv_use_${displayStartIndex + i}`)
-        .setLabel(`Usar ${i + 1}`)
-        .setEmoji(SLOT_EMOJI[i])
-        .setStyle(ButtonStyle.Primary),
-    );
+function buildInventoryButtons(inventory) {
+  const rows = [];
+  
+  for (let i = 0; i < inventory.length; i += MAX_DISPLAY) {
+    const row = new ActionRowBuilder();
+    const end = Math.min(i + MAX_DISPLAY, inventory.length);
+    
+    for (let j = i; j < end; j++) {
+      row.addComponents(
+        new ButtonBuilder()
+          .setCustomId(`inv_use_${j}`)
+          .setLabel(`Usar ${j + 1}`)
+          .setEmoji(SLOT_EMOJI[j % MAX_DISPLAY])
+          .setStyle(ButtonStyle.Primary),
+      );
+    }
+    
+    rows.push(row);
   }
 
-  return [row];
-}
-
-function buildPaginationButtons(inventory, displayStartIndex = 0) {
-  const row = new ActionRowBuilder();
-  const hasMore = inventory.length > displayStartIndex + MAX_DISPLAY;
-  const hasPrev = displayStartIndex > 0;
-
-  row.addComponents(
-    new ButtonBuilder()
-      .setCustomId('inv_prev')
-      .setEmoji('⬅️')
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(!hasPrev),
-
-    new ButtonBuilder()
-      .setCustomId('inv_next')
-      .setEmoji('➡️')
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(!hasMore),
-  );
-
-  return row;
+  return rows;
 }
 
 // ───────────────────────── aplicar item ─────────────────────
 async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
-  const { getUser, setUserProperty } = await import('../database.js');
+  const { getOrCreateUser, setUserProperty } = await import('../database.js');
   const { hasEffect } = await import('../functions/effects.js');
-  
-  const expiresAt = item.duration ? Date.now() + item.duration : null;
-  const durStr = expiresAt ? `<t:${Math.floor(expiresAt / 1000)}:R>` : 'permanente';
 
-  // Verificar se é não-stackável e se o usuário já tem o efeito
+  const expiresAt = item.duration ? Date.now() + item.duration : null;
+  const durStr = expiresAt ? `<t:${Math.floor(expiresAt / 1000)}:R>` : '';
+
   if (itemDef.nonStackable && hasEffect(userId, guildId, itemDef.effect)) {
     return `❌ **${itemDef.name}** não é stackável! Você já tem esse efeito ativo.`;
   }
 
-  // Definir efeitos negativos que podem ser bloqueados
   const negativeEffects = ['char_double_cost'];
 
-  // Verificar se target tem blockNegativeEffects (Fora da Lei)
   if (itemDef.requiresTarget && targetId !== userId && negativeEffects.includes(itemDef.effect)) {
-    // Verificar se target tem immunity ativo (efeito do Fora da Lei)
     const hasBlockEffect = hasEffect(targetId, guildId, 'immunity');
-    
     if (hasBlockEffect) {
-      return `🛡️ <@${targetId}> está protegido com "Fora da Lei"! Você não pode lançar efeitos negativos nele!`;
+      return `🛡️ <@${targetId}> está protegido com "Fora da Lei"! não da pra pegar um fora da lei! ele nao respeita leis!`;
     }
   }
 
   switch (itemDef.effect) {
     case 'char_double_cost':
       addEffect(targetId, guildId, 'char_double_cost', expiresAt);
-      return `🃏 Maldição lançada em <@${targetId}>! Eles vão gastar o dobro de chars (expira ${durStr}).`;
+      return `Maldição lançada em <@${targetId}>! Agora ele vai gastar o dobro de chars (expira ${durStr}).`;
 
     case 'swap_chars': {
-      const userData = getUser(userId, guildId);
-      const targetData = getUser(targetId, guildId);
-      
-      const myChars = userData?.charLeft ?? 0;
-      const theirChars = targetData?.charLeft ?? 0;
-      
-      // Swap the values
-      setUserProperty('charLeft', userId, guildId, theirChars);
-      setUserProperty('charLeft', targetId, guildId, myChars);
-      
-      return `🔀 Troca feita! Você tinha **${myChars}** chars e <@${targetId}> tinha **${theirChars}**. Agora estão invertidos!`;
+      const { ensureUserExists } = await import('../database.js');
+      const userData = await ensureUserExists(userId, guildId);
+      const targetData = await ensureUserExists(targetId, guildId);
+
+      if (!targetData || !targetData.charLeft) {
+        return 'Usuário alvo não encontrado no banco de dados.';
+      }
+
+      const myChars = userData.charLeft;
+      const theirChars = targetData.charLeft;
+
+      await setUserProperty('charLeft', userId, guildId, theirChars);
+      await setUserProperty('charLeft', targetId, guildId, myChars);
+
+      return `Troca feita! Você tinha **${myChars}** chars e <@${targetId}> tinha **${theirChars}**`;
     }
 
-    case 'reset_achievement':
-      return `🔄 Selecione uma conquista para resetar`;
+    case 'reincarnate': {
+      const { resetUserData } = await import('../database.js');
+      const success = resetUserData(targetId, guildId);
+
+      if (!success) {
+        return '❌ Erro ao resetar dados do usuário. Tente novamente!';
+      }
+
+      return `🔄 **${itemDef.name}** aplicada em <@${targetId}>!\n\nTodos os dados foram apagados, mas seus **chars** foram preservados! Bem-vindo à sua nova vida! 🎌`;
+    }
 
     case 'char_discount':
       addEffect(userId, guildId, 'char_discount', expiresAt);
@@ -150,59 +143,113 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
 
     case 'free_messages':
       addEffect(userId, guildId, 'free_messages', expiresAt);
-      return `🍽️ **${itemDef.name}** ativado! Você não gasta chars (expira ${durStr}).`;
+      return `**${itemDef.name}** ativado! Você não gasta chars (expira ${durStr}).`;
 
     case 'next_rob_takes_all':
       addEffect(userId, guildId, 'next_rob_takes_all', expiresAt);
-      return `🔫 **${itemDef.name}** ativado! Seu próximo roubo leva TUDO (válido para 1x roubo).`;
+      return `**${itemDef.name}** ativado! Seu próximo roubo leva TUDO (válido para 1x roubo).`;
+
+    case 'shield_robbery':
+      addEffect(userId, guildId, 'shield_robbery', expiresAt);
+      return `🛡️ **${itemDef.name}** ativado! Você está protegido contra roubos por 24 horas.`;
 
     case 'char_bomb': {
       const { getGuildUsers } = await import('../database.js');
       const users = getGuildUsers(guildId);
-      
+
       if (users.length === 0) {
-        return `💣 Ninguém pra destruir chars! 😅`;
+        return '💣 Ninguém pra destruir chars?! que droga!';
       }
 
-      const charParaDestruir = 1000;
-      const destruirPorPessoa = Math.floor(charParaDestruir / users.length);
-      
+      const destruirPorPessoa = 1000;
       let totalDestruido = 0;
       const afetados = [];
-      
+
       for (const user of users) {
         const charsAtuais = user.charLeft ?? 0;
         const destruir = Math.min(destruirPorPessoa, charsAtuais);
-        
+
         if (destruir > 0) {
-          setUserProperty('charLeft', user.id, guildId, charsAtuais - destruir);
+          await setUserProperty('charLeft', user.id, guildId, charsAtuais - destruir);
           totalDestruido += destruir;
           afetados.push(`<@${user.id}>: -${destruir} chars`);
         }
       }
-      
-      return `💣 **BOMBA DETONADA!**\n\n🔥 ${totalDestruido} chars foram destruídos!\n\n${afetados.slice(0, 5).join('\n')}${afetados.length > 5 ? `\n... e mais ${afetados.length - 5}` : ''}`;
+
+      return `💣 **BOMBA DETONADA!**\n\n🔥 ${totalDestruido} chars foram destruídos de todos!\n\n${afetados.slice(0, 5).join('\n')}${afetados.length > 5 ? `\n... e mais ${afetados.length - 5}` : ''}`;
+    }
+
+    case 'redistribute': {
+      const { getGuildUsers } = await import('../database.js');
+      const allUsers = getGuildUsers(guildId);
+
+      if (allUsers.length === 0) {
+        return '🤝 Não há ninguém no servidor para redistribuir chars.';
+      }
+
+      let totalChars = 0;
+      for (const user of allUsers) {
+        totalChars += user.charLeft ?? 0;
+      }
+
+      const share = Math.floor(totalChars / allUsers.length);
+      const remainder = totalChars % allUsers.length;
+
+      for (const user of allUsers) {
+        await setUserProperty('charLeft', user.id, guildId, share);
+      }
+
+      if (remainder > 0) {
+        const lucky = allUsers[Math.floor(Math.random() * allUsers.length)];
+        await setUserProperty('charLeft', lucky.id, guildId, share + remainder);
+
+        return `**EQUALIZADOR APLICADO!**\n\nTodos voces camaradas agora têm **${share}** chars! (Ah, e sobraram ${remainder} chars, entregues para <@${lucky.id}>)`;
+      }
+
+      return `**EQUALIZADOR APLICADO!**\n\nTodos voces camaradas agora têm **${share}** chars!`;
+    }
+
+    case 'shuffle_balances': {
+      const { getGuildUsers } = await import('../database.js');
+      const users = getGuildUsers(guildId);
+
+      if (users.length < 2) {
+        return 'Não há usuários suficientes para embaralhar.';
+      }
+
+      const balances = users.map(u => u.charLeft ?? 0);
+
+      for (let i = balances.length - 1; i > 0; i--) {
+        const j = randomInt(0, i);
+        [balances[i], balances[j]] = [balances[j], balances[i]];
+      }
+
+      setCharsBulk(users.map((u, i) => ({ userId: u.id, guildId, amount: balances[i] })));
+
+      return '**EMBARALHADOR SOMBRIO ATIVADO!**\n\nOs chars de todos os membros foram redistribuídos aleatoriamente!';
     }
 
     case 'mystery': {
       const { getGuildUsers } = await import('../database.js');
-      
+
       const effects = [
         {
           name: 'Renda extra!',
           action: async () => {
             const bonus = randomInt(2000, 5000);
-            const userData = getUser(userId, guildId);
-            setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) + bonus);
+            const { ensureUserExists } = await import('../database.js');
+            const userData = await ensureUserExists(userId, guildId);
+            await setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) + bonus);
             return `Você ganhou **${bonus}** chars! 💰`;
           }
         },
         {
           name: 'IMPOSTO!!!',
           action: async () => {
-            const userData = getUser(userId, guildId);
+            const { ensureUserExists } = await import('../database.js');
+            const userData = await ensureUserExists(userId, guildId);
             const loss = Math.min(randomInt(1000, 3000), userData?.charLeft ?? 0);
-            setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) - loss);
+            await setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) - loss);
             return `Você perdeu **${loss}** chars de imposto pra Yui! 😭`;
           }
         },
@@ -210,81 +257,81 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
           name: 'Dobro de gasto',
           action: async () => {
             addEffect(userId, guildId, 'char_double_cost', Date.now() + 6 * 60 * 60 * 1000);
-            return `Voce ta gastando 2x mais chars por 6 horas!`;
+            return 'Você tá gastando 2x mais chars por 6 horas!';
           }
         },
         {
           name: 'Troca aleatória',
           action: async () => {
+            const { getGuildUsers, ensureUserExists } = await import('../database.js');
             const users = getGuildUsers(guildId);
             if (users.length > 1) {
               const randomUser = users[randomInt(0, users.length - 1)];
-              const userData = getUser(userId, guildId);
-              const targetData = getUser(randomUser.id, guildId);
+              const userData = await ensureUserExists(userId, guildId);
+              const targetData = await ensureUserExists(randomUser.id, guildId);
               const userChars = userData?.charLeft ?? 0;
               const targetChars = targetData?.charLeft ?? 0;
-              
-              setUserProperty('charLeft', userId, guildId, targetChars);
-              setUserProperty('charLeft', randomUser.id, guildId, userChars);
-              
-              return `Seus chars foram trocados com <@${randomUser.id}>! \n\n Agora você tem **${targetChars}** chars e eles têm **${userChars}** chars! 🔄`;
+
+              await setUserProperty('charLeft', userId, guildId, targetChars);
+              await setUserProperty('charLeft', randomUser.id, guildId, userChars);
+
+              return `Seus chars foram trocados com <@${randomUser.id}>!\n\nAgora você tem **${targetChars}** chars e eles têm **${userChars}** chars! 🔄`;
             }
-            return `Ninguém pra trocar com você! 😅`;
+            return 'Ninguém pra trocar com você! 😅';
           }
         },
         {
           name: 'Proteção',
           action: async () => {
             addEffect(userId, guildId, 'immunity', Date.now() + 12 * 60 * 60 * 1000);
-            return `Você ganhou imunidade a penalidades por 12 horas! 🛡️`;
+            return 'Você ganhou imunidade a penalidades por 12 horas! 🛡️';
           }
         },
         {
-          name: 'Roleta do Silvio santos',
+          name: 'Roleta do Silvio Santos',
           action: async () => {
+            const { ensureUserExists } = await import('../database.js');
             const resultado = randomInt(1, 3);
             if (resultado === 1) {
-              const userData = getUser(userId, guildId);
-              setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) * 2);
-              return `Você DUPLICOU seus chars! 🤑`;
+              const userData = await ensureUserExists(userId, guildId);
+              await setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) * 2);
+              return 'Você DUPLICOU seus chars! 🤑';
             } else if (resultado === 2) {
-              const userData = getUser(userId, guildId);
-              setUserProperty('charLeft', userId, guildId, Math.floor((userData?.charLeft ?? 0) / 2));
-              return `Você PERDEU METADE dos seus chars! 💸`;
+              const { ensureUserExists } = await import('../database.js');
+              const userData = await ensureUserExists(userId, guildId);
+              await setUserProperty('charLeft', userId, guildId, Math.floor((userData?.charLeft ?? 0) / 2));
+              return 'Você PERDEU METADE dos seus chars! 💸';
             } else {
-              return `Nada aconteceu... talvez próxima vez! 🎲`;
+              return 'Nada aconteceu... talvez próxima vez! 🎲';
             }
           }
         },
         {
-          name: 'Premio pela cabeça!',
+          name: 'Prêmio pela cabeça!',
           action: async () => {
-            const { getGuildUsers } = await import('../database.js');
             const users = getGuildUsers(guildId);
             if (users.length === 0) {
-              return `Não há ninguém pra colocar uma recompensa! 😅`;
+              return 'Não há ninguém pra colocar uma recompensa! 😅';
             }
-            
+
             const targetUser = users[randomInt(0, users.length - 1)];
             const bountyAmount = randomInt(500, 2500);
-            const userData = getUser(userId, guildId);
-            
-            setUserProperty('bounty_placer', targetUser.id, guildId, userData?.display_name || 'Usuário Desconhecido');
-            setUserProperty('total_bounty_value', targetUser.id, guildId, bountyAmount);
-            
+            const { ensureUserExists } = await import('../database.js');
+            const userData = await ensureUserExists(userId, guildId);
+
+            await setUserProperty('bounty_placer', targetUser.id, guildId, userData?.display_name || 'Usuário Desconhecido');
+            await setUserProperty('total_bounty_value', targetUser.id, guildId, bountyAmount);
+
             const message = targetUser.id === userId
-              ? `Uma recompensa de **${bountyAmount}** chars foi colocada na SUA cabeça! Cuidado!
-              \n\nQue começe a caçada! `
-              : `Uma recompensa de **${bountyAmount}** chars foi colocada na cabeça de <@${targetUser.id}>!
-              \n\nQue começe a caçada! `;
+              ? `Uma recompensa de **${bountyAmount}** chars foi colocada na **SUA** cabeça! Cuidado!\n\nQue comece a caçada!`
+              : `Uma recompensa de **${bountyAmount}** chars foi colocada na cabeça de <@${targetUser.id}>!\n\nQue comece a caçada!`;
 
             return message;
           }
         }
       ];
-      
+
       const chosen = effects[randomInt(0, effects.length - 1)];
-      
       const result = await chosen.action();
       return `🗑️ Lixo Lendário ativou: **${chosen.name}**\n\n${result}`;
     }
@@ -292,7 +339,7 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
     case 'tiger_luck': {
       const existingEffect = hasEffect(userId, guildId, 'tiger_luck');
       if (existingEffect) {
-        return `❌ Você já tem esse efeito! A Moeda da Sorte não é stackável.`;
+        return '❌ Você já tem esse efeito! A Moeda da Sorte não é stackável.';
       }
       addEffect(userId, guildId, 'tiger_luck', expiresAt);
       return `🍀 **${itemDef.name}** ativada! Sua sorte no tigre aumentou em 20% (expira ${durStr}).`;
@@ -307,47 +354,67 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
       return `🗡️ **${itemDef.name}** equipada! Seu dano em roubos aumentou em 35% (expira ${durStr}).`;
 
     case 'guaranteed_rob': {
-      const targetData = getUser(targetId, guildId);
+      const { ensureUserExists } = await import('../database.js');
+      const targetData = await ensureUserExists(targetId, guildId);
       if (!targetData) {
-        return `❌ Usuário alvo não encontrado no banco de dados.`;
+        return '❌ Usuário alvo não encontrado no banco de dados.';
       }
       addEffect(userId, guildId, 'guaranteed_rob', expiresAt);
       return `🎓 **${itemDef.name}** concluído! Seu próximo roubo em <@${targetId}> é 100% garantido!`;
     }
 
     case 'halve_wealth': {
-      const targetData = getUser(targetId, guildId);
-      const currentChars = targetData?.charLeft ?? 0;
+      const { ensureUserExists } = await import('../database.js');
+      const targetData = await ensureUserExists(targetId, guildId);
+      const currentChars = targetData.charLeft;
+
+      if(!currentChars || currentChars <= 1) {
+        return `<@${targetId}> tem pouquíssimos chars, o **${itemDef.name}** não teve efeito!`;
+      }
+
+
       const half = Math.floor(currentChars / 2);
       const destroyed = currentChars - half;
 
-      setUserProperty('charLeft', targetId, guildId, half);
+      await setUserProperty('charLeft', targetId, guildId, half);
 
-      return `💸 **${itemDef.name}** ativado!\n\n<@${targetId}> perdeu **${destroyed}** chars (ficou com ${half})`;
+      return `**${itemDef.name}** ativado!\n\n<@${targetId}> perdeu **${destroyed}** chars (ficou com ${half})`;
     }
 
     case 'server_chaos': {
       const { getGuildUsers } = await import('../database.js');
-      const { randomEventsData } = await import('../data/eventsData.js');
-      
+
       const users = getGuildUsers(guildId);
-      const randomEvent = randomEventsData[Math.floor(Math.random() * randomEventsData.length)];
+      const randomValidEffects = Object.values(SHOP_ITEMS).filter(i => i.effect && i.duration() !== null);
       
-      let message = `🌪️ **CAOS DA YUI ATIVADO!**\n\n`;
-      message += `**${randomEvent.name}**\n`;
-      message += `${randomEvent.description}\n\n`;
-      message += `Duração: ${randomEvent.charMultiplier}x chars, ${randomEvent.casinoMultiplier}x cassino`;
-
-      // Aplicar evento para todos do servidor
+      let message = '🌪️ **CAOS DA YUI ATIVADO!**\n\n';
       for (const user of users) {
-        // Aqui você poderia salvar o evento no banco de dados para toda a guild
-        // Por enquanto, apenas notificamos
+        const effect = randomValidEffects[randomInt(0, randomValidEffects.length - 1)];
+        const expires = Date.now() + effect.duration();
+        addEffect(user.id, guildId, effect.effect, expires);
+        message += `<@${user.id}> recebeu o efeito **${effect.name}** (expira <t:${Math.floor(expires / 1000)}:R>)\n`;
       }
-
       return message;
     }
 
-    default:
+    case 'credit_card': {
+      const { ensureUserExists } = await import('../database.js');
+      const userData = await ensureUserExists(userId, guildId);
+      const currentBalance = userData?.charLeft ?? 0;
+      
+      await setUserProperty('credit_limit', userId, guildId, currentBalance);
+      await setUserProperty('credit_debt', userId, guildId, 0);
+      
+      const now = Date.now();
+      const duration = typeof itemDef.duration === 'function' ? itemDef.duration() : itemDef.duration;
+      const expiresAt = duration ? now + duration : null;
+      addEffect(userId, guildId, 'credit_card_active', expiresAt);
+      
+      const daysLeft = duration ? Math.ceil(duration / (24 * 60 * 60 * 1000)) : 0;
+      return `💳 **${itemDef.name}** ativado!\n\nVocê pode gastar até **${currentBalance}** chars negativos.\nConforme você ganhar chars, a dívida será paga automaticamente.\nA fatura fecha daqui a **${daysLeft} dia(s)**!`;
+    }
+
+    default: 
       return `✅ Item **${itemDef.name}** usado com sucesso! ${durStr}`;
   }
 }
@@ -360,7 +427,7 @@ export const data = new SlashCommandBuilder()
 export async function execute(client, data) {
   const userId = data.userId;
   const guildId = data.guildId;
-  
+
   if (!getServerConfig(guildId, 'charLimitEnabled')) {
     return await data.reply({
       content: "❌ O sistema de caracteres está desligado neste servidor!",
@@ -370,13 +437,10 @@ export async function execute(client, data) {
 
   const inventory = getInventory(userId, guildId);
 
-  let displayStart = 0;
+  const embed = buildInventoryEmbed(userId, guildId, inventory);
+  const itemButtons = inventory.length ? buildInventoryButtons(inventory) : [];
 
-  const embed = buildInventoryEmbed(userId, guildId, inventory, displayStart);
-  const itemButtons = inventory.length ? buildInventoryButtons(inventory, displayStart) : [];
-  const paginationButtons = inventory.length ? [buildPaginationButtons(inventory, displayStart)] : [];
-  
-  const components = [...itemButtons, ...paginationButtons];
+  const components = itemButtons;
 
   const reply = await data.reply({
     embeds: [embed],
@@ -391,42 +455,11 @@ export async function execute(client, data) {
     time: 60_000,
   });
 
-  // Guarda qual slot foi selecionado enquanto espera o alvo
   let pendingSlot = null;
 
   collector.on('collect', async (comp) => {
     if (comp.user.id !== userId) return;
 
-    // ── Navegação de páginas ──
-    if (comp.customId === 'inv_prev') {
-      displayStart = Math.max(0, displayStart - MAX_DISPLAY);
-      
-      const newEmbed = buildInventoryEmbed(userId, guildId, inventory, displayStart);
-      const newItemButtons = buildInventoryButtons(inventory, displayStart);
-      const newPaginationButtons = buildPaginationButtons(inventory, displayStart);
-      const newComponents = [...newItemButtons, newPaginationButtons];
-
-      return comp.update({
-        embeds: [newEmbed],
-        components: newComponents,
-      });
-    }
-
-    if (comp.customId === 'inv_next') {
-      displayStart = Math.min(inventory.length - MAX_DISPLAY, displayStart + MAX_DISPLAY);
-      
-      const newEmbed = buildInventoryEmbed(userId, guildId, inventory, displayStart);
-      const newItemButtons = buildInventoryButtons(inventory, displayStart);
-      const newPaginationButtons = buildPaginationButtons(inventory, displayStart);
-      const newComponents = [...newItemButtons, newPaginationButtons];
-
-      return comp.update({
-        embeds: [newEmbed],
-        components: newComponents,
-      });
-    }
-
-    // ── Clicou num botão "Usar N" ──
     if (comp.customId.startsWith('inv_use_')) {
       const slotIndex = parseInt(comp.customId.replace('inv_use_', ''));
       const item = inventory[slotIndex];
@@ -436,21 +469,17 @@ export async function execute(client, data) {
         return comp.update({ content: '❌ Item inválido no inventário.', embeds: [], components: [] });
       }
 
-      // Item precisa de alvo → mostra UserSelect
       if (itemDef.requiresTarget) {
         pendingSlot = slotIndex;
-
         const select = new UserSelectMenuBuilder()
           .setCustomId('inv_select_target')
           .setPlaceholder(`Selecione o alvo para ${itemDef.name}`)
           .setMinValues(1)
           .setMaxValues(1);
-
         const cancelBtn = new ButtonBuilder()
           .setCustomId('inv_cancel')
           .setLabel('Cancelar')
           .setStyle(ButtonStyle.Secondary);
-
         return comp.update({
           content: `👤 **${itemDef.name}** — Selecione o alvo:`,
           embeds: [],
@@ -461,94 +490,17 @@ export async function execute(client, data) {
         });
       }
 
-      // Item sem alvo → usa direto
-      if (itemDef.effect === 'reset_achievement') {
-        const { getAchievements } = await import('../database.js');
-        const { achievements } = await import('../functions/achievmentsData.js');
-        
-        const userAchievements = getAchievements(userId, guildId);
-        const unlockedKeys = Object.keys(userAchievements).filter(k => userAchievements[k]);
-        
-        if (unlockedKeys.length === 0) {
-          return comp.update({
-            content: '🔄 Você não tem nenhuma conquista pra resetar! 😅',
-            embeds: [],
-            components: [],
-          });
-        }
 
-        // Get unique categories the user has achievements in
-        const userCategories = new Set();
-        for (const key of unlockedKeys) {
-          const achData = achievements[key];
-          if (achData?.category) {
-            userCategories.add(achData.category);
-          }
-        }
-
-        if (userCategories.size === 0) {
-          return comp.update({
-            content: '🔄 Nenhuma categoria válida encontrada.',
-            embeds: [],
-            components: [],
-          });
-        }
-
-        // Build select menu for categories
-        const select = new StringSelectMenuBuilder()
-          .setCustomId('inv_select_achievement')
-          .setPlaceholder('Selecione uma categoria para resetar');
-        
-        const categoryNames = {
-          special: '✨ Especiais',
-          activity: '💬 Atividade',
-          social: '👥 Social',
-          verbal: '🗣️ Verbal',
-          robbery: '🔫 Roubo',
-          tiger: '🐯 Tigre',
-          bounty: '💰 Recompensas',
-        };
-
-        for (const category of userCategories) {
-          const achInCategory = unlockedKeys.filter(k => achievements[k]?.category === category);
-          select.addOptions({
-            label: categoryNames[category] || category,
-            value: category,
-            description: `${achInCategory.length} conquista(s) nesta categoria`,
-          });
-        }
-
-        pendingSlot = slotIndex; // Store for later
-
-        return comp.update({
-          content: `🏆 **${itemDef.name}** — Qual categoria deseja resetar?`,
-          embeds: [],
-          components: [
-            new ActionRowBuilder().addComponents(select),
-            new ActionRowBuilder().addComponents(
-              new ButtonBuilder()
-                .setCustomId('inv_cancel')
-                .setLabel('Cancelar')
-                .setStyle(ButtonStyle.Secondary)
-            ),
-          ],
-        });
-      }
 
       const result = await applyInventoryItem(userId, guildId, item, itemDef, userId);
       removeFromInventory(userId, guildId, slotIndex);
-      
-      // Remove from local inventory
       inventory.splice(slotIndex, 1);
-      
       collector.stop();
       return comp.update({ content: result, embeds: [], components: [] });
     }
 
-    // ── Selecionou um alvo no UserSelect ──
     if (comp.customId === 'inv_select_target' && pendingSlot !== null) {
       const targetId = comp.values[0];
-
       if (targetId === userId) {
         return comp.update({
           content: '❌ Você não pode usar este item em si mesmo. Selecione outro alvo:',
@@ -561,93 +513,20 @@ export async function execute(client, data) {
       const result = await applyInventoryItem(userId, guildId, item, itemDef, targetId);
 
       removeFromInventory(userId, guildId, pendingSlot);
-      
-      // Remove from local inventory
       inventory.splice(pendingSlot, 1);
-      
       pendingSlot = null;
       collector.stop();
       return comp.update({ content: result, embeds: [], components: [] });
     }
 
-    // ── Selecionou uma categoria para resetar ──
-    if (comp.customId === 'inv_select_achievement' && pendingSlot !== null) {
-      const categoryToReset = comp.values[0];
-      const { achievements } = await import('../functions/achievmentsData.js');
-      const { getAchievements } = await import('../database.js');
-      const { db } = await import('../database.js');
-
-      // Get user's current achievements
-      const userAchievements = getAchievements(userId, guildId);
-      
-      // Find all achievements in this category
-      const achievementsInCategory = Object.entries(achievements)
-        .filter(([_, achData]) => achData.category === categoryToReset)
-        .map(([key, _]) => key);
-      
-      if (achievementsInCategory.length === 0) {
-        return comp.update({
-          content: '❌ Nenhuma conquista encontrada nesta categoria.',
-          embeds: [],
-          components: [],
-        });
-      }
-
-      // Remove all achievements in this category
-      let removedCount = 0;
-      for (const achKey of achievementsInCategory) {
-        if (userAchievements[achKey]) {
-          delete userAchievements[achKey];
-          removedCount++;
-        }
-      }
-
-      if (removedCount === 0) {
-        return comp.update({
-          content: `ℹ️ Você não tinha nenhuma conquista da categoria **${categoryToReset}** pra resetar.`,
-          embeds: [],
-          components: [],
-        });
-      }
-
-      // Update database with cleaned achievements
-      db.prepare('UPDATE users SET achievements_unlocked = ? WHERE id = ? AND guild_id = ?')
-        .run(JSON.stringify(userAchievements), userId, guildId);
-
-      const item = inventory[pendingSlot];
-      const itemDef = SHOP_ITEMS[item.id];
-      const categoryNames = {
-        special: '✨ Especiais',
-        activity: '💬 Atividade',
-        social: '👥 Social',
-        verbal: '🗣️ Verbal',
-        robbery: '🔫 Roubo',
-        tiger: '🐯 Tigre',
-        bounty: '💰 Recompensas',
-      };
-
-      const result = `🔄 ✅ **${removedCount}** conquista(s) da categoria **${categoryNames[categoryToReset]}** foram resetadas!`;
-
-      removeFromInventory(userId, guildId, pendingSlot);
-      inventory.splice(pendingSlot, 1);
-      
-      pendingSlot = null;
-      collector.stop();
-      return comp.update({ content: result, embeds: [], components: [] });
-    }
-
-    // ── Cancelou ──
     if (comp.customId === 'inv_cancel') {
       pendingSlot = null;
-      const newEmbed = buildInventoryEmbed(userId, guildId, inventory, displayStart);
-      const newItemButtons = buildInventoryButtons(inventory, displayStart);
-      const newPaginationButtons = buildPaginationButtons(inventory, displayStart);
-      const newComponents = [...newItemButtons, newPaginationButtons];
-
+      const newEmbed = buildInventoryEmbed(userId, guildId, inventory);
+      const newItemButtons = buildInventoryButtons(inventory);
       return comp.update({
         content: null,
         embeds: [newEmbed],
-        components: newComponents,
+        components: newItemButtons,
       });
     }
   });

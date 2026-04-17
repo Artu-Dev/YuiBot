@@ -6,6 +6,7 @@ import {
   getRandomUserId,
   getUser,
   reduceChars,
+  reduceCharsWithCredit,
   setUserProperty,
   getServerConfig,
 } from "../database.js";
@@ -240,7 +241,7 @@ export async function execute(client, data) {
 
   if (success) {
     addChars(userId, guildId, stolenAmount);
-    reduceChars(victimId, guildId, stolenAmount);
+    await reduceCharsWithCredit(victimId, guildId, stolenAmount);
 
     const successReplies = isTargeted
       ? [
@@ -262,11 +263,11 @@ export async function execute(client, data) {
     finalReply = sample(successReplies) + allHint;
   } else {
     if (userChars != 0) {
-      reduceChars(userId, guildId, penality);
+      await reduceCharsWithCredit(userId, guildId, penality);
       addChars(victimId, guildId, penality);
     } else if (userChars < penality) {
       penality = userChars;
-      reduceChars(userId, guildId, userChars);
+      await reduceCharsWithCredit(userId, guildId, userChars);
     }
 
 

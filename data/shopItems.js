@@ -48,14 +48,15 @@ export const SHOP_ITEMS = {
     duration: () => 24 * 60 * 60 * 1000,
     effect: 'free_messages',
   },
-  selo_reset: {
-    name: 'Selo de Reset',
-    description: 'Reseta o progresso de uma conquista sua para farmar de novo.',
+  reencarnacao: {
+    name: 'Reencarnação',
+    description: 'Apaga TODOS os dados do usuário, deixando apenas seus chars. Use em alguém para resetar sua vida!',
     image: "https://c.tenor.com/FK9Qsf1ctSwAAAAd/tenor.gif",
-    rarity: 'incomum',
-    price: () => randomInt(500, 1500),
+    rarity: 'lendário',
+    price: () => randomInt(5000, 8000),
     duration: () => null,
-    effect: 'reset_achievement',
+    effect: 'reincarnate',
+    requiresTarget: true,
   },
   espelho_troca: {
     name: 'Espelho da Troca',
@@ -173,5 +174,15 @@ export const SHOP_ITEMS = {
     price: () => randomInt(5000, 8000),
     duration: () => null,
     effect: 'server_chaos',
+  },
+
+  cartao_credito: {
+    name: 'Cartão de Crédito',
+    description: 'Use seu saldo atual como limite de crédito. Gaste negativamente e pague conforme ganha chars!',
+    image: "https://c.tenor.com/fHzF7OSce3IAAAAd/tenor.gif",
+    rarity: 'raro',
+    price: () => randomInt(200, 1500),
+    duration: () => 24 * 60 * 60 * 1000,
+    effect: 'credit_card',
   },
 };

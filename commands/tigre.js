@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { getOrCreateUser, getUser, reduceChars, addChars, db, addUserPropertyByAmount, getServerConfig } from "../database.js";
+import { getOrCreateUser, getUser, reduceChars, reduceCharsWithCredit, addChars, getSpendableChars, db, addUserPropertyByAmount, getServerConfig } from "../database.js";
 import { getClassModifier } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { randomInt } from 'es-toolkit';
@@ -26,15 +26,16 @@ export async function execute(client, data) {
   }
 
   const user = getOrCreateUser(userId, displayName, guildId);
+  const spendableChars = await getSpendableChars(userId, guildId);
 
-  if (user.charLeft < TIGRE_CUSTO) {
+  if (spendableChars < TIGRE_CUSTO) {
     return data.reply(`❌ Você precisa de pelo menos ${TIGRE_CUSTO} caracteres para apostar no tigre!`);
   }
 
   const pendingStacks = Math.max(0, Math.min(8, Number(user.tiger_pending_double) || 0));
   const doubleMult = 2 ** pendingStacks;
 
-  reduceChars(userId, guildId, TIGRE_CUSTO);
+  await reduceCharsWithCredit(userId, guildId, TIGRE_CUSTO);
 
   const outcomes = [
     { type: "loss",    chance: 0.65, amount: 0,                        emoji: "💸", desc: "Perdeu" },

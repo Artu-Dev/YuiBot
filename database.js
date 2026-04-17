@@ -11,12 +11,16 @@ export {
   getUser,
   deleteUser,
   getOrCreateUser,
+  ensureUserExists,
   addUserProperty,
   setUserProperty,
   addUserPropertyByAmount,
   reduceChars,
+  reduceCharsWithCredit,
+  getSpendableChars,
   addChars,
   addCharsBulk,
+  setCharsBulk,
   getRandomUserId,
   getGuildUsers,
   getPoorestGuildUsers,
@@ -68,6 +72,17 @@ export {
   getHolidaysForYear,
   saveHolidays,
 } from "./functions/database/events.js";
+
+// Bank
+export {
+  depositToBank,
+  withdrawFromBank,
+  getBankBalance,
+  applyDailyBankInterest,
+  getCreditInfo,
+  addCreditDebt,
+  payCredit,
+} from "./functions/database/bank.js";
 
 // Words
 export {
@@ -151,6 +166,11 @@ const USERS_SCHEMA = {
 
   total_chars_donated: "INTEGER DEFAULT 0",
   user_class: "TEXT DEFAULT 'none'",
+
+  bank_balance: "INTEGER DEFAULT 0",
+  last_bank_interest: "TEXT DEFAULT ''",
+  credit_limit: "INTEGER DEFAULT 0",
+  credit_debt: "INTEGER DEFAULT 0",
 };
 
 function buildUsersColumnsSQL() {
@@ -182,6 +202,34 @@ function updateUserDb() {
     }
   }
 }
+
+export const resetUserData = (userId, guildId) => {
+  if (!isValidUserId(userId) || !isValidGuildId(guildId)) return false;
+  
+  try {
+    const preserveFields = ["charLeft", "id", "guild_id", "display_name", "user_class"];
+    
+    const assignments = Object.entries(USERS_SCHEMA)
+      .filter(([col]) => !preserveFields.includes(col))
+      .map(([col, type]) => {
+        const defaultMatch = type.match(/DEFAULT\s+(.+)/i);
+        const defaultValue = defaultMatch ? defaultMatch[1].replace(/['"]/g, "") : "NULL";
+        return `${col} = ${defaultValue}`;
+      })
+      .join(",\n            ");
+    
+    db.transaction(() => {
+      db.prepare(`
+        UPDATE users 
+        SET ${assignments}
+        WHERE id = ? AND guild_id = ?
+      `).run(userId, guildId);
+    })();
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
 
 export const initializeDbBot = async () => { 
   await dbBot.read();
@@ -388,6 +436,10 @@ export const initializeDbBot = async () => {
     
     reduceChars: db.prepare(`
       UPDATE users SET charLeft = MAX(0, charLeft - ?), last_message_time = ?
+      WHERE id = ? AND guild_id = ?
+    `),
+    reduceCharsAllowNegative: db.prepare(`
+      UPDATE users SET charLeft = charLeft - ?, last_message_time = ?
       WHERE id = ? AND guild_id = ?
     `),
     addChars: db.prepare(`

@@ -1,8 +1,8 @@
-import { dbBot, reduceChars, setUserProperty, addChars, getRandomProhibitedWord, getServerConfig, getPoorestGuildUsers, addCharsBulk, removeUserPenality } from "../database.js";
+import { dbBot, reduceChars, reduceCharsWithCredit, setUserProperty, addChars, getRandomProhibitedWord, getServerConfig, getPoorestGuildUsers, addCharsBulk, removeUserPenality } from "../database.js";
 import { parseMessage, safeReplyToMessage } from "./utils.js";
 import { penalities, handlePenalities, randomWords } from "./penalties/penalities.js";
 import { getCurrentDailyEvent } from "./getTodaysEvent.js";
-import { getCharMultiplier } from "./effects.js";
+import { getCharMultiplier, hasEffect } from "./effects.js";
 import { sample } from "es-toolkit";
 import dayjs from "dayjs";
 import { log } from "../bot.js";
@@ -50,7 +50,7 @@ export const limitChar = async (message, userData) => {
       });
 
       addCharsBulk(updates);
-      reduceChars(userId, guildId, totalDistributed);
+      await reduceCharsWithCredit(userId, guildId, totalDistributed);
 
       await safeReplyToMessage(
         message,
@@ -96,11 +96,9 @@ export const limitChar = async (message, userData) => {
     textSize = 1;
   }
 
-  // ====================== EVENTO ======================
   const event = await getCurrentDailyEvent(guildId);
+  
   const eventMultiplier = event?.charMultiplier ?? 1.0;
-
-  // ====================== EFEITOS ======================
   const effectsMultiplier = getCharMultiplier(userId, guildId);
 
   if (effectsMultiplier === 0 || eventMultiplier === 0) return true;
@@ -110,7 +108,7 @@ export const limitChar = async (message, userData) => {
   textSize = Math.ceil(textSize * charMultiplier);
 
   const oldValue = Number(userData.charLeft) || 0;
-  const newValue = reduceChars(userId, guildId, textSize);
+  const newValue = await reduceCharsWithCredit(userId, guildId, textSize);
   
   userData.charLeft = newValue;
 
@@ -132,6 +130,12 @@ export const limitChar = async (message, userData) => {
   }
 
   // ====================== PENALIDADES ======================
+  const hasCreditCardProtection = newValue <= 0 && hasEffect(userId, guildId, "credit_card_active") && !userData.penality;
+  
+  if (hasCreditCardProtection) {
+    return true;
+  }
+  
   const wasPunished = await handlePenalities(message, userData);
   if (wasPunished) return false;
 
@@ -147,7 +151,6 @@ export const limitChar = async (message, userData) => {
       randomWord = randomWords[Math.floor(Math.random() * randomWords.length)];
       setUserProperty("penalityWord", userId, guildId, randomWord);
     }
-
 
     await safeReplyToMessage(
       message,

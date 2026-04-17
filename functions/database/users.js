@@ -76,6 +76,18 @@ export const addCharsBulk = (updates) => {
   runAll(updates);
 };
 
+export const setCharsBulk = (updates) => {
+  const stmt = db.prepare("UPDATE users SET charLeft = ? WHERE id = ? AND guild_id = ?");
+  const runAll = db.transaction((updates) => {
+    for (const { userId, guildId, amount } of updates) {
+      if (isValidUserId(userId) && isValidGuildId(guildId)) {
+        stmt.run(parseInt(amount), userId, guildId);
+      }
+    }
+  });
+  runAll(updates);
+};
+
 export const getRandomUserId = (guildId, excludeUserId) => {
   if (!guildId) return null;
   const row = db.queries.getGuildRandomUser.get(guildId, excludeUserId || "");
@@ -97,3 +109,44 @@ export const getPoorestGuildUsers = (guildId, excludeUserId, limit = 10) => {
     LIMIT ?
   `).all(guildId, excludeUserId || "", limit);
 };
+
+export const ensureUserExists = (userId, guildId) => {
+  if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
+    logInvalidId(userId, guildId, "ensureUserExists");
+    return null;
+  }
+  return getOrCreateUser(userId, "Unknown", guildId);
+};
+
+export async function reduceCharsWithCredit(userId, guildId, amount) {
+  if (!isValidUserId(userId) || !isValidGuildId(guildId)) return 0;
+  
+  const { hasEffect, removeEffect } = await import("../effects.js");
+  const hasCreditCard = hasEffect(userId, guildId, "credit_card_active");
+  
+  const date = new Date().toISOString();
+  const query = hasCreditCard ? db.queries.reduceCharsAllowNegative : db.queries.reduceChars;
+  const result = query.run(amount, date, userId, guildId);
+  const user = getUser(userId, guildId);
+  const newBalance = user?.charLeft ?? 0;
+  
+  if (hasCreditCard && newBalance < -(user?.credit_limit || 0)) {
+    removeEffect(userId, guildId, 'credit_card_active');
+  }
+  
+  return newBalance;
+}
+
+export async function getSpendableChars(userId, guildId) {
+  const user = getUser(userId, guildId);
+  if (!user) return 0;
+  
+  const { hasEffect } = await import("../effects.js");
+  const hasCreditCard = hasEffect(userId, guildId, "credit_card_active");
+  
+  if (!hasCreditCard) {
+    return Math.max(0, user.charLeft);
+  }
+  
+  return Math.max(0, user.charLeft) + (user.credit_limit || 0);
+}

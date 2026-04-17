@@ -9,7 +9,7 @@ import {
 } from 'discord.js';
 import { getShop, getShopItem, decrementStock } from '../functions/shop.js';
 import { addToInventory, getInventory } from '../functions/inventario.js';
-import { getUser, reduceChars, getServerConfig } from '../database.js';
+import { getUser, reduceChars, reduceCharsWithCredit, getSpendableChars, getServerConfig } from '../database.js';
 import {SHOP_ITEMS} from '../data/shopItems.js';
 import { customEmojis } from '../functions/utils.js';
 
@@ -122,8 +122,9 @@ async function handleBuy(user, guildId, itemId) {
   if (!userData) return '❌ Usuário não encontrado no banco de dados.';
   
   const userChars = userData.charLeft ?? 0;
+  const spendableChars = await getSpendableChars(userId, guildId);
   
-  if (userChars < shopItem.price)
+  if (spendableChars < shopItem.price)
     return `❌ Você tem **${userChars} chars** mas precisa de **${shopItem.price}**.`;
 
   const inv = getInventory(userId, guildId);
@@ -131,7 +132,7 @@ async function handleBuy(user, guildId, itemId) {
     return `❌ Seu inventário está cheio! (${MAX_INVENTORY}/${MAX_INVENTORY})\nUse \`/usar\` para usar um item antes.`;
 
   // Deduz chars
-  reduceChars(userId, guildId, shopItem.price);
+  await reduceCharsWithCredit(userId, guildId, shopItem.price);
   decrementStock(guildId, itemId);
   
   // Adiciona ao inventário

@@ -4,6 +4,8 @@ import {
   getUser,
   addChars,
   reduceChars,
+  reduceCharsWithCredit,
+  getSpendableChars,
   getBotPrefix,
   addUserPropertyByAmount,
   setUserProperty,
@@ -89,7 +91,9 @@ export async function execute(client, data) {
   }
 
   const giver = getOrCreateUser(userId, displayName, guildId);
-  if ((giver.charLeft || 0) < amount) {
+  const spendableChars = await getSpendableChars(userId, guildId);
+  
+  if (spendableChars < amount) {
     return await data.reply(
       `Você não tem ${amount} chars. Seu saldo é **${giver.charLeft ?? 0}**.`,
     );
@@ -98,7 +102,7 @@ export async function execute(client, data) {
   const newGiverBalance = (giver.charLeft || 0) - amount;
   const receiverName = targetUser.displayName ?? targetUser.username;
   getOrCreateUser(targetUser.id, receiverName, guildId);
-  reduceChars(userId, guildId, amount);
+  await reduceCharsWithCredit(userId, guildId, amount);
 
   if (amount < targetUser.rewardValue) {
     return await data.reply(

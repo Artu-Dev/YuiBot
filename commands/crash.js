@@ -2,7 +2,9 @@ import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Embe
 import { 
   getOrCreateUser, 
   addChars, 
-  reduceChars, 
+  reduceChars,
+  reduceCharsWithCredit,
+  getSpendableChars,
   addUserPropertyByAmount,
   getServerConfig 
 } from "../database.js";
@@ -126,12 +128,13 @@ export async function execute(client, data) {
 
   const user = getOrCreateUser(userId, displayName, guildId);
   const charLeft = Number(user.charLeft) || 0;
+  const spendableChars = await getSpendableChars(userId, guildId);
 
-  if (aposta > charLeft) {
-    return await data.reply(`**${displayName}**, tu só tem **${charLeft.toLocaleString()}** chars. Aposta algo que tu tem, seu liso!`);
+  if (aposta > spendableChars) {
+    return await data.reply(`**${displayName}**, tu só tem **${charLeft.toLocaleString()}** chars${spendableChars > charLeft ? ` (+ ${(spendableChars - charLeft).toLocaleString()} de crédito)` : ''}. Aposta algo que tu tem, seu liso!`);
   }
 
-  reduceChars(userId, guildId, aposta);
+  await reduceCharsWithCredit(userId, guildId, aposta);
   addUserPropertyByAmount("tiger_plays", userId, guildId, 1);
 
   const classLucky = getClassModifier(user.user_class, "lucky");
@@ -231,14 +234,14 @@ export async function execute(client, data) {
     const lucroFinal = Math.floor(aposta * multiplier) - aposta;
     const totalRecebido = aposta + lucroFinal;
 
-    addChars(userId, guildId, totalRecebido);
-    addUserPropertyByAmount("tiger_wins", userId, guildId, 1);
+    await addChars(userId, guildId, totalRecebido);
+    await addUserPropertyByAmount("tiger_wins", userId, guildId, 1);
 
     const updatedUser = getOrCreateUser(userId, displayName, guildId);
 
     embed
       .setColor("#00ff00")
-      .setDescription(`✅ **PAROU NA HORA CERTA, PORRA!**\nParou em **${multiplier.toFixed(1)}x** e levou **${totalRecebido.toLocaleString()} chars**!`)
+      .setDescription(`✅ **PAROU NA HORA CERTA, PORRA!**\nParou em **${multiplier.toFixed(1)}x** e levou **${lucroFinal.toLocaleString()} chars**!`)
       .setFooter({ text: `Chars restantes: ${Number(updatedUser.charLeft).toLocaleString()}` })
       .spliceFields(0, 3,
         { name: "Resultado",          value: `**+${lucroFinal.toLocaleString()} chars**`,                               inline: false },

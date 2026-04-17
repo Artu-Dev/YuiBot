@@ -87,7 +87,10 @@ export async function getCurrentDailyEvent(guildId) {
   const today = dayjs().format("YYYY-MM-DD");
 
   let event = getDailyEventFromDB(guildId);
-  if (event) return event;
+  
+  if (event && event.date === today) {
+    return event;
+  }
 
   event = await generateDailyEvent(today);
   saveDailyEvent(guildId, event);

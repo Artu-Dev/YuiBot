@@ -123,7 +123,6 @@ export async function handlePenalities(message, userData) {
   }
 
   if (!penalityKey || !penaltiesData[penalityKey]) {
-    log(`❌ handlePenalities false: Penalidade inválida ou não existe (${penalityKey})`, "Penality", 31);
     return false;
   }
 
