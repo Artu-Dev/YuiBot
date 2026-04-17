@@ -5,6 +5,11 @@ import { penalities } from "../functions/penalties/penalities.js";
 export const name = "set-penality";
 export const aliases = ["set-penalidade", "add-penality", "add-penalidade", "add-p", "set-p"];
 
+const penalityNameToKey = Object.entries(penalities).reduce((acc, [key, data]) => {
+  acc[data.nome.toLowerCase()] = key;
+  return acc;
+}, {});
+
 const EXISTING = Object.values(penalities).map((p) => p.nome);
 
 export const data = new SlashCommandBuilder()
@@ -67,9 +72,11 @@ export async function execute(client, data) {
     );
   }
 
+  const penaltyKey = penalityNameToKey[normalizedPenalty];
+
   getOrCreateUser(targetUser.id, targetUser.username, guildId);
 
-  const added = setUserPenality(targetUser.id, guildId, normalizedPenalty, true);
+  const added = setUserPenality(targetUser.id, guildId, penaltyKey, true);
   if (!added) {
     return data.reply(`${targetUser.username} já tem a penalidade: ${normalizedPenalty}.`);
   }

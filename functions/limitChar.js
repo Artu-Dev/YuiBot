@@ -133,7 +133,6 @@ export const limitChar = async (message, userData) => {
 
   // ====================== PENALIDADES ======================
   const wasPunished = await handlePenalities(message, userData);
-  log(`🔔 handlePenalities retornou: ${wasPunished}`, "LimitChar", 33);
   if (wasPunished) return false;
 
   if (newValue <= 0 && !userData.penality ) {
@@ -149,7 +148,6 @@ export const limitChar = async (message, userData) => {
       setUserProperty("penalityWord", userId, guildId, randomWord);
     }
 
-    log(`⚡ Penalidade atribuída: ${randomPenality.nome}${randomWord ? ` (palavra: ${randomWord})` : ""}`, "LimitChar", 31);
 
     await safeReplyToMessage(
       message,

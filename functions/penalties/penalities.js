@@ -17,25 +17,7 @@ const WARNING_DELETE_TIMEOUT_MS = ms('10s');
 const ECO_DELETE_TIMEOUT_MS = ms('5s');
 const SLOWMODE_COOLDOWN_MS = ms('10s');
 
-// ==================== FUNÇÃO HELPER ====================
-function normalizeAndFindPenalityKey(penalityInput) {
-  if (!penalityInput) return null;
-  
-  // Se for exatamente uma chave válida, retorna
-  if (penaltiesData[penalityInput]) return penalityInput;
-  
-  // Tenta encontrar pela descrição (nome formatado)
-  const inputLower = penalityInput.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  for (const [key, data] of Object.entries(penaltiesData)) {
-    const keyNorm = key.toLowerCase();
-    const nameLower = data.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    if (keyNorm === inputLower || nameLower === inputLower) {
-      return key;
-    }
-  }
-  
-  return null;
-}
+
 
 // ==================== UTILITÁRIOS INTERNOS ====================
 async function tryInvertMessage(text) {
@@ -134,18 +116,14 @@ export async function handlePenalities(message, userData) {
     return false; 
   }
 
-  const penality = userData.penality;
-  const penalityKey = normalizeAndFindPenalityKey(penality);
-  
-  log(`🔍 Verificando penalidades - User: ${actualUserId}, Penality: ${penality}, PenalityKey: ${penalityKey}, CharLeft: ${userData.charLeft}, Content: "${message.content.substring(0, 50)}"`, "Penality", 33);
+  const penalityKey = userData.penality;
   
   if (Number(userData.charLeft) > 0 && userData.penalitySetByAdmin !== 1) {
-    log(`⚠️ Caracteres positivos (${userData.charLeft}) e não é penalidade de admin. Ignorando.`, "Penality", 33);
     return false;
   }
 
-  if (!penalityKey) {
-    log(`⚠️ Sem penalidade definida ou penalidade inválida (${penality}).`, "Penality", 33);
+  if (!penalityKey || !penaltiesData[penalityKey]) {
+    log(`❌ handlePenalities false: Penalidade inválida ou não existe (${penalityKey})`, "Penality", 31);
     return false;
   }
 
@@ -157,7 +135,6 @@ export async function handlePenalities(message, userData) {
   if (penalityKey === "hater_vogais" && /[aeiou]/i.test(content)) {
     isPunished = true;
     warning = "Você não pode usar vogais!";
-    log(`❌ PENALIDADE ATIVADA: hater_vogais`, "Penality", 31);
 
   // ===== PALAVRA OBRIGATÓRIA =====
   } else if (penalityKey === "palavra_obrigatoria") {
@@ -165,7 +142,6 @@ export async function handlePenalities(message, userData) {
     if (!content.endsWith(required)) {
       isPunished = true;
       warning = `Sua mensagem precisa terminar com: ${required}`;
-      log(`❌ PENALIDADE ATIVADA: palavra_obrigatoria (faltava: ${required})`, "Penality", 31);
     }
 
   // ===== COMO DIMINUI A FONTE? =====
@@ -175,7 +151,6 @@ export async function handlePenalities(message, userData) {
   ) {
     isPunished = true;
     warning = "Você só pode usar MAIÚSCULAS!";
-    log(`❌ PENALIDADE ATIVADA: como_diminui_a_fonte`, "Penality", 31);
 
   // ===== TIMIDEZ =====
   } else if (
@@ -185,7 +160,6 @@ export async function handlePenalities(message, userData) {
     if (palavras.length > 1) {
       isPunished = true;
       warning = "Você só pode enviar uma única palavra!";
-      log(`❌ PENALIDADE ATIVADA: timidez (${palavras.length} palavras)`, "Penality", 31);
     }
 
   // ===== REDIGIDO =====
@@ -199,7 +173,6 @@ export async function handlePenalities(message, userData) {
         .join("") || "...";
 
     await sendModifiedMessage(message, textPunished);
-    log(`❌ PENALIDADE ATIVADA: redigido`, "Penality", 31);
     return false;
 
   // ===== SENTIDO INVERTIDO =====
@@ -208,7 +181,6 @@ export async function handlePenalities(message, userData) {
     invertedText = await tryInvertMessage(invertedText);
 
     await sendModifiedMessage(message, invertedText);
-    log(`❌ PENALIDADE ATIVADA: sentido_invertido`, "Penality", 31);
     return false;
 
   // ===== SLOWMODE =====
@@ -231,7 +203,6 @@ export async function handlePenalities(message, userData) {
         const expiryUnix = Math.floor(expiryTimeMs / 1000);
 
         warning = `Você está em slowmode! Aguarde <t:${expiryUnix}:R> antes de enviar outra mensagem.`;
-        log(`❌ PENALIDADE ATIVADA: slowmode`, "Penality", 31);
     }
   // ===== IRRELEVÂNCIA =====
   } else if (penalityKey === "irrelevancia") {
@@ -239,7 +210,6 @@ export async function handlePenalities(message, userData) {
     setTimeout(() => {
       message.delete().catch(() => {});
     }, ECO_DELETE_TIMEOUT_MS);
-    log(`❌ PENALIDADE ATIVADA: irrelevancia`, "Penality", 31);
     return true;
 
   // ===== APENAS GIFS =====
@@ -248,12 +218,10 @@ export async function handlePenalities(message, userData) {
     if (!isGifOnly) {
       isPunished = true;
       warning = "Você só pode enviar GIFs! Nada de texto.";
-      log(`❌ PENALIDADE ATIVADA: gif_only`, "Penality", 31);
     }
   }
 
   if (isPunished) {
-    log(`✅ Enviando aviso: "${warning}"`, "Penality", 32);
     await sendWarning(message, warning);
     return true;
   }

@@ -53,12 +53,12 @@ export const data = new SlashCommandBuilder()
 
 function parseArgs(data) {
   if (data.fromInteraction) {
-    const subcommand = data.options.getSubcommand();
+    const subcommand = data.getSubcommand();
     return {
       subcommand,
-      targetUser: data.options.getUser("user"),
-      achievementId: data.options.getString("achievement"),
-      amount: data.options.getInteger("amount"),
+      targetUser: data.getUser("user"),
+      achievementId: data.getString("achievement"),
+      amount: data.getInteger("amount"),
     };
   }
 
@@ -66,7 +66,7 @@ function parseArgs(data) {
   return {
     subcommand: args[0]?.toLowerCase(),
     args,
-    targetUser: data.mentions?.users?.first(),
+    targetUser: data.mentionedUser,
   };
 }
 
