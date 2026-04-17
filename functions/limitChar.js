@@ -3,6 +3,7 @@ import { parseMessage, safeReplyToMessage } from "./utils.js";
 import { penalities, handlePenalities, randomWords } from "./penalties/penalities.js";
 import { getCurrentDailyEvent } from "./getTodaysEvent.js";
 import { getCharMultiplier } from "./effects.js";
+import { sample } from "es-toolkit";
 import dayjs from "dayjs";
 import { log } from "../bot.js";
 
@@ -72,6 +73,9 @@ export const limitChar = async (message, userData) => {
   const textWithoutUrls = text.replace(GIF_URL_REGEX, "").trim();
   let textSize = textWithoutUrls.length;
 
+  const urls = text.match(GIF_URL_REGEX) || [];
+  textSize += urls.length;
+
   // Anexos
   if (message.attachments.size > 0) {
     const gifAttachments = message.attachments.filter((a) =>
@@ -130,7 +134,7 @@ export const limitChar = async (message, userData) => {
   if (wasPunished) return false;
 
   if (newValue <= 0 && !userData.penality ) {
-    const randomPenality = penalities[Math.floor(Math.random() * penalities.length)];
+    const randomPenality = sample(Object.values(penalities));
     let randomWord = "";
 
     setUserProperty("penality", userId, guildId, randomPenality.nome);

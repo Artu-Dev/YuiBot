@@ -5,7 +5,7 @@ import { penalities } from "../functions/penalties/penalities.js";
 export const name = "set-penality";
 export const aliases = ["set-penalidade", "add-penality", "add-penalidade", "add-p", "set-p"];
 
-const EXISTING = penalities.map((p) => p.nome);
+const EXISTING = Object.values(penalities).map((p) => p.nome);
 
 export const data = new SlashCommandBuilder()
   .setName("set-penality")

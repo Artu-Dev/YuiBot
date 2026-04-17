@@ -189,13 +189,12 @@ export async function execute(client, data) {
     if (event.eventKey === "rob_0") successChance = 0.0;
   }
 
-  // Check for guaranteed_rob effect (from Curso de Roubo item)
   if (hasEffect(userId, guildId, 'guaranteed_rob')) {
     successChance = 1.0;
     removeEffect(userId, guildId, 'guaranteed_rob');
   }
 
-  const penalty = applyClassModifier(
+  let penalty = applyClassModifier(
     isTargeted ? PENALTY_TARGETED : PENALTY_RANDOM,
     "robCost",
     userClass,
@@ -265,7 +264,11 @@ export async function execute(client, data) {
     if (userChars != 0) {
       reduceChars(userId, guildId, penalty);
       addChars(victimId, guildId, penalty);
+    } else if (userChars < penalty) {
+      penality = userChars;
+      reduceChars(userId, guildId, userChars);
     }
+
 
     setUserProperty("consecutive_robbery_losses", userId, guildId, 0);
 
@@ -282,14 +285,14 @@ export async function execute(client, data) {
 
     const failReplies = isTargeted
       ? [
-          `${displayName} tentou roubar ${victimName} na surdina... mas ${victimName} pegou com a mao na jaca. ${displayName} perdeu pra ele ${penalty} caracteres igual um betinha.`,
-          `${victimName} estava paranoico com os cara no teto, viu ${displayName} chegando, pegou a makita e passou a mao em ${penalty} caracteres.`,
-          `deu ruim menó! ${displayName} foi pego ao tentar roubar ${victimName} e teve que fazer um pix ${penalty} chars pra ele.`,
+          `${displayName} tentou roubar ${victimName} na surdina... mas ${victimName} pegou com a mao na jaca. ${displayName} perdeu pra ele ${penality} caracteres igual um betinha.`,
+          `${victimName} estava paranoico com os cara no teto, viu ${displayName} chegando, pegou a makita e passou a mao em ${penality} caracteres.`,
+          `deu ruim menó! ${displayName} foi pego ao tentar roubar ${victimName} e teve que fazer um pix ${penality} chars pra ele.`,
         ]
       : [
-          `${displayName} foi roubar um aleatorio e se fodeu, foi pego no flagra e perdeu ${penalty} caracteres para ${victimName}!`,
-          `${displayName} se deu mal na ação e acabou doando contra sua vontade ${penalty} caracteres para ${victimName}.`,
-          `${displayName} foi burrao e acabou doando ${penalty} chars pra ${victimName} viva a benevolencia.`,
+          `${displayName} foi roubar um aleatorio e se fodeu, foi pego no flagra e perdeu ${penality} caracteres para ${victimName}!`,
+          `${displayName} se deu mal na ação e acabou doando contra sua vontade ${penality} caracteres para ${victimName}.`,
+          `${displayName} foi burrao e acabou doando ${penality} chars pra ${victimName} viva a benevolencia.`,
         ];
 
     finalReply = userChars === 0 ? sample(failRepliesNoChars) : sample(failReplies);

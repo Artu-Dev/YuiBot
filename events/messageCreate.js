@@ -1,15 +1,11 @@
 import { ALLOWED_MESSAGE_BOT_ID } from "../data/config.js";
 import { parseMessage } from "../functions/utils.js";
-import { 
-  handleCommand,
-  handleAchievementsCheck,
-  processMessageContext,
-  handleRandomActions,
-  announceEventIfNeeded,
-  extractImageUrl,
-  initCooldownCleanup,
-  cleanupCooldowns
-} from "../functions/handlers/messageCreate/index.js";
+import { handleCommand } from "../functions/handlers/messageCreate/commands.js";
+import { handleAchievementsCheck } from "../functions/handlers/messageCreate/achievements.js";
+import { processMessageContext } from "../functions/handlers/messageCreate/messageContext.js";
+import { handleRandomActions, initCooldownCleanup, cleanupCooldowns } from "../functions/handlers/messageCreate/randomActions.js";
+import { announceEventIfNeeded } from "../functions/handlers/messageCreate/events.js";
+import { extractImageUrl } from "../functions/handlers/messageCreate/utils.js";
 
 export const name = "messageCreate";
 export const cleanup = cleanupMessageCreateListeners;

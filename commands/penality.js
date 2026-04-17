@@ -42,7 +42,7 @@ export async function execute(client, data) {
 
   return data.reply(
     `Penalidade de ${displayName}: ${penality}\n
-    ${penalities.filter(p => p.name === penality)}
+    ${Object.values(penalities).find(p => p.nome === penality)?.description || "Descrição não encontrada"}
     `
 
   );

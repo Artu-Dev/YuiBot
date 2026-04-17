@@ -123,8 +123,8 @@ export async function handlePenalities(message, userData) {
   let isPunished = false;
   let warning = "";
 
-  // ===== ESTRANGEIRO =====
-  if (penality === "estrangeiro" && /[aeiou]/i.test(content)) {
+  // ===== HATER DE VOGAIS =====
+  if (penality === "hater_vogais" && /[aeiou]/i.test(content)) {
     isPunished = true;
     warning = "Você não pode usar vogais!";
 
@@ -136,17 +136,17 @@ export async function handlePenalities(message, userData) {
       warning = `Sua mensagem precisa terminar com: ${required}`;
     }
 
-  // ===== SCREAMER =====
+  // ===== COMO DIMINUI A FONTE? =====
   } else if (
-    penality === "screamer" &&
+    penality === "como_diminui_a_fonte" &&
     content !== content.toUpperCase()
   ) {
     isPunished = true;
-    warning = "Você só pode usar letras maiúsculas!";
+    warning = "Você só pode usar MAIÚSCULAS!";
 
-  // ===== POETA BINÁRIO =====
+  // ===== TIMIDEZ =====
   } else if (
-    penality === "poeta_binario"
+    penality === "timidez"
   ) {
     const palavras = content.trim().split(/\s+/);
     if (palavras.length > 1) {
@@ -196,11 +196,19 @@ export async function handlePenalities(message, userData) {
 
         warning = `Você está em slowmode! Aguarde <t:${expiryUnix}:R> antes de enviar outra mensagem.`;
     }
-  // ===== ECO =====
-  } else if (penality === "eco") {
+  // ===== IRRELEVÂNCIA =====
+  } else if (penality === "irrelevancia") {
     setTimeout(() => {
       message.delete().catch(() => {});
     }, ECO_DELETE_TIMEOUT_MS);
+
+  // ===== APENAS GIFS =====
+  } else if (penality === "gif_only") {
+    const isGifOnly = isGifOnlyMessage(message);
+    if (!isGifOnly) {
+      isPunished = true;
+      warning = "Você só pode enviar GIFs! Nada de texto.";
+    }
   }
 
   if (isPunished) {
