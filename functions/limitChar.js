@@ -111,6 +111,8 @@ export const limitChar = async (message, userData) => {
 
   const oldValue = Number(userData.charLeft) || 0;
   const newValue = reduceChars(userId, guildId, textSize);
+  
+  userData.charLeft = newValue;
 
   const getTier = (value) => (value > 1000 ? "green" : value > 500 ? "yellow" : "red");
 
@@ -131,18 +133,23 @@ export const limitChar = async (message, userData) => {
 
   // ====================== PENALIDADES ======================
   const wasPunished = await handlePenalities(message, userData);
+  log(`🔔 handlePenalities retornou: ${wasPunished}`, "LimitChar", 33);
   if (wasPunished) return false;
 
   if (newValue <= 0 && !userData.penality ) {
-    const randomPenality = sample(Object.values(penalities));
+    const penalityKeys = Object.keys(penalities);
+    const randomKey = penalityKeys[Math.floor(Math.random() * penalityKeys.length)];
+    const randomPenality = penalities[randomKey];
     let randomWord = "";
 
-    setUserProperty("penality", userId, guildId, randomPenality.nome);
+    setUserProperty("penality", userId, guildId, randomKey);
 
-    if (randomPenality.nome === "palavra_obrigatoria") {
+    if (randomKey === "palavra_obrigatoria") {
       randomWord = randomWords[Math.floor(Math.random() * randomWords.length)];
       setUserProperty("penalityWord", userId, guildId, randomWord);
     }
+
+    log(`⚡ Penalidade atribuída: ${randomPenality.nome}${randomWord ? ` (palavra: ${randomWord})` : ""}`, "LimitChar", 31);
 
     await safeReplyToMessage(
       message,

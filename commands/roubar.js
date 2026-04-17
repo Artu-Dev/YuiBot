@@ -194,7 +194,7 @@ export async function execute(client, data) {
     removeEffect(userId, guildId, 'guaranteed_rob');
   }
 
-  let penalty = applyClassModifier(
+  let penality = applyClassModifier(
     isTargeted ? PENALTY_TARGETED : PENALTY_RANDOM,
     "robCost",
     userClass,
@@ -262,9 +262,9 @@ export async function execute(client, data) {
     finalReply = sample(successReplies) + allHint;
   } else {
     if (userChars != 0) {
-      reduceChars(userId, guildId, penalty);
-      addChars(victimId, guildId, penalty);
-    } else if (userChars < penalty) {
+      reduceChars(userId, guildId, penality);
+      addChars(victimId, guildId, penality);
+    } else if (userChars < penality) {
       penality = userChars;
       reduceChars(userId, guildId, userChars);
     }
@@ -299,7 +299,7 @@ export async function execute(client, data) {
   }
 
 
-  const finalChars = userChars + (success ? stolenAmount : -penalty);
+  const finalChars = userChars + (success ? stolenAmount : -penality);
   const resultEmbed = new EmbedBuilder()
     .setColor(success ? "#00FF00" : "#FF0000")
     .setTitle(success ? `${customEmojis.pointingGun} Roubo deu bom!` : `${customEmojis.pepeCry} Roubo deu B.O!`)
