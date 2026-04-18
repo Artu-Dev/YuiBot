@@ -9,7 +9,7 @@ import {
 } from 'discord.js';
 import { getShop, getShopItem, decrementStock } from '../functions/shop.js';
 import { addToInventory, getInventory } from '../functions/inventario.js';
-import { getUser, reduceChars, reduceCharsWithCredit, getSpendableChars, getServerConfig } from '../database.js';
+import { getUser, reduceChars, getSpendableChars, getServerConfig } from '../database.js';
 import {SHOP_ITEMS} from '../data/shopItems.js';
 import { customEmojis } from '../functions/utils.js';
 
@@ -132,7 +132,7 @@ async function handleBuy(user, guildId, itemId) {
     return `❌ Seu inventário está cheio! (${MAX_INVENTORY}/${MAX_INVENTORY})\nUse \`/usar\` para usar um item antes.`;
 
   // Deduz chars
-  await reduceCharsWithCredit(userId, guildId, shopItem.price);
+  await reduceChars(userId, guildId, shopItem.price, true);
   decrementStock(guildId, itemId);
   
   // Adiciona ao inventário

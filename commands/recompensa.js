@@ -4,7 +4,6 @@ import {
   getUser,
   addChars,
   reduceChars,
-  reduceCharsWithCredit,
   getSpendableChars,
   getBotPrefix,
   addUserPropertyByAmount,
@@ -102,7 +101,7 @@ export async function execute(client, data) {
   const newGiverBalance = (giver.charLeft || 0) - amount;
   const receiverName = targetUser.displayName ?? targetUser.username;
   getOrCreateUser(targetUser.id, receiverName, guildId);
-  await reduceCharsWithCredit(userId, guildId, amount);
+  await reduceChars(userId, guildId, amount, true);
 
   if (amount < targetUser.rewardValue) {
     return await data.reply(

@@ -10,6 +10,7 @@ export const aliases = ["d"];
 export const data = new SlashCommandBuilder()
   .setName("dev")
   .setDescription("Comandos de desenvolvimento (apenas owner)")
+  .setDefaultMemberPermissions(0)
   .addSubcommand(sub =>
     sub
       .setName("achievement")
@@ -23,6 +24,12 @@ export const data = new SlashCommandBuilder()
       .setDescription("Setar chars de um usuário")
       .addUserOption(opt => opt.setName("user").setDescription("Usuário alvo").setRequired(true))
       .addIntegerOption(opt => opt.setName("amount").setDescription("Quantidade de chars").setRequired(true).setMinValue(0))
+  )
+  .addSubcommand(sub =>
+    sub
+      .setName("set-event")
+      .setDescription("Definir evento diário do servidor")
+      .addStringOption(opt => opt.setName("event").setDescription("Chave do evento (ex: no_limit, half_chars)").setRequired(true))
   )
   .addSubcommand(sub =>
     sub
@@ -59,6 +66,7 @@ function parseArgs(data) {
       targetUser: data.getUser("user"),
       achievementId: data.getString("achievement"),
       amount: data.getInteger("amount"),
+      eventKey: data.getString("event"),
     };
   }
 
@@ -84,10 +92,28 @@ export async function execute(client, data) {
     return data.reply(opts);
   }
 
-  const { subcommand, targetUser, achievementId, amount, args } = parseArgs(data);
+  const { subcommand, targetUser, achievementId, amount, args, eventKey } = parseArgs(data);
 
   if (!subcommand) {
-    return data.reply("❌ Use: `$dev <subcomando> [argumentos]`\nExemplo: `$dev chars @usuário 3000`");
+    const embed = new EmbedBuilder()
+      .setColor(0x0099ff)
+      .setTitle("🛠️ Comandos de Desenvolvimento")
+      .setDescription("**Subcomandos disponíveis:**")
+      .addFields(
+        { name: "🏆 achievement", value: "Desbloquear conquista para usuário\n`/dev achievement user:@usuário achievement:id`", inline: true },
+        { name: "💰 chars", value: "Setar chars de um usuário\n`/dev chars user:@usuário amount:3000`", inline: true },
+        { name: "🎲 set-event", value: "Definir evento diário do servidor\n`/dev set-event event:no_limit`", inline: true },
+        { name: "🏪 shop-reset", value: "Resetar loja diária\n`/dev shop-reset`", inline: true },
+        { name: "👤 user-info", value: "Ver info de um usuário\n`/dev user-info user:@usuário`", inline: true },
+        { name: "🎯 random-achievement", value: "Mostrar conquista aleatória\n`/dev random-achievement`", inline: true },
+        { name: "🖥️ servers", value: "Lista todos os servidores\n`/dev servers`", inline: true },
+        { name: "🔄 reload-config", value: "Recarregar configuração\n`/dev reload-config`", inline: true }
+      )
+      .setFooter({ text: "Apenas para owner do bot" });
+
+    const opts = { embeds: [embed] };
+    if (data.isEphemeral) opts.flags = ChannelFlags.Ephemeral;
+    return data.reply(opts);
   }
 
   try {
@@ -97,6 +123,9 @@ export async function execute(client, data) {
 
       case "chars":
         return await handleChars(data, guildId, targetUser, amount, args);
+
+      case "set-event":
+        return await handleSetEvent(data, guildId, eventKey, args);
 
       case "shop-reset":
         return await handleShopReset(data, guildId);
@@ -300,6 +329,49 @@ async function handleReloadConfig(data) {
     .setColor(0x00ff00)
     .setTitle("✅ Config Recarregada")
     .setDescription("A configuração do bot foi recarregada com sucesso!");
+
+  const opts = { embeds: [embed] };
+  if (data.isEphemeral) opts.flags = ChannelFlags.Ephemeral;
+  return data.reply(opts);
+}
+
+async function handleSetEvent(data, guildId, eventKey, args = []) {
+  if (data.fromInteraction) {
+    if (!eventKey) {
+      throw new Error("Chave do evento não informada.");
+    }
+  } else {
+    eventKey = eventKey || args[1];
+    if (!eventKey) {
+      throw new Error("Uso: `$dev set-event <eventKey>`\nExemplo: `$dev set-event no_limit`");
+    }
+  }
+
+  // Verificar se o evento existe
+  const { randomEventsData } = await import("../data/eventsData.js");
+  const validEvents = randomEventsData.map(e => e.key);
+  if (!validEvents.includes(eventKey) && eventKey !== "normal") {
+    const embed = new EmbedBuilder()
+      .setColor(0xffaa00)
+      .setTitle("⚠️ Evento Inválido")
+      .setDescription(`Evento **${eventKey}** não encontrado. Eventos válidos:\n${validEvents.join(", ")}, normal`);
+
+    const opts = { embeds: [embed] };
+    if (data.isEphemeral) opts.flags = ChannelFlags.Ephemeral;
+    return data.reply(opts);
+  }
+
+  // Salvar o evento
+  const { saveDailyEvent } = await import("../functions/database/events.js");
+  const { resetDailyEventCache } = await import("../functions/getTodaysEvent.js");
+
+  saveDailyEvent(guildId, eventKey);
+  resetDailyEventCache(); // Limpar cache para forçar reload
+
+  const embed = new EmbedBuilder()
+    .setColor(0x00ff00)
+    .setTitle("🎲 Evento Definido")
+    .setDescription(`Evento diário definido como **${eventKey}** para este servidor!`);
 
   const opts = { embeds: [embed] };
   if (data.isEphemeral) opts.flags = ChannelFlags.Ephemeral;

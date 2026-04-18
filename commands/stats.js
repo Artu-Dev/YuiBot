@@ -127,8 +127,6 @@ function embedResumo(user, discordUser, guildId, embedColor) {
   const unlocked = parseAchievements(user);
   const achCount = Object.keys(unlocked).length;
   const totalAch = Object.keys(achievements).length;
-  
-  const robbiesRemaining = 3 - (user.daily_robberies ?? 0);
 
   const eb = new EmbedBuilder()
     .setColor(embedColor)
@@ -145,8 +143,8 @@ function embedResumo(user, discordUser, guildId, embedColor) {
         inline: true,
       },
       {
-        name: `${customEmojis.pointingGun || "🥷"} Roubos Restantes`,
-        value: `${robbiesRemaining}/3`,
+        name: `${customEmojis.pointingGun || "🥷"} Roubos Hoje`,
+        value: `${user.daily_robberies ?? 0}/3`,
         inline: true,
       }
     );

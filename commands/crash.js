@@ -3,7 +3,6 @@ import {
   getOrCreateUser, 
   addChars, 
   reduceChars,
-  reduceCharsWithCredit,
   getSpendableChars,
   addUserPropertyByAmount,
   getServerConfig 
@@ -134,7 +133,7 @@ export async function execute(client, data) {
     return await data.reply(`**${displayName}**, tu só tem **${charLeft.toLocaleString()}** chars${spendableChars > charLeft ? ` (+ ${(spendableChars - charLeft).toLocaleString()} de crédito)` : ''}. Aposta algo que tu tem, seu liso!`);
   }
 
-  await reduceCharsWithCredit(userId, guildId, aposta);
+  await reduceChars(userId, guildId, aposta, true);
   addUserPropertyByAmount("tiger_plays", userId, guildId, 1);
 
   const classLucky = getClassModifier(user.user_class, "lucky");

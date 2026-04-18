@@ -3,7 +3,6 @@ import {
   dbBot,
   getOrCreateUser,
   reduceChars,
-  reduceCharsWithCredit,
   getSpendableChars,
   extendGuildAiSilenceMs,
   getServerConfig,
@@ -44,7 +43,7 @@ export async function execute(client, data) {
     );
   }
 
-  await reduceCharsWithCredit(userId, guildId, CALAR_CUSTO);
+  await reduceChars(userId, guildId, CALAR_CUSTO, true);
 
   const loadingEmbed = new EmbedBuilder()
     .setColor("#5865F2")

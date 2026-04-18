@@ -16,7 +16,6 @@ export {
   setUserProperty,
   addUserPropertyByAmount,
   reduceChars,
-  reduceCharsWithCredit,
   getSpendableChars,
   addChars,
   addCharsBulk,
@@ -293,12 +292,7 @@ export const initializeDbBot = async () => {
       guildId TEXT PRIMARY KEY,
       date TEXT,
       eventKey TEXT,
-      hasBeenAnnounced INTEGER DEFAULT 0,
-      charMultiplier REAL DEFAULT 1.0,
-      casinoMultiplier REAL DEFAULT 1.0,
-      robSuccess REAL,
-      name TEXT,
-      description TEXT
+      hasBeenAnnounced INTEGER DEFAULT 0
     )
   `).run();
 

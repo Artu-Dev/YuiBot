@@ -29,7 +29,12 @@ export const getOrCreateUser = (userId, displayName, guildId) => {
     return null;
   }
 
-  db.queries.insertUser.run(userId, displayName || "Unknown", guildId);
+  const existing = db.queries.getUserById.get(userId, guildId);
+  if (existing) {
+    return existing;
+  }
+
+  db.queries.insertUser.run(userId, displayName ?? null, guildId);
   return db.queries.getUserById.get(userId, guildId);
 };
 
@@ -51,10 +56,35 @@ export function addUserPropertyByAmount(prop, userId, guildId, amount) {
     .run(amount, userId, guildId);
 }
 
-export const reduceChars = (userId, guildId, amount) => {
+
+export const reduceChars = async (userId, guildId, amount, allowCredit = false) => {
   if (!isValidUserId(userId) || !isValidGuildId(guildId)) return 0;
+
   const date = new Date().toISOString();
-  const result = db.queries.reduceChars.run(amount, date, userId, guildId);
+  let query = db.queries.reduceChars;
+
+  if (allowCredit) {
+    const { hasEffect, removeEffect } = await import("../effects.js");
+    const hasCreditCard = hasEffect(userId, guildId, "credit_card_active");
+    
+    if (hasCreditCard) {
+      query = db.queries.reduceCharsAllowNegative;
+    }
+
+    query.run(amount, date, userId, guildId);
+    
+    if (hasCreditCard) {
+      const user = getUser(userId, guildId);
+      const newBalance = user?.charLeft ?? 0;
+      
+      if (newBalance < -(user?.credit_limit || 0)) {
+        removeEffect(userId, guildId, "credit_card_active");
+      }
+    }
+  } else {
+    query.run(amount, date, userId, guildId);
+  }
+
   const user = getUser(userId, guildId);
   return user?.charLeft ?? 0;
 };
@@ -110,32 +140,22 @@ export const getPoorestGuildUsers = (guildId, excludeUserId, limit = 10) => {
   `).all(guildId, excludeUserId || "", limit);
 };
 
+
 export const ensureUserExists = (userId, guildId) => {
   if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
     logInvalidId(userId, guildId, "ensureUserExists");
     return null;
   }
-  return getOrCreateUser(userId, "Unknown", guildId);
-};
 
-export async function reduceCharsWithCredit(userId, guildId, amount) {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) return 0;
-  
-  const { hasEffect, removeEffect } = await import("../effects.js");
-  const hasCreditCard = hasEffect(userId, guildId, "credit_card_active");
-  
-  const date = new Date().toISOString();
-  const query = hasCreditCard ? db.queries.reduceCharsAllowNegative : db.queries.reduceChars;
-  const result = query.run(amount, date, userId, guildId);
-  const user = getUser(userId, guildId);
-  const newBalance = user?.charLeft ?? 0;
-  
-  if (hasCreditCard && newBalance < -(user?.credit_limit || 0)) {
-    removeEffect(userId, guildId, 'credit_card_active');
+  // Tenta obter usuário existente
+  const existing = db.queries.getUserById.get(userId, guildId);
+  if (existing) {
+    return existing;
   }
-  
-  return newBalance;
-}
+
+  // Cria novo usuário (sem forçar displayName)
+  return getOrCreateUser(userId, null, guildId);
+};
 
 export async function getSpendableChars(userId, guildId) {
   const user = getUser(userId, guildId);

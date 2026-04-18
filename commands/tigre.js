@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { getOrCreateUser, getUser, reduceChars, reduceCharsWithCredit, addChars, getSpendableChars, db, addUserPropertyByAmount, getServerConfig } from "../database.js";
+import { getOrCreateUser, getUser, reduceChars, addChars, getSpendableChars, db, addUserPropertyByAmount, getServerConfig } from "../database.js";
 import { getClassModifier } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { randomInt } from 'es-toolkit';
@@ -36,7 +36,7 @@ export async function execute(client, data) {
   const pendingStacks = Math.max(0, Math.min(8, Number(user.tiger_pending_double) || 0));
   const doubleMult = 2 ** pendingStacks;
 
-  await reduceCharsWithCredit(userId, guildId, TIGRE_CUSTO);
+  await reduceChars(userId, guildId, TIGRE_CUSTO, true);
 
   const loadingEmbed = new EmbedBuilder()
     .setColor("#F1C40F")

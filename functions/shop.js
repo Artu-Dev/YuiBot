@@ -8,10 +8,10 @@ const RESTART_SHOP = 'day';
 const ITEMS_POR_SEMANA = 3;
 
 const STOCK_PADRAO = {
-  comum: 1,
-  incomum: 1,
-  raro: 1,
-  lendário: 1,
+  comum: 3,
+  incomum: 3,
+  raro: 3,
+  lendário: 3,
 };
 
 function getPeriodKey(guildId) {
@@ -23,17 +23,39 @@ function getPeriodKey(guildId) {
 
 function generateWeeklyShop() {
   const entries = Object.entries(SHOP_ITEMS);
-  for (let i = entries.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [entries[i], entries[j]] = [entries[j], entries[i]];
+  
+  const rarityWeights = {
+    comum: 25,
+    incomum: 25,
+    raro: 25,
+    lendário: 25   
+  };
+  
+  const selectedItems = [];
+  
+  for (let i = 0; i < ITEMS_POR_SEMANA; i++) {
+    let totalWeight = 0;
+    const weightedEntries = entries.map(([id, item]) => {
+      const weight = rarityWeights[item.rarity] || 10;
+      totalWeight += weight;
+      return { id, item, weight, cumulative: totalWeight };
+    });
+    
+    const random = Math.random() * totalWeight;
+    const selected = weightedEntries.find(entry => random <= entry.cumulative);
+    
+    if (selected) {
+      const itemDef = selected.item;
+      selectedItems.push({
+        id: selected.id,
+        price: typeof itemDef.price === 'function' ? itemDef.price() : (itemDef.price || 1000),
+        duration: itemDef.duration ? (typeof itemDef.duration === 'function' ? itemDef.duration() : itemDef.duration) : null,
+        stock: itemDef.stock ?? STOCK_PADRAO[itemDef.rarity] ?? 2,
+      });
+    }
   }
-
-  return entries.slice(0, ITEMS_POR_SEMANA).map(([id, item]) => ({
-    id,
-    price: typeof item.price === 'function' ? item.price() : (item.price || 1000),
-    duration: item.duration ? (typeof item.duration === 'function' ? item.duration() : item.duration) : null,
-    stock: item.stock ?? STOCK_PADRAO[item.rarity] ?? 2,
-  }));
+  
+  return selectedItems;
 }
 
 export function getShop(guildId) {

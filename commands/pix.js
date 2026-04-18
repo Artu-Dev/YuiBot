@@ -4,7 +4,6 @@ import {
   getUser,
   addChars,
   reduceChars,
-  reduceCharsWithCredit,
   getSpendableChars,
   getBotPrefix,
   addUserPropertyByAmount,
@@ -101,7 +100,7 @@ export async function execute(client, data) {
   const newGiverBalance = (giver.charLeft || 0) - amount;
   getOrCreateUser(targetUser.id, receiverName, guildId);
 
-  await reduceCharsWithCredit(userId, guildId, amount);
+  await reduceChars(userId, guildId, amount, true);
   addChars(targetUser.id, guildId, amount);
   addUserPropertyByAmount("total_chars_donated", userId, guildId, amount);
   await awardAchievementInCommand(client, data, "generoso");

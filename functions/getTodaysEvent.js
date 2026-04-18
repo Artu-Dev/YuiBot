@@ -9,6 +9,11 @@ import { log } from "../bot.js";
 import { isValidGuildId } from "./validation.js";
 import { randomEventsData } from "../data/eventsData.js";
 
+// =============== CACHE GLOBAL ===============
+
+const DAILY_EVENT_CACHE = new Map();
+
+// =============== FUNÇÕES AUXILIARES ===============
 function createNormalEvent() {
   return {
     eventKey: "normal",
@@ -20,38 +25,142 @@ function createNormalEvent() {
   };
 }
 
-async function generateDailyEvent(today) {
+async function generateDailyEventKey(today) {
   const year = dayjs().year();
   const holidays = await loadHolidays(year);
   const isHoliday = holidays.get(today);
 
   if (isHoliday) {
     const multiplier = Math.random() < 0.5 ? 0.5 : 1.5;
-    return {
-      eventKey: "holiday_special",
-      charMultiplier: multiplier,
-      casinoMultiplier: 1.0,
-      robSuccess: null,
-      name: `Feriado: ${isHoliday}`,
-      description: `Dia de feriado! Bônus geral de ${multiplier}x`,
-    };
+    return `holiday_${multiplier}`;
   }
 
   // Halloween (outubro / mês 9)
   if (dayjs().month() === 9) {
-    const base = randomEventsData[Math.floor(Math.random() * randomEventsData.length)];
+    return "halloween";
+  }
+
+  // Natal (dezembro / mês 11, a partir do dia 25)
+  if (dayjs().month() === 11 && dayjs().date() >= 25) {
+    return "natal";
+  }
+
+  if (Math.random() < 0.8) {
+    return "normal";
+  }
+
+  const random = randomEventsData[Math.floor(Math.random() * randomEventsData.length)];
+  return random.key;
+}
+
+export async function generateAndCacheDailyEvent(guildId) {
+  if (!guildId || !isValidGuildId(guildId)) {
+    return "normal";
+  }
+
+  const today = dayjs().format("YYYY-MM-DD");
+
+  const cached = DAILY_EVENT_CACHE.get(guildId);
+  if (cached && cached.date === today) {
+    return cached.eventKey;
+  }
+
+  try {
+    const eventKey = await generateDailyEventKey(today);
+
+    saveDailyEvent(guildId, eventKey);
+
+    DAILY_EVENT_CACHE.set(guildId, { eventKey, date: today });
+
+    log(
+      `📅 Evento gerado e cacheado para ${guildId}: ${eventKey}`,
+      "DailyEvent",
+      36
+    );
+
+    return eventKey;
+  } catch (error) {
+    log(
+      `❌ Erro ao gerar evento para ${guildId}: ${error.message}`,
+      "DailyEvent",
+      31
+    );
+    return "normal";
+  }
+}
+
+export async function getCurrentDailyEvent(guildId) {
+  if (!guildId || !isValidGuildId(guildId)) {
+    return createNormalEvent();
+  }
+
+  const today = dayjs().format("YYYY-MM-DD");
+
+  const cached = DAILY_EVENT_CACHE.get(guildId);
+  if (cached && cached.date === today) {
+    return getEventDataByKey(cached.eventKey);
+  }
+
+  try {
+    const eventKey = getDailyEventFromDB(guildId);
+    if (eventKey) {
+      DAILY_EVENT_CACHE.set(guildId, { eventKey, date: today });
+      return getEventDataByKey(eventKey);
+    }
+  } catch (error) {
+    log(
+      `⚠️ Erro ao buscar evento do DB para ${guildId}: ${error.message}`,
+      "DailyEvent",
+      33
+    );
+  }
+
+  return createNormalEvent();
+}
+
+
+export function getEventDataByKey(eventKey) {
+  if (eventKey === "normal") {
+    return createNormalEvent();
+  }
+
+  const eventData = randomEventsData.find(event => event.key === eventKey);
+  if (eventData) {
+    return {
+      eventKey: eventData.key,
+      name: eventData.name,
+      description: eventData.description,
+      charMultiplier: eventData.charMultiplier,
+      casinoMultiplier: eventData.casinoMultiplier,
+      robSuccess: eventData.robSuccess,
+    };
+  }
+
+  // Eventos especiais (feriados, etc.)
+  if (eventKey.startsWith("holiday_")) {
+    const multiplier = eventKey.includes("0.5") ? 0.5 : 1.5;
+    return {
+      eventKey,
+      charMultiplier: multiplier,
+      casinoMultiplier: 1.0,
+      robSuccess: null,
+      name: `Feriado Especial`,
+      description: `Dia de feriado! Bônus geral de ${multiplier}x`,
+    };
+  }
+
+  if (eventKey === "halloween") {
     return {
       eventKey: "halloween",
-      charMultiplier: base.charMultiplier || 1.5,
-      casinoMultiplier: base.casinoMultiplier,
-      robSuccess: base.robSuccess,
+      charMultiplier: 1.5,
+      casinoMultiplier: 1.0,
+      robSuccess: null,
       name: "Halloween do MEDO!! 👻",
       description: "Evento especial de Halloween!",
     };
   }
 
-  // Natal (dezembro / mês 11, a partir do dia 25)
-  if (dayjs().month() === 11 && dayjs().date() >= 25) {
+  if (eventKey === "natal") {
     return {
       eventKey: "natal",
       charMultiplier: 0.5,
@@ -62,40 +171,18 @@ async function generateDailyEvent(today) {
     };
   }
 
-  // 80% de chance de dia normal
-  if (Math.random() < 0.8) {
-    return createNormalEvent();
-  }
-
-  // 20% de chance de evento aleatório
-  const random = randomEventsData[Math.floor(Math.random() * randomEventsData.length)];
-  return {
-    eventKey: random.eventKey,
-    charMultiplier: random.charMultiplier,
-    casinoMultiplier: random.casinoMultiplier,
-    robSuccess: random.robSuccess,
-    name: random.name,
-    description: random.description,
-  };
+  return createNormalEvent();
 }
 
-export async function getCurrentDailyEvent(guildId) {
-  if (!guildId || !isValidGuildId(guildId)) {
-    return createNormalEvent();
-  }
-
-  const today = dayjs().format("YYYY-MM-DD");
-
-  let event = getDailyEventFromDB(guildId);
-  
-  if (event && event.date === today) {
-    return event;
-  }
-
-  event = await generateDailyEvent(today);
-  saveDailyEvent(guildId, event);
-
-  return event || createNormalEvent();
+// =============== RESET DIÁRIO DO CACHE ===============
+export function resetDailyEventCache() {
+  const size = DAILY_EVENT_CACHE.size;
+  DAILY_EVENT_CACHE.clear();
+  log(
+    `🔄 Cache de eventos diários resetado (${size} servidores)`,
+    "DailyEvent",
+    32
+  );
 }
 
 async function loadHolidays(year) {

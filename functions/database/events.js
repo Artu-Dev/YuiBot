@@ -5,26 +5,18 @@ import { isValidGuildId } from "../../functions/validation.js";
 export const getDailyEventFromDB = (guildId) => {
   if (!guildId || !isValidGuildId(guildId)) return null;
   const today = dayjs().format("YYYY-MM-DD");
-  return db.prepare("SELECT * FROM daily_events WHERE guildId = ? AND date = ?").get(guildId, today);
+  const row = db.prepare("SELECT eventKey FROM daily_events WHERE guildId = ? AND date = ?").get(guildId, today);
+  return row ? row.eventKey : null;
 };
 
-export const saveDailyEvent = (guildId, eventData) => {
+export const saveDailyEvent = (guildId, eventKey) => {
   if (!guildId || !isValidGuildId(guildId)) return;
   const today = dayjs().format("YYYY-MM-DD");
   db.prepare(`
-    INSERT OR REPLACE INTO daily_events 
-      (guildId, date, eventKey, charMultiplier, casinoMultiplier, robSuccess, name, description, hasBeenAnnounced)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-  `).run(
-    guildId,
-    today,
-    eventData.eventKey ?? "normal",
-    eventData.charMultiplier ?? 1.0,
-    eventData.casinoMultiplier ?? 1.0,
-    eventData.robSuccess ?? null,
-    eventData.name ?? "Dia Normal",
-    eventData.description ?? "Tudo normal hoje"
-  );
+    INSERT OR REPLACE INTO daily_events
+      (guildId, date, eventKey, hasBeenAnnounced)
+    VALUES (?, ?, ?, 0)
+  `).run(guildId, today, eventKey ?? "normal");
 };
 
 export const shouldAnnounceDailyEvent = (guildId) => {
@@ -37,7 +29,7 @@ export const shouldAnnounceDailyEvent = (guildId) => {
 export const markDailyEventAsAnnounced = (guildId) => {
   if (!guildId || !isValidGuildId(guildId)) return;
   const today = dayjs().format("YYYY-MM-DD");
-  db.prepare("INSERT OR REPLACE INTO daily_events (guildId, date, hasBeenAnnounced) VALUES (?, ?, 1)").run(guildId, today);
+  db.prepare("UPDATE daily_events SET hasBeenAnnounced = 1 WHERE guildId = ? AND date = ?").run(guildId, today);
 };
 
 export const getHolidaysForYear = (year) => {

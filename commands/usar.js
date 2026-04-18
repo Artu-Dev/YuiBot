@@ -14,6 +14,7 @@ import { SHOP_ITEMS } from '../data/shopItems.js';
 import { db, getServerConfig } from '../database.js';
 import { randomInt } from 'es-toolkit';
 import { setCharsBulk } from '../functions/database/users.js';
+import { customEmojis } from "../functions/utils.js";
 
 // ───────────────────────── helpers ──────────────────────────
 
@@ -124,13 +125,13 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
 
     case 'reincarnate': {
       const { resetUserData } = await import('../database.js');
-      const success = resetUserData(targetId, guildId);
+      const success = resetUserData(userId, guildId);
 
       if (!success) {
         return '❌ Erro ao resetar dados do usuário. Tente novamente!';
       }
 
-      return `🔄 **${itemDef.name}** aplicada em <@${targetId}>!\n\nTodos os dados foram apagados, mas seus **chars** foram preservados! Bem-vindo à sua nova vida! 🎌`;
+      return `🔄 **${itemDef.name}** aplicada em <@${userId}>!\n\nTodos os seus dados foram apagados, mas seus **chars** foram preservados! Bem-vindo à sua nova vida!`;
     }
 
     case 'char_discount':
@@ -354,13 +355,8 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
       return `🗡️ **${itemDef.name}** equipada! Seu dano em roubos aumentou em 35% (expira ${durStr}).`;
 
     case 'guaranteed_rob': {
-      const { ensureUserExists } = await import('../database.js');
-      const targetData = await ensureUserExists(targetId, guildId);
-      if (!targetData) {
-        return '❌ Usuário alvo não encontrado no banco de dados.';
-      }
       addEffect(userId, guildId, 'guaranteed_rob', expiresAt);
-      return `🎓 **${itemDef.name}** concluído! Seu próximo roubo em <@${targetId}> é 100% garantido!`;
+      return `**${itemDef.name}** concluído! Seu próximo roubo é 100% garantido!`;
     }
 
     case 'halve_wealth': {

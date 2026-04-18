@@ -1,4 +1,4 @@
-import { dbBot, reduceChars, reduceCharsWithCredit, setUserProperty, addChars, getRandomProhibitedWord, getServerConfig, getPoorestGuildUsers, addCharsBulk, removeUserPenality } from "../database.js";
+import { dbBot, reduceChars, setUserProperty, addChars, getRandomProhibitedWord, getServerConfig, getPoorestGuildUsers, addCharsBulk, removeUserPenality } from "../database.js";
 import { parseMessage, safeReplyToMessage } from "./utils.js";
 import { penalities, handlePenalities, randomWords } from "./penalties/penalities.js";
 import { getCurrentDailyEvent } from "./getTodaysEvent.js";
@@ -50,7 +50,7 @@ export const limitChar = async (message, userData) => {
       });
 
       addCharsBulk(updates);
-      await reduceCharsWithCredit(userId, guildId, totalDistributed);
+      await reduceChars(userId, guildId, totalDistributed, true);
 
       await safeReplyToMessage(
         message,
@@ -108,7 +108,7 @@ export const limitChar = async (message, userData) => {
   textSize = Math.ceil(textSize * charMultiplier);
 
   const oldValue = Number(userData.charLeft) || 0;
-  const newValue = await reduceCharsWithCredit(userId, guildId, textSize);
+  const newValue = await reduceChars(userId, guildId, textSize, true);
   
   userData.charLeft = newValue;
 

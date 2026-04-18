@@ -6,9 +6,11 @@ import {
   getRandomUserId,
   getUser,
   reduceChars,
-  reduceCharsWithCredit,
   setUserProperty,
   getServerConfig,
+  getBankBalance,
+  withdrawFromBank,
+  db,
 } from "../database.js";
 import {
   applyClassModifier,
@@ -187,6 +189,11 @@ export async function execute(client, data) {
     if (event.eventKey === "rob_0") successChance = 0.0;
   }
 
+  if (hasEffect(userId, guildId, 'robbery_luck')) {
+    successChance += 0.15;
+    removeEffect(userId, guildId, 'robbery_luck');
+  }
+
   if (hasEffect(userId, guildId, 'guaranteed_rob')) {
     successChance = 1.0;
     removeEffect(userId, guildId, 'guaranteed_rob');
@@ -200,8 +207,10 @@ export async function execute(client, data) {
   const victimDefense = getClassModifier(victimClass, "robDefense");
 
   if (hasEffect(victimId, guildId, 'shield_robbery')) {
-    return data.reply(`${customEmojis.shield} ${victimName} tinha um guarda costas MUITO foda! não da pra roubar alguem assim agora.`);
+    data.followUp(`${customEmojis.shield} ${victimName} tinha um guarda costas MUITO foda! não da pra roubar alguem assim agora.`);
+    return;
   }
+  let tookAll = false;
 
   const baseStolen = Math.max(
     1,
@@ -212,33 +221,48 @@ export async function execute(client, data) {
     ),
   );
   
-  let finalStolenAmount = baseStolen;
-  let tookAll = false;
-  
-  if (hasEffect(userId, guildId, 'next_rob_takes_all')) {
-    finalStolenAmount = victimCharsRefresh; 
-    tookAll = true;
-    removeEffect(userId, guildId, 'next_rob_takes_all');
+  let damageMultiplier = 1 + getClassModifier(userClass, "robDamage") - victimDefense;
+  if (hasEffect(userId, guildId, 'robbery_damage_boost')) {
+    damageMultiplier += 0.35;
   }
-  
-  const stolenAmount = Math.max(
-    1,
-    Math.floor(
-      finalStolenAmount *
-        (1 + getClassModifier(userClass, "robDamage") - victimDefense),
-    ),
-  );
+
+  let stolenAmount = Math.max(1, Math.floor(baseStolen * damageMultiplier));
 
   // ====================== RESULTADO ======================
-  const success = Math.random() < successChance;
+  const success = Math.random() < Math.min(successChance, 1.0);
 
   addUserPropertyByAmount("total_robberies", userId, guildId, 1);
 
   let finalReply = "";
 
   if (success) {
+    if (hasEffect(userId, guildId, 'next_rob_takes_all')) {
+      stolenAmount = victimCharsRefresh; 
+      tookAll = true;
+      removeEffect(userId, guildId, 'next_rob_takes_all');
+    }
+
     addChars(userId, guildId, stolenAmount);
-    await reduceCharsWithCredit(victimId, guildId, stolenAmount);
+    await reduceChars(victimId, guildId, stolenAmount, true);
+    setUserProperty("consecutive_robbery_losses", userId, guildId, 0);
+
+    let bankRobHint = "";
+    if (hasEffect(userId, guildId, 'bank_robber')) {
+      try {
+        const victimBank = getBankBalance(victimId, guildId);
+        const bankRobAmount = Math.max(1, Math.floor(victimBank * 0.1));
+
+        if (bankRobAmount > 0 && victimBank >= bankRobAmount) {
+          withdrawFromBank(victimId, guildId, bankRobAmount);
+          addChars(userId, guildId, bankRobAmount);
+          bankRobHint = `\n\n🏦 **ASSALTO BANCÁRIO!** ${displayName} roubou ${bankRobAmount} chars do banco de ${victimName}!`;
+        }
+        
+        removeEffect(userId, guildId, 'bank_robber');
+      } catch (error) {
+        log(`Erro no assalto bancário: ${error.message}`, "Roubar", 31);
+      }
+    }
 
     const successReplies = isTargeted
       ? [
@@ -257,18 +281,22 @@ export async function execute(client, data) {
       allHint = `\n\n🔫 **PISTOLA DOURADA ATIVADA!** ${displayName} levou TODOS os caracteres de ${victimName}!`;
     }
 
-    finalReply = sample(successReplies) + allHint;
+    finalReply = sample(successReplies) + allHint + bankRobHint;
   } else {
-    if (userChars != 0) {
-      await reduceCharsWithCredit(userId, guildId, penality);
+    addUserPropertyByAmount("consecutive_robbery_losses", userId, guildId, 1)
+
+    if (userChars >= penality) {
+      await reduceChars(userId, guildId, penality, true);
       addChars(victimId, guildId, penality);
-    } else if (userChars < penality) {
-      penality = userChars;
-      await reduceCharsWithCredit(userId, guildId, userChars);
+    } else if (userChars > 0) {
+      const partialPenalty = userChars;
+      await reduceChars(userId, guildId, partialPenalty, true);
+      addChars(victimId, guildId, partialPenalty);
+      penality = partialPenalty;
     }
 
 
-    setUserProperty("consecutive_robbery_losses", userId, guildId, 0);
+    
 
     const failRepliesNoChars = isTargeted ? [
       `${displayName} tentou roubar ${victimName} e deu ruim pra caralho! Mas por sorte não tinha char nenhum pra perder kkk`,
@@ -307,8 +335,8 @@ export async function execute(client, data) {
   await loadingMsg.edit({ embeds: [resultEmbed] });
 
   if (success && isTargeted) {
-    const bountyValue = Number(victimData.total_bounty_value) || 0;
-    const bountyPlacer = victimData.bounty_placer;
+    const bountyValue = Number(victimDataRefresh.total_bounty_value) || 0;
+    const bountyPlacer = victimDataRefresh.bounty_placer;
 
     if (bountyValue > 0 && bountyPlacer) {
       addChars(userId, guildId, bountyValue);

@@ -50,13 +50,12 @@ export const SHOP_ITEMS = {
   },
   reencarnacao: {
     name: 'Reencarnação',
-    description: 'Apaga TODOS os dados do usuário, deixando apenas seus chars. Use em alguém para resetar sua vida!',
+    description: 'Apaga TODOS os dados do usuário, deixando apenas seus chars!',
     image: "https://c.tenor.com/FK9Qsf1ctSwAAAAd/tenor.gif",
     rarity: 'lendário',
     price: () => randomInt(5000, 8000),
     duration: () => null,
     effect: 'reincarnate',
-    requiresTarget: true,
   },
   espelho_troca: {
     name: 'Espelho da Troca',
@@ -152,7 +151,6 @@ export const SHOP_ITEMS = {
     price: () => randomInt(200, 800),
     duration: () => null,
     effect: 'guaranteed_rob',
-    requiresTarget: true,
   },
 
   divisor_de_riqueza: {
@@ -179,10 +177,20 @@ export const SHOP_ITEMS = {
   cartao_credito: {
     name: 'Cartão de Crédito',
     description: 'Use seu saldo atual como limite de crédito. Gaste negativamente e pague conforme ganha chars!',
-    image: "https://c.tenor.com/fHzF7OSce3IAAAAd/tenor.gif",
+    image: "https://media.tenor.com/A5adkAg-YJsAAAAi/mastercard-pink.gif",
     rarity: 'raro',
     price: () => randomInt(200, 1000),
     duration: () => 24 * 60 * 60 * 1000,
     effect: 'credit_card',
+  },
+
+  assaltante_bancario: {
+    name: 'Posse do Banco Master',
+    description: 'Quando roubar alguém com sucesso, rouba também 10% do banco da vítima!',
+    image: "https://c.tenor.com/v5_vkVhEbswAAAAd/tenor.gif",
+    rarity: 'incomum',
+    price: () => randomInt(800, 1500),
+    duration: () => null,
+    effect: 'bank_robber',
   },
 };
