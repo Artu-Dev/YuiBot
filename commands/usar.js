@@ -469,6 +469,17 @@ export async function execute(client, data) {
         return comp.update({ content: '❌ Item inválido no inventário.', embeds: [], components: [] });
       }
 
+      const isMysteryItem = itemDef.effect === 'mystery';
+      if (isMysteryItem) {
+        const mysteryLoading = new EmbedBuilder()
+          .setColor('#8E44AD')
+          .setTitle('🗑️ Lixo Lendário ativado...')
+          .setDescription('Algo esta se revelando desse pedaço de lixo...')
+
+        await comp.update({ embeds: [mysteryLoading], components: [] });
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+      }
+
       if (itemDef.requiresTarget) {
         pendingSlot = slotIndex;
         const select = new UserSelectMenuBuilder()
@@ -496,7 +507,9 @@ export async function execute(client, data) {
       removeFromInventory(userId, guildId, slotIndex);
       inventory.splice(slotIndex, 1);
       collector.stop();
-      return comp.update({ content: result, embeds: [], components: [] });
+      return isMysteryItem
+        ? comp.editReply({ content: result, embeds: [], components: [] })
+        : comp.update({ content: result, embeds: [], components: [] });
     }
 
     if (comp.customId === 'inv_select_target' && pendingSlot !== null) {

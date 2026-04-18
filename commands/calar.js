@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import {
   dbBot,
   getOrCreateUser,
@@ -16,6 +16,7 @@ export const requiresCharLimit = true;
 const CALAR_CUSTO = 500;
 const SILENCIO_MS = 3 * 60 * 60 * 1000;
 const CHANCE_SUCESSO = 1 / 3;
+const LOADING_TIME = 2200;
 
 export const data = new SlashCommandBuilder()
   .setName("calar")
@@ -45,6 +46,15 @@ export async function execute(client, data) {
 
   await reduceCharsWithCredit(userId, guildId, CALAR_CUSTO);
 
+  const loadingEmbed = new EmbedBuilder()
+    .setColor("#5865F2")
+    .setTitle("🤐 Tentando calar a Yui...")
+    .setDescription("Aguarde enquanto seu pedido de silêncio é preparado...")
+    .setFooter({ text: "Calculando a chance de sucesso..." });
+
+  const loadingMsg = await data.reply({ embeds: [loadingEmbed], fetchReply: true });
+  await new Promise((resolve) => setTimeout(resolve, LOADING_TIME));
+
   if (Math.random() < CHANCE_SUCESSO) {
     await extendGuildAiSilenceMs(guildId, SILENCIO_MS);
     const untilMs = Number(getServerConfig(guildId, 'guildSilenceUntil')) || Date.now();
@@ -53,12 +63,14 @@ export async function execute(client, data) {
       dateStyle: "short",
       timeStyle: "short",
     });
-    return data.reply(
-      `🔇 **Deu certo.** IA e mensagens aleatórias mais quietas neste servidor até **${hora}** (horário de Brasília). O tempo **acumula** se outra pessoa acertar também.`
-    );
+    return loadingMsg.edit({
+      content: `🔇 **Deu certo.** IA e mensagens aleatórias mais quietas neste servidor até **${hora}** (horário de Brasília). O tempo **acumula** se outra pessoa acertar também.`,
+      embeds: [],
+    });
   }
 
-  return data.reply(
-    `😶 **Não rolou.** Foram **${CALAR_CUSTO}** chars pro ralo. A Yui continua tagarela.`
-  );
+  return loadingMsg.edit({
+    content: `😶 **Não rolou.** Foram **${CALAR_CUSTO}** chars pro ralo. A Yui continua tagarela.`,
+    embeds: [],
+  });
 }

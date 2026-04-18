@@ -143,20 +143,13 @@ export async function execute(client, data) {
     victimName = victimData.display_name || "um usuário misterioso";
   }
 
-  const victimChars = Number(victimData.charLeft) || 0;
-  if (victimChars <= 0) {
-    return data.reply(
-      `${customEmojis.poor} ${displayName} tentou roubar ${victimName}, mas ele tá liso (0 chars).`,
-    );
-  }
-
   const loadingEmbed = new EmbedBuilder()
     .setColor("#751CA1")
-    .setTitle(`${customEmojis.loading} Iniciando Roubo...`)
+    .setTitle("🔍 Preparando o roubo...")
     .setDescription(getRandomLoadingPhrase(isTargeted, victimName))
-    .setFooter({ text: "se preparando pra roubar..." });
+    .setFooter({ text: "Aguarde enquanto a ação é planejada..." });
 
-  const loadingMsg = await data.reply({ embeds: [loadingEmbed] });
+  const loadingMsg = await data.reply({ embeds: [loadingEmbed], fetchReply: true });
 
   await new Promise((resolve) => setTimeout(resolve, LOADING_TIME));
 
@@ -167,7 +160,11 @@ export async function execute(client, data) {
   const victimCharsRefresh = Number(victimDataRefresh.charLeft) || 0;
 
   if (victimCharsRefresh <= 0) {
-    return data.reply(`${customEmojis.poor} ${victimName} ficou sem chars enquanto você preparava o roubo!`);
+    return loadingMsg.edit({
+      content: `${customEmojis.poor} ${victimName} ficou sem chars enquanto você preparava o roubo!`,
+      embeds: [],
+      components: [],
+    });
   }
 
   const userClass = userRefresh.user_class || "none";

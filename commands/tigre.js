@@ -10,6 +10,7 @@ export const aliases = ["tigrinho", "casino", "slot", "slots", "apostar"];
 export const requiresCharLimit = true;
 
 const TIGRE_CUSTO = 350;
+const LOADING_TIME = 2200;
 let TIGRE_SUCCESS_MULTIPLIER = 1.0;
 
 export const data = new SlashCommandBuilder()
@@ -36,6 +37,15 @@ export async function execute(client, data) {
   const doubleMult = 2 ** pendingStacks;
 
   await reduceCharsWithCredit(userId, guildId, TIGRE_CUSTO);
+
+  const loadingEmbed = new EmbedBuilder()
+    .setColor("#F1C40F")
+    .setTitle("🎰 Apostando no Tigre...")
+    .setDescription("A casa, digo... A SORTE esta decidindo o resultado...")
+    .setFooter({ text: "O tigrinho ta contando os chars..." });
+
+  const loadingMsg = await data.reply({ embeds: [loadingEmbed], fetchReply: true });
+  await new Promise((resolve) => setTimeout(resolve, LOADING_TIME));
 
   const outcomes = [
     { type: "loss",    chance: 0.65, amount: 0,                        emoji: "💸", desc: "Perdeu" },
