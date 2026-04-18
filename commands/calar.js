@@ -48,7 +48,7 @@ export async function execute(client, data) {
 
   const loadingEmbed = new EmbedBuilder()
     .setColor("#5865F2")
-    .setTitle("🤐 Tentando calar a Yui...")
+    .setTitle(`${customEmojis.loading} 🤐 Tentando calar a Yui...`)
     .setDescription("Aguarde enquanto seu pedido de silêncio é preparado...")
     .setFooter({ text: "Calculando a chance de sucesso..." });
 

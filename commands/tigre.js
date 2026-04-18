@@ -40,7 +40,7 @@ export async function execute(client, data) {
 
   const loadingEmbed = new EmbedBuilder()
     .setColor("#F1C40F")
-    .setTitle("🎰 Apostando no Tigre...")
+    .setTitle(`${customEmojis.loading} 🎰 Apostando no Tigre...`)
     .setDescription("A casa, digo... A SORTE esta decidindo o resultado...")
     .setFooter({ text: "O tigrinho ta contando os chars..." });
 

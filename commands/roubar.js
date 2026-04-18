@@ -145,9 +145,9 @@ export async function execute(client, data) {
 
   const loadingEmbed = new EmbedBuilder()
     .setColor("#751CA1")
-    .setTitle("🔍 Preparando o roubo...")
-    .setDescription(getRandomLoadingPhrase(isTargeted, victimName))
-    .setFooter({ text: "Aguarde enquanto a ação é planejada..." });
+    .setTitle(`${customEmojis.loading} Preparando o roubo...`)
+    .setDescription(`${getRandomLoadingPhrase(isTargeted, victimName)}`)
+    .setFooter({ text: `o roubo esta sendo planejado...` });
 
   const loadingMsg = await data.reply({ embeds: [loadingEmbed], fetchReply: true });
 
