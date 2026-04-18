@@ -48,6 +48,30 @@ const configOptions = [
     value: "charLimitEnabled",
     description: "Habilitar/desabilitar economia de chars",
     type: "boolean"
+  },
+  {
+    label: "Eventos aleatórios",
+    value: "randomEventsEnabled",
+    description: "Notícias falsas aleatórias",
+    type: "boolean"
+  },
+  {
+    label: "Limite de roubos diários",
+    value: "dailyRobberyLimit",
+    description: "Máximo de roubos por dia",
+    type: "number"
+  },
+  {
+    label: "Loja",
+    value: "shopEnabled",
+    description: "Habilitar/desabilitar loja",
+    type: "boolean"
+  },
+  {
+    label: "Classes",
+    value: "classesEnabled",
+    description: "Habilitar/desabilitar sistema de classes",
+    type: "boolean"
   }
 ];
 
@@ -57,6 +81,10 @@ function buildMainEmbed(guildId) {
   const speak = getServerConfig(guildId, 'speakMessage') ?? false;
   const limit = getServerConfig(guildId, 'limitChar') ?? 4000;
   const charLimitEnabled = getServerConfig(guildId, 'charLimitEnabled') ?? true;
+  const randomEventsEnabled = getServerConfig(guildId, 'randomEventsEnabled') ?? true;
+  const dailyRobberyLimit = getServerConfig(guildId, 'dailyRobberyLimit') ?? 5;
+  const shopEnabled = getServerConfig(guildId, 'shopEnabled') ?? true;
+  const classesEnabled = getServerConfig(guildId, 'classesEnabled') ?? true;
 
   return new EmbedBuilder()
     .setColor("#5865F2")
@@ -67,7 +95,11 @@ function buildMainEmbed(guildId) {
       { name: "IA no Chat", value: generate ? "✅ Ligado" : "❌ Desligado", inline: true },
       { name: "TTS no Voice", value: speak ? "✅ Ligado" : "❌ Desligado", inline: true },
       { name: "Limite de Chars", value: `${limit}`, inline: true },
-      { name: "Limitador de Chars", value: charLimitEnabled ? "✅ Ligado" : "❌ Desligado", inline: true }
+      { name: "Limitador de Chars", value: charLimitEnabled ? "✅ Ligado" : "❌ Desligado", inline: true },
+      { name: "Eventos Aleatórios", value: randomEventsEnabled ? "✅ Ligado" : "❌ Desligado", inline: true },
+      { name: "Limite Roubo Diário", value: `${dailyRobberyLimit}`, inline: true },
+      { name: "Loja", value: shopEnabled ? "✅ Ligado" : "❌ Desligado", inline: true },
+      { name: "Classes", value: classesEnabled ? "✅ Ligado" : "❌ Desligado", inline: true }
     )
     .setFooter({ text: "Apenas administradores podem alterar • Expira em 60 segundos" });
 }

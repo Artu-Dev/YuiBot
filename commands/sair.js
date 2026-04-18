@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
 import { getVoiceConnection } from "@discordjs/voice";
+import { stopPlayingAudio } from "../functions/audio.js";
 
 export const name = "sair";
 export const aliases = ["leave", "disconnect", "dc", "saircall", "sair-call"];
@@ -23,6 +24,8 @@ export async function execute(client, data) {
       .setDescription("Não estou em nenhum canal de voz.");
     return data.reply({ embeds: [embed] });
   }
+
+  stopPlayingAudio(data.guildId);
 
   connection.destroy();
   const embed = new EmbedBuilder()

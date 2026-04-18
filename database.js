@@ -202,6 +202,44 @@ function updateUserDb() {
   }
 }
 
+const SERVER_CONFIGS_SCHEMA = {
+  limitChar: "INTEGER DEFAULT 4000",
+  speakMessage: "INTEGER DEFAULT 0",
+  charLimitEnabled: "INTEGER DEFAULT 1",
+  generateMessage: "INTEGER DEFAULT 1",
+  maxSavedAudios: "INTEGER DEFAULT 50",
+  prefix: "TEXT DEFAULT '$'",
+  guildSilenceUntil: "TEXT DEFAULT '0'",
+  randomEventsEnabled: "INTEGER DEFAULT 1",
+  dailyRobberyLimit: "INTEGER DEFAULT 5",
+  shopEnabled: "INTEGER DEFAULT 1",
+  classesEnabled: "INTEGER DEFAULT 1"
+};
+
+function updateServerConfigsDb() {
+  const requiredColumns = SERVER_CONFIGS_SCHEMA;
+  const existingColumns = db
+    .prepare("PRAGMA table_info(server_configs)")
+    .all()
+    .map((col) => col.name);
+
+  for (const [column, type] of Object.entries(requiredColumns)) {
+    if (!existingColumns.includes(column)) {
+      log(`➕ Adicionando coluna AUSENTE no BD server_configs: ${column}`, "Database", 33);
+      db.prepare(`ALTER TABLE server_configs ADD COLUMN ${column} ${type}`).run();
+
+      const defaultValue = type.includes("DEFAULT")
+        ? type.match(/DEFAULT\s+(.+)/i)?.[1]?.replace(/['"]/g, "") ?? null
+        : null;
+
+      if (defaultValue !== null) {
+        const updateStmt = db.prepare(`UPDATE server_configs SET ${column} = ? WHERE ${column} IS NULL`);
+        updateStmt.run(defaultValue);
+      }
+    }
+  }
+}
+
 export const resetUserData = (userId, guildId) => {
   if (!isValidUserId(userId) || !isValidGuildId(guildId)) return false;
   
@@ -247,6 +285,7 @@ export const initializeDbBot = async () => {
   `).run();
 
   updateUserDb();
+  updateServerConfigsDb();
 
   // bot channels
   db.prepare(`
@@ -282,7 +321,11 @@ export const initializeDbBot = async () => {
       generateMessage INTEGER DEFAULT 1,
       maxSavedAudios INTEGER DEFAULT 50,
       prefix TEXT DEFAULT '$',
-      guildSilenceUntil TEXT DEFAULT '0'
+      guildSilenceUntil TEXT DEFAULT '0',
+      randomEventsEnabled INTEGER DEFAULT 1,
+      dailyRobberyLimit INTEGER DEFAULT 5,
+      shopEnabled INTEGER DEFAULT 1,
+      classesEnabled INTEGER DEFAULT 1
     )
   `).run();
 
@@ -411,8 +454,8 @@ export const initializeDbBot = async () => {
     getServerConfig: db.prepare("SELECT * FROM server_configs WHERE guild_id = ?"),
     setServerConfig: db.prepare(`
       INSERT OR REPLACE INTO server_configs 
-        (guild_id, limitChar, speakMessage, charLimitEnabled, generateMessage, maxSavedAudios, prefix, guildSilenceUntil)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        (guild_id, limitChar, speakMessage, charLimitEnabled, generateMessage, maxSavedAudios, prefix, guildSilenceUntil, randomEventsEnabled, dailyRobberyLimit, shopEnabled, classesEnabled)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `),
     deleteExcessMessages: db.prepare(`
       DELETE FROM message_context

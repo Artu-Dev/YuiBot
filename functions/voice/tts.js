@@ -15,26 +15,36 @@ const elevenlabs = new ElevenLabsClient({
 
 // ==================== VOICE CONNECTION ====================
 
-export function joinCall(message) {
-  const voiceChannel = message.member?.voice.channel;
+export function joinCall(data) {
+  const voiceChannel = data.voiceChannel || data.member?.voice?.channel;
+  const guildId = data.guildId || data.guild?.id;
+  const adapterCreator = data.adapterCreator || data.guild?.voiceAdapterCreator;
+  const reply = data.reply || ((msg) => data.channel.send(msg));
+
   if (!voiceChannel) {
-    message.reply("Você precisa estar em um canal de voz.");
+    reply("Você precisa estar em um canal de voz.");
     return null;
   }
   if (!voiceChannel.joinable) {
-    message.reply("Não tenho permissão para entrar no canal de voz.");
+    reply("Não tenho permissão para entrar no canal de voz.");
     return null;
   }
-  if (getVoiceConnection(message.guild.id)) {
-     message.reply("Já estou gravando.");
+  if (getVoiceConnection(guildId)) {
+    reply("Já estou em um canal de voz.");
     return null;
   }
 
-  return joinVoiceChannel({
-    channelId: voiceChannel.id,
-    guildId: message.guild.id,
-    adapterCreator: message.guild.voiceAdapterCreator,
-  });
+  try {
+    return joinVoiceChannel({
+      channelId: voiceChannel.id,
+      guildId: guildId,
+      adapterCreator: adapterCreator,
+    });
+  } catch (error) {
+    log(`Erro ao conectar à call: ${error.message}`, "Voice", 31);
+    reply("❌ Falha na conexão. Não foi possível conectar à call agora. Tente novamente mais tarde.");
+    return null;
+  }
 }
 
 // ==================== TEXT-TO-SPEECH ====================

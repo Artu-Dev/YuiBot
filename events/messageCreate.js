@@ -10,6 +10,7 @@ import { generateFakeNews, generateFullArticle } from "../functions/ai/generateN
 import { createNewsImage } from "../functions/newsImage.js";
 import { AttachmentBuilder, EmbedBuilder } from "discord.js";
 import { log } from "../bot.js";
+import { getServerConfig } from "../functions/database/settings.js";
 
 export const name = "messageCreate";
 export const cleanup = cleanupMessageCreateListeners;
@@ -68,5 +69,7 @@ export const execute = async (message, client) => {
 
   handleAchievementsCheck(message);
 
-  await tryRandomNews(message, guildId, channelId);
+  if (getServerConfig(guildId, 'randomEventsEnabled')) {
+    await tryRandomNews(message, guildId, channelId);
+  }
 };

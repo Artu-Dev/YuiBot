@@ -9,7 +9,11 @@ const DEFAULT_CONFIGS = {
   generateMessage: 1,
   maxSavedAudios: 50,
   prefix: '$',
-  guildSilenceUntil: '0'
+  guildSilenceUntil: '0',
+  randomEventsEnabled: 1,
+  dailyRobberyLimit: 5,
+  shopEnabled: 1,
+  classesEnabled: 1
 };
 
 export function getServerConfig(guildId, key) {
@@ -29,7 +33,7 @@ export function getServerConfig(guildId, key) {
     return DEFAULT_CONFIGS[key];
   }
  
-  if (key === 'speakMessage' || key === 'charLimitEnabled' || key === 'generateMessage') {
+  if (key === 'speakMessage' || key === 'charLimitEnabled' || key === 'generateMessage' || key === 'randomEventsEnabled' || key === 'shopEnabled' || key === 'classesEnabled') {
     return row[key] === 1;
   }
   return row[key];
@@ -40,7 +44,7 @@ export function setServerConfig(guildId, key, value) {
   const row = db.queries.getServerConfig.get(guildId);
   const config = row ? { ...row } : { ...DEFAULT_CONFIGS, guild_id: guildId };
 
-  if (key === 'speakMessage' || key === 'charLimitEnabled' || key === 'generateMessage') {
+  if (key === 'speakMessage' || key === 'charLimitEnabled' || key === 'generateMessage' || key === 'randomEventsEnabled' || key === 'shopEnabled' || key === 'classesEnabled') {
     config[key] = value ? 1 : 0;
   } else {
     config[key] = value;
@@ -54,7 +58,11 @@ export function setServerConfig(guildId, key, value) {
     config.generateMessage,
     config.maxSavedAudios,
     config.prefix,
-    config.guildSilenceUntil
+    config.guildSilenceUntil,
+    config.randomEventsEnabled,
+    config.dailyRobberyLimit,
+    config.shopEnabled,
+    config.classesEnabled
   );
 }
 

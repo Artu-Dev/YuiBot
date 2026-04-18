@@ -97,6 +97,8 @@ export async function execute(client, data) {
     return data.reply("❌ Erro de configuração - IDs inválidos");
   }
 
+  const dailyRobberyLimit = getServerConfig(guildId, 'dailyRobberyLimit') || 5;
+
   const { mentionedUser } = parseArgs(data);
 
   if (mentionedUser && !isValidUserId(mentionedUser.id)) {
@@ -116,12 +118,12 @@ export async function execute(client, data) {
     setUserProperty("daily_robberies", userId, guildId, 1);
     setUserProperty("lastRoubo", userId, guildId, today);
     daily_robberies = 1;
-  } else if (daily_robberies < ROUBO_LIMIT_PER_DAY) {
+  } else if (daily_robberies < dailyRobberyLimit) {
     addUserPropertyByAmount("daily_robberies", userId, guildId, 1);
     daily_robberies += 1;
   } else {
     return data.reply(
-      `${customEmojis.pepeAngry} Tu já roubou alguém ${ROUBO_LIMIT_PER_DAY}x hoje, seu maldito!`,
+      `${customEmojis.pepeAngry} Tu já roubou alguém ${dailyRobberyLimit}x hoje, seu maldito!`,
     );
   }
 
@@ -351,8 +353,8 @@ export async function execute(client, data) {
     }
   }
 
-  if (daily_robberies >= ROUBO_LIMIT_PER_DAY) {
-      await data.followUp(`${customEmojis.pepeAngry} Você atingiu o limite de ${ROUBO_LIMIT_PER_DAY} roubos por dia!`);
+if (daily_robberies >= dailyRobberyLimit) {
+      await data.followUp(`${customEmojis.pepeAngry} Você atingiu o limite de ${dailyRobberyLimit} roubos por dia!`);
   }
 
   await awardAchievementInCommand(client, data, "primeiro_roubo");

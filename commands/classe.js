@@ -69,6 +69,10 @@ export async function execute(client, data) {
   if (!getServerConfig(guildId, 'charLimitEnabled')) {
     return await data.reply("❌ O sistema de caracteres está desligado neste servidor!");
   }
+  
+  if (!getServerConfig(guildId, 'classesEnabled')) {
+    return await data.reply("❌ O sistema de classes está desabilitado neste servidor!");
+  }
 
   const userData = getOrCreateUser(userId, displayName, guildId);
 

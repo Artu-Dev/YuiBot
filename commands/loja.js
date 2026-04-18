@@ -157,6 +157,10 @@ export async function execute(client, data) {
     return await data.reply("❌ O sistema de caracteres está desligado neste servidor!");
   }
   
+  if (!getServerConfig(guildId, 'shopEnabled')) {
+    return await data.reply("❌ A loja está desabilitada neste servidor!");
+  }
+  
   if (!isValidGuildId(data.guildId)) {
     return await data.reply("Erro de configuração do servidor");
   }
