@@ -206,7 +206,7 @@ export async function execute(client, data) {
   const baseStolen = Math.max(
     1,
     Math.floor(
-      victimChars *
+      victimCharsRefresh *
         (Math.random() * (STEAL_PERCENTAGE_MAX - STEAL_PERCENTAGE_MIN) +
           STEAL_PERCENTAGE_MIN),
     ),
@@ -216,7 +216,7 @@ export async function execute(client, data) {
   let tookAll = false;
   
   if (hasEffect(userId, guildId, 'next_rob_takes_all')) {
-    finalStolenAmount = victimChars; 
+    finalStolenAmount = victimCharsRefresh; 
     tookAll = true;
     removeEffect(userId, guildId, 'next_rob_takes_all');
   }
