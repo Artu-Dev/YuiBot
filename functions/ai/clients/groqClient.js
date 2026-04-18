@@ -10,7 +10,7 @@ function getClient() {
 }
 
 const DEFAULT_GROQ_INVERT_MODEL = "llama-3.1-8b-instant";
-const DEFAULT_GROQ_CHAT_MODEL = "gemini-3-flash-preview";
+const DEFAULT_GROQ_CHAT_MODEL = "openai/gpt-oss-120b";
 
 export function resolveGroqChatModel() {
   return (

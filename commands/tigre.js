@@ -4,6 +4,7 @@ import { getClassModifier } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { randomInt } from 'es-toolkit';
 import { getCurrentDailyEvent } from "../functions/getTodaysEvent.js";
+import { customEmojis } from "../functions/utils.js";
 
 export const name = "tigre";
 export const aliases = ["tigrinho", "casino", "slot", "slots", "apostar"];

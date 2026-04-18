@@ -1,6 +1,7 @@
 import { dbBot, getRecentMessages } from "../../database.js";
-import ollama, { ollamaGenerateQueued } from "./clients/ollamaClient.js";
 import { sample } from 'es-toolkit';
+// Ajuste o caminho do import para o arquivo onde você colocou as funções do Groq
+import { chatCompletion, resolveGroqChatModel } from "./clients/groqClient.js"; 
 
 // ==================== TEMPLATES ====================
 const newsTemplates = [
@@ -14,16 +15,12 @@ const newsTemplates = [
   "A CASA CAIU: {subject}",
 ];
 
-
 // ==================== GERAÇÃO DE NOTÍCIAS ====================
 
 export async function generateFakeNews(guildId, channelId) {
   const recentContext = getRecentMessages(guildId, channelId, 30);
 
-  const prompt = `Você é um gerador de manchetes de notícias FALSAS e ABSURDAS para um servidor de Discord.
-
-Contexto das conversas recentes:
-${recentContext}
+  const system = `Você é um gerador de manchetes de notícias FALSAS e ABSURDAS para um servidor de Discord.
 
 Crie UMA manchete de notícia completamente falsa e engraçada que:
 1. Misture elementos reais das conversas de forma absurda
@@ -38,30 +35,30 @@ Exemplos do estilo:
 
 Retorne APENAS a manchete, sem aspas ou formatação extra.`;
 
-  const modelToUse = dbBot.data.AiConfig.fastModels;
+  const user = `Contexto das conversas recentes:\n${recentContext}`;
 
-  const response = await ollamaGenerateQueued(() =>
-    ollama.generate({
-      prompt,
+  const modelToUse = resolveGroqChatModel();
+
+  try {
+    const headline = await chatCompletion({
+      system,
+      user,
       model: modelToUse,
-      stream: false,
-      options: {
-        temperature: 0.8,
-        top_p: 0.9,
-      },
-    }),
-  );
+      temperature: 0.8,
+      topP: 0.9,
+    });
 
-  const headline = response.response?.trim() || "Notícia indisponível";
-  const template = sample(newsTemplates);
-  return template.replace("{subject}", headline);
+    const template = sample(newsTemplates);
+    return template.replace("{subject}", headline || "Notícia indisponível");
+  } catch (error) {
+    console.error("Erro ao gerar Fake News com Groq:", error);
+    const template = sample(newsTemplates);
+    return template.replace("{subject}", "Notícia indisponível no momento");
+  }
 }
 
 export async function generateFullArticle(headline) {
-  const prompt = `Você é um gerador de artigos de notícias FALSAS e ABSURDAS para um servidor de Discord.
-Expanda esta manchete em uma notícia fake completa (1-2 parágrafos curtos):
-
-${headline}
+  const system = `Você é um gerador de artigos de notícias FALSAS e ABSURDAS para um servidor de Discord.
 
 A notícia deve:
 - Incluir detalhes absurdos e engraçados
@@ -72,19 +69,23 @@ Mantenha curto e engraçado!
 
 Retorne APENAS o artigo.`;
 
-  const modelToUse = dbBot.data.AiConfig.textModel;
-  
-  const response = await ollamaGenerateQueued(() =>
-    ollama.generate({
-      prompt,
-      model: modelToUse,
-      stream: false,
-      options: {
-        temperature: 0.8,
-        top_p: 0.9,
-      },
-    }),
-  );
+  const user = `Expanda esta manchete em uma notícia fake completa (1-2 parágrafos curtos):\n\n${headline}`;
 
-  return response.response?.trim() || "Artigo indisponível";
+  // Tenta pegar o modelo de texto do banco, se não existir usa o resolveGroqChatModel()
+  const modelToUse = dbBot.data?.AiConfig?.groqTextModel || resolveGroqChatModel();
+  
+  try {
+    const article = await chatCompletion({
+      system,
+      user,
+      model: modelToUse,
+      temperature: 0.8,
+      topP: 0.9,
+    });
+
+    return article || "Artigo indisponível";
+  } catch (error) {
+    console.error("Erro ao gerar Artigo Completo com Groq:", error);
+    return "Falha ao redigir o artigo no momento. O estagiário do jornal tropeçou nos cabos do servidor.";
+  }
 }
