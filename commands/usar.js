@@ -474,7 +474,7 @@ export async function execute(client, data) {
         const mysteryLoading = new EmbedBuilder()
           .setColor('#8E44AD')
           .setTitle(`${customEmojis.loading} 🗑️ Lixo Lendário ativado...`)
-          .setDescription('Algo esta se revelando desse pedaço de lixo...'
+          .setDescription('Algo esta se revelando desse pedaço de lixo...');
 
         await comp.update({ embeds: [mysteryLoading], components: [] });
         await new Promise((resolve) => setTimeout(resolve, 2500));
