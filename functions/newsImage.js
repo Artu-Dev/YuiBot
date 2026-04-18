@@ -2,13 +2,13 @@ import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
 import axios from 'axios';
 
 GlobalFonts.registerFromPath(
-  './fonts/twemoji.ttf',
-  'Emoji'
+  './fonts/NoticiaText-Regular.ttf',
+  'Arial'
 );
 
 GlobalFonts.registerFromPath(
-  './fonts/NoticiaText-Regular.ttf',
-  'Arial'
+  './fonts/twemoji.ttf',
+  'Emoji'
 );
 
 async function getRandomImage() {
@@ -85,7 +85,7 @@ export async function createNewsImage(headline, article) {
   ctx.fillStyle = "#FFD700";
   ctx.fillRect(tagX, 25, 190, 40);
   ctx.fillStyle = "#C4170C";
-  ctx.font = "bold 18px Arial, Emoji";
+  ctx.font = "bold 18px 'Emoji', Arial";
   ctx.fillText("🔴 ÚLTIMA HORA", tagX + 12, 52);
 
   let y = headerHeight;
@@ -109,7 +109,7 @@ export async function createNewsImage(headline, article) {
 
   // ===== TÍTULO =====
   ctx.fillStyle = "#1A1A1A";
-  ctx.font = "bold 48px Arial, Emoji";
+  ctx.font = "bold 48px 'Emoji', Arial";
 
   const titleLines = wrapText(ctx, headline, contentWidth * 0.92); // MAIS LARGO
   const titleLH = 58;
@@ -147,14 +147,14 @@ export async function createNewsImage(headline, article) {
   ctx.fillText(`${dateStr} às ${timeStr}`, padding, y);
 
   ctx.fillStyle = "#C4170C";
-  ctx.font = "bold 16px Arial, Emoji";
+  ctx.font = "bold 16px 'Emoji', Arial";
   ctx.fillText("✓ NOTÍCIA VERIFICADA", width - padding - 220, y);
 
   y += 50;
 
   // ===== ARTIGO =====
   ctx.fillStyle = "#333";
-  ctx.font = "20px Arial, Emoji";
+  ctx.font = "20px 'Emoji', Arial";
 
   const lh = 30;
   for (let i = 0; i < articleLines.length; i++) {

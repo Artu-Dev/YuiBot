@@ -6,11 +6,40 @@ import { processMessageContext } from "../functions/handlers/messageCreate/messa
 import { handleRandomActions, initCooldownCleanup, cleanupCooldowns } from "../functions/handlers/messageCreate/randomActions.js";
 import { announceEventIfNeeded } from "../functions/handlers/messageCreate/events.js";
 import { extractImageUrl } from "../functions/handlers/messageCreate/utils.js";
+import { generateFakeNews, generateFullArticle } from "../functions/ai/generateNews.js";
+import { createNewsImage } from "../functions/newsImage.js";
+import { AttachmentBuilder, EmbedBuilder } from "discord.js";
+import { log } from "../bot.js";
 
 export const name = "messageCreate";
 export const cleanup = cleanupMessageCreateListeners;
 
 initCooldownCleanup();
+
+async function tryRandomNews(message, guildId, channelId) {
+  try {
+    if (Math.random() < 0.001) {
+      const newsHeadline = await generateFakeNews(channelId, guildId);
+      const article = await generateFullArticle(newsHeadline);
+      const imageBuffer = await createNewsImage(newsHeadline, article);
+      const attachment = new AttachmentBuilder(imageBuffer, { name: "noticia.png" });
+
+      const embed = new EmbedBuilder()
+        .setTitle("📰 ÚLTIMA HORA!")
+        .setDescription(`**${newsHeadline}**`)
+        .setColor("#C4170C")
+        .setImage("attachment://noticia.png")
+        .setTimestamp()
+        .setFooter({
+          text: "⚠️ Esta notícia é 100% REAL PORRA!!!!",
+        });
+
+      await message.channel.send({ embeds: [embed], files: [attachment] });
+    }
+  } catch (error) {
+    log(`Erro ao gerar notícia aleatória: ${error.message}`, "RandomNews", 31);
+  }
+}
 
 export function cleanupMessageCreateListeners() {
   cleanupCooldowns();
@@ -38,4 +67,6 @@ export const execute = async (message, client) => {
   await handleRandomActions(message, userId, mentions);
 
   handleAchievementsCheck(message);
+
+  await tryRandomNews(message, guildId, channelId);
 };
