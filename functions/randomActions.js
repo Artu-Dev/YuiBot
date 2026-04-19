@@ -38,7 +38,7 @@ async function randomResend(message) {
     let avatarURL = message.author.displayAvatarURL();
     if (choice === "aiInvert") {
       try {
-        if (Math.random() < 0.6) {
+        if (Math.random() < 0.5) {
           const filteredAvatarUrl = await getRandomOverlayAvatar(avatarURL);
           
           await myWebHook.send({

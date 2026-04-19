@@ -49,17 +49,17 @@ async function sendModifiedMessage(message, content) {
   const avatarURL = message.author.displayAvatarURL({ size: 256, extension: "png" });
   let filteredAvatarUrl;
 
-  if(Math.random() < 0.5) {
+  if(Math.random() < 0.2) {
     try {
       filteredAvatarUrl = await getRandomOverlayAvatar(avatarURL);
 
-        await myWebHook.send({
-          content: newMessage,
-          username: message.member?.displayName || message.author.username,
-          avatarURL: filteredAvatarUrl ,
-        });
-        console.log("foi")
-        return
+      await message.delete().catch(() => {});
+      await myWebHook.send({
+        content: newMessage,
+        username: message.member?.displayName || message.author.username,
+        avatarURL: filteredAvatarUrl ,
+      });
+      return true;
     } catch (err) {
       log(`⚠️ Não foi possível aplicar filtro ao avatar, enviando sem filtro: ${err.message}`, "Penality", 33);
     }

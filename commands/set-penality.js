@@ -1,87 +1,154 @@
-import { SlashCommandBuilder, ChannelFlags } from "discord.js";
-import { getOrCreateUser, getBotPrefix, setUserPenality } from "../database.js";
-import { penalities } from "../functions/penalties/penalities.js";
+import {
+  SlashCommandBuilder,
+  ChannelFlags,
+  ActionRowBuilder,
+  UserSelectMenuBuilder,
+  StringSelectMenuBuilder,
+  EmbedBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} from "discord.js";
+import { getOrCreateUser, setUserPenality } from "../database.js";
+import { penaltiesData } from "../data/penaltiesData.js";
 
 export const name = "set-penality";
 export const aliases = ["set-penalidade", "add-penality", "add-penalidade", "add-p", "set-p"];
 
-const penalityNameToKey = Object.entries(penalities).reduce((acc, [key, data]) => {
-  acc[data.nome.toLowerCase()] = key;
-  return acc;
-}, {});
-
-const EXISTING = Object.values(penalities).map((p) => p.nome);
+const PENALTIES = Object.entries(penaltiesData).map(([key, data]) => ({ key, nome: data.nome }));
 
 export const data = new SlashCommandBuilder()
   .setName("set-penality")
-  .setDescription("Adiciona uma penalidade a um usuário.")
-  .addUserOption(option =>
-    option.setName("usuário")
-      .setDescription("O usuário para aplicar a penalidade")
-      .setRequired(true)
-  )
-  .addStringOption(option =>
-    option.setName("penalidade")
-      .setDescription("A penalidade a aplicar")
-      .addChoices(
-        ...EXISTING.map(p => ({ name: p, value: p }))
-      )
-      .setRequired(true)
-  );
-
-function parseArgs(data) {
-  if (data.fromInteraction) {
-    return {
-      targetUser: data.getUser("usuário"),
-      penalty: data.getString("penalidade"),
-    };
-  }
-
-  const args = data.args ?? [];
-  const textArgs = args.filter((p) => !/^<@!?\d+>$/.test(String(p)));
-  const penalty = textArgs.join(" ").trim().toLowerCase() || null;
-
-  return {
-    targetUser: data.mentionedUser,
-    penalty,
-  };
-}
+  .setDescription("Adiciona uma penalidade a um usuário.");
 
 export async function execute(client, data) {
   const { guildId } = data;
-  const { targetUser, penalty } = parseArgs(data);
-  const isAdmin = data.isAdmin();
 
-  if (!isAdmin) {
-    return data.reply({ content: "❌ Apenas administradores podem usar este comando.", flags: ChannelFlags.Ephemeral });
+  if (!data.isAdmin()) {
+    return data.reply({
+      content: "❌ Apenas administradores podem usar este comando.",
+      flags: ChannelFlags.Ephemeral,
+    });
   }
 
-  const finalPenalty = penalty;
+  const userSelect = new UserSelectMenuBuilder()
+    .setCustomId("pen_select_user")
+    .setPlaceholder("Selecione o usuário para aplicar a penalidade")
+    .setMinValues(1)
+    .setMaxValues(1);
 
-  if (!targetUser || !finalPenalty) {
-    const p = getBotPrefix();
-    return data.reply(
-      `**Prefixo:** \`${p}set-penality @usuário <penalidade>\`\nPenalidades válidas: ${EXISTING.join(", ")}`
-    );
-  }
+  const cancelBtn = new ButtonBuilder()
+    .setCustomId("pen_cancel")
+    .setLabel("Cancelar")
+    .setStyle(ButtonStyle.Secondary);
 
-  const normalizedPenalty = finalPenalty.trim().toLowerCase();
-  if (!EXISTING.includes(normalizedPenalty)) {
-    return data.reply(
-      `Penalidade inválida. Valores possíveis: ${EXISTING.join(", ")}`
-    );
-  }
+  const embed = new EmbedBuilder()
+    .setTitle("Aplicar Penalidade")
+    .setDescription("**Etapa 1/2** — Selecione o usuário que receberá a penalidade.")
+    .setColor(0xe74c3c);
 
-  const penaltyKey = penalityNameToKey[normalizedPenalty];
+  const reply = await data.reply({
+    embeds: [embed],
+    components: [
+      new ActionRowBuilder().addComponents(userSelect),
+      new ActionRowBuilder().addComponents(cancelBtn),
+    ],
+    flags: ChannelFlags.Ephemeral,
+    fetchReply: true,
+  });
 
-  getOrCreateUser(targetUser.id, targetUser.username, guildId);
+  const collector = reply.createMessageComponentCollector({ time: 60_000 });
 
-  const added = setUserPenality(targetUser.id, guildId, penaltyKey, true);
-  if (!added) {
-    return data.reply(`${targetUser.username} já tem a penalidade: ${normalizedPenalty}.`);
-  }
+  let selectedUser = null;
 
-  return data.reply(`Penalidade '${normalizedPenalty}' adicionada a ${targetUser.username}!`);
+  collector.on("collect", async (comp) => {
+    if (comp.user.id !== data.userId) return;
+
+    if (comp.customId === "pen_cancel") {
+      collector.stop("cancelled");
+      return comp.update({ content: "❌ Cancelado.", embeds: [], components: [] });
+    }
+
+    if (comp.customId === "pen_select_user") {
+      const targetId = comp.values[0];
+      const targetMember = await comp.guild.members.fetch(targetId).catch(() => null);
+      selectedUser = { id: targetId, username: targetMember?.user?.username ?? targetId };
+
+      const penaltySelect = new StringSelectMenuBuilder()
+        .setCustomId("pen_select_penalty")
+        .setPlaceholder("Selecione a penalidade")
+        .addOptions(
+          PENALTIES.map((p) => ({
+            label: p.nome,
+            value: p.key,
+          }))
+        );
+
+      const backBtn = new ButtonBuilder()
+        .setCustomId("pen_back")
+        .setLabel("Voltar")
+        .setStyle(ButtonStyle.Secondary);
+
+      const stepEmbed = new EmbedBuilder()
+        .setTitle("Aplicar Penalidade")
+        .setDescription(
+          `**Etapa 2/2** — Escolha a penalidade para <@${targetId}>:`
+        )
+        .setColor(0xe74c3c);
+
+      return comp.update({
+        embeds: [stepEmbed],
+        components: [
+          new ActionRowBuilder().addComponents(penaltySelect),
+          new ActionRowBuilder().addComponents(backBtn, cancelBtn),
+        ],
+      });
+    }
+
+    if (comp.customId === "pen_back") {
+      selectedUser = null;
+
+      const stepEmbed = new EmbedBuilder()
+        .setTitle("Aplicar Penalidade")
+        .setDescription("**Etapa 1/2** — Selecione o usuário que receberá a penalidade.")
+        .setColor(0xe74c3c);
+
+      return comp.update({
+        embeds: [stepEmbed],
+        components: [
+          new ActionRowBuilder().addComponents(userSelect),
+          new ActionRowBuilder().addComponents(cancelBtn),
+        ],
+      });
+    }
+
+    if (comp.customId === "pen_select_penalty" && selectedUser) {
+      const penaltyKey = comp.values[0];
+      const penaltyNome = penaltiesData[penaltyKey]?.nome ?? penaltyKey;
+
+      getOrCreateUser(selectedUser.id, selectedUser.username, guildId);
+      const added = setUserPenality(selectedUser.id, guildId, penaltyKey, true);
+
+      collector.stop("done");
+
+      if (!added) {
+        return comp.update({
+          content: `⚠️ <@${selectedUser.id}> já possui a penalidade **${penaltyNome}**.`,
+          embeds: [],
+          components: [],
+        });
+      }
+
+      return comp.update({
+        content: `✅ Penalidade **${penaltyNome}** aplicada a <@${selectedUser.id}>!`,
+        embeds: [],
+        components: [],
+      });
+    }
+  });
+
+  collector.on("end", (_, reason) => {
+    if (reason === "time") {
+      reply.edit({ content: "⏰ Tempo esgotado.", embeds: [], components: [] }).catch(() => {});
+    }
+  });
 }
-
-
