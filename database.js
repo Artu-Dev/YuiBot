@@ -77,6 +77,7 @@ export {
   depositToBank,
   withdrawFromBank,
   getBankBalance,
+  getTotalBankInterest,
   applyDailyBankInterest,
   getCreditInfo,
   addCreditDebt,
@@ -168,6 +169,7 @@ const USERS_SCHEMA = {
 
   bank_balance: "INTEGER DEFAULT 0",
   last_bank_interest: "TEXT DEFAULT ''",
+  total_bank_interest: "INTEGER DEFAULT 0",
   credit_limit: "INTEGER DEFAULT 0",
   credit_debt: "INTEGER DEFAULT 0",
 };

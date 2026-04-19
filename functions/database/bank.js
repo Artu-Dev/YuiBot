@@ -48,12 +48,18 @@ export function getBankBalance(userId, guildId) {
   return user?.bank_balance ?? 0;
 }
 
+export function getTotalBankInterest(userId, guildId) {
+  if (!isValidUserId(userId) || !isValidGuildId(guildId)) return 0;
+  const user = db.prepare("SELECT total_bank_interest FROM users WHERE id = ? AND guild_id = ?").get(userId, guildId);
+  return user?.total_bank_interest ?? 0;
+}
+
 export function applyDailyBankInterest(userId, guildId) {
   if (!isValidUserId(userId) || !isValidGuildId(guildId)) return false;
 
   try {
     const today = dayjs().format("YYYY-MM-DD");
-    const user = db.prepare("SELECT bank_balance, last_bank_interest FROM users WHERE id = ? AND guild_id = ?").get(userId, guildId);
+    const user = db.prepare("SELECT bank_balance, last_bank_interest, total_bank_interest FROM users WHERE id = ? AND guild_id = ?").get(userId, guildId);
     
     if (!user || user.bank_balance <= 0) return false;
     
@@ -63,9 +69,10 @@ export function applyDailyBankInterest(userId, guildId) {
     
     const interest = Math.max(1, Math.floor(user.bank_balance * DAILY_INTEREST_RATE));
     const newBalance = user.bank_balance + interest;
+    const newTotalInterest = (user.total_bank_interest ?? 0) + interest;
     
-    db.prepare("UPDATE users SET bank_balance = ?, last_bank_interest = ? WHERE id = ? AND guild_id = ?")
-      .run(newBalance, today, userId, guildId);
+    db.prepare("UPDATE users SET bank_balance = ?, last_bank_interest = ?, total_bank_interest = ? WHERE id = ? AND guild_id = ?")
+      .run(newBalance, today, newTotalInterest, userId, guildId);
     
     return interest;
   } catch {

@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder, ChannelFlags } from 'discord.js';
-import { getBankBalance, depositToBank, applyDailyBankInterest, withdrawFromBank } from '../database.js';
+import { getBankBalance, depositToBank, applyDailyBankInterest, withdrawFromBank, getTotalBankInterest } from '../database.js';
 import { getOrCreateUser, setUserProperty, getServerConfig } from '../database.js';
 
 export const name = "banco";
@@ -71,7 +71,6 @@ export async function execute(client, data) {
   }
 
   const { subcommand, quantidade } = parseArgs(data);
-  // Se nenhum subcomando válido for informado, usa 'saldo' como padrão
   let finalSubcommand = subcommand;
   if (!finalSubcommand || !['saldo', 'depositar', 'sacar'].includes(finalSubcommand)) {
     finalSubcommand = 'saldo';
@@ -80,9 +79,9 @@ export async function execute(client, data) {
   if (finalSubcommand === 'saldo') {
     const bankBalance = getBankBalance(userId, guildId);
     
-    // Aplica juros diários se houver saldo
     const interest = applyDailyBankInterest(userId, guildId);
     const finalBalance = getBankBalance(userId, guildId);
+    const totalInterest = getTotalBankInterest(userId, guildId);
 
     const embed = new EmbedBuilder()
       .setTitle('💳 Sua Conta Bancária')
@@ -96,6 +95,10 @@ export async function execute(client, data) {
 
     if (interest) {
       embed.addFields({ name: '📈 Juros de Hoje', value: `+**${interest}** chars`, inline: true });
+    }
+
+    if (totalInterest > 0) {
+      embed.addFields({ name: '💰 Total de Juros Ganhos', value: `**${totalInterest}** chars`, inline: true });
     }
 
     return await data.reply({ embeds: [embed], flags: data.isEphemeral ? ChannelFlags.Ephemeral : undefined });
