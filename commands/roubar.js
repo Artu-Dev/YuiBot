@@ -29,7 +29,6 @@ const SUCCESS_CHANCE_TARGETED = 0.22;
 const SUCCESS_CHANCE_RANDOM = 0.38;
 const PENALTY_TARGETED = 150;
 const PENALTY_RANDOM = 100;
-const ROUBO_LIMIT_PER_DAY = 3;
 const ROUBO_CHANCE_MULTIPLIER = 1.0;
 const LOADING_TIME = 5000;
 
@@ -97,7 +96,7 @@ export async function execute(client, data) {
     return data.reply("❌ Erro de configuração - IDs inválidos");
   }
 
-  const dailyRobberyLimit = getServerConfig(guildId, 'dailyRobberyLimit') || 5;
+  const dailyRobberyLimit = getServerConfig(guildId, 'dailyRobberyLimit') || 3;
 
   const { mentionedUser } = parseArgs(data);
 

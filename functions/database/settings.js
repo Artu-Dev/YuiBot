@@ -11,7 +11,7 @@ const DEFAULT_CONFIGS = {
   prefix: '$',
   guildSilenceUntil: '0',
   randomEventsEnabled: 1,
-  dailyRobberyLimit: 5,
+  dailyRobberyLimit: 3,
   shopEnabled: 1,
   classesEnabled: 1
 };

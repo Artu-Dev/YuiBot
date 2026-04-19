@@ -213,7 +213,7 @@ const SERVER_CONFIGS_SCHEMA = {
   prefix: "TEXT DEFAULT '$'",
   guildSilenceUntil: "TEXT DEFAULT '0'",
   randomEventsEnabled: "INTEGER DEFAULT 1",
-  dailyRobberyLimit: "INTEGER DEFAULT 5",
+  dailyRobberyLimit: "INTEGER DEFAULT 3",
   shopEnabled: "INTEGER DEFAULT 1",
   classesEnabled: "INTEGER DEFAULT 1"
 };
@@ -325,7 +325,7 @@ export const initializeDbBot = async () => {
       prefix TEXT DEFAULT '$',
       guildSilenceUntil TEXT DEFAULT '0',
       randomEventsEnabled INTEGER DEFAULT 1,
-      dailyRobberyLimit INTEGER DEFAULT 5,
+      dailyRobberyLimit INTEGER DEFAULT 3,
       shopEnabled INTEGER DEFAULT 1,
       classesEnabled INTEGER DEFAULT 1
     )

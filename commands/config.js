@@ -82,7 +82,7 @@ function buildMainEmbed(guildId) {
   const limit = getServerConfig(guildId, 'limitChar') ?? 4000;
   const charLimitEnabled = getServerConfig(guildId, 'charLimitEnabled') ?? true;
   const randomEventsEnabled = getServerConfig(guildId, 'randomEventsEnabled') ?? true;
-  const dailyRobberyLimit = getServerConfig(guildId, 'dailyRobberyLimit') ?? 5;
+  const dailyRobberyLimit = getServerConfig(guildId, 'dailyRobberyLimit') ?? 3;
   const shopEnabled = getServerConfig(guildId, 'shopEnabled') ?? true;
   const classesEnabled = getServerConfig(guildId, 'classesEnabled') ?? true;
 
