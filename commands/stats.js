@@ -14,6 +14,7 @@ import { getInventory } from "../functions/inventario.js";
 import { getActiveEffects } from "../functions/effects.js";
 import { SHOP_ITEMS } from "../data/shopItems.js";
 import { ALLOWED_MESSAGE_BOT_ID } from "../data/config.js";
+import { getRandomOverlayAvatar } from "../functions/canvasApi.js";
 
 export const name = "stats";
 export const aliases = ["estatísticas", "stat", "perfil", "profile", "dados"];
@@ -21,6 +22,16 @@ export const aliases = ["estatísticas", "stat", "perfil", "profile", "dados"];
 const EMBED_COLORS = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#F7DC6F", "#BB8FCE"];
 function getRandomColor() {
   return EMBED_COLORS[Math.floor(Math.random() * EMBED_COLORS.length)];
+}
+
+function shouldTransformAvatar() {
+  return Math.random() < 0.1;
+}
+
+
+function bufferToDataUrl(buffer) {
+  const base64 = buffer.toString('base64');
+  return `data:image/png;base64,${base64}`;
 }
 
 export const data = new SlashCommandBuilder()
@@ -118,12 +129,12 @@ function formatAchievements(unlocked) {
     .join("\n");
 }
 
-function embedResumo(user, discordUser, guildId, embedColor) {
+function embedResumo(user, discordUser, guildId, embedColor, transformedAvatarUrl = null) {
   const cls = CLASSES[user.user_class || "none"];
   const penalityName = user && user.penality ? user.penality : "Nenhuma";
   const name = discordDisplayLabel(discordUser);
   const icon = resolveDisplayAvatarURL(discordUser);
-  const thumb = resolveDisplayAvatarURL(discordUser, { size: 256 });
+  const thumb = transformedAvatarUrl || resolveDisplayAvatarURL(discordUser, { size: 256 });
   const unlocked = parseAchievements(user);
   const achCount = Object.keys(unlocked).length;
   const totalAch = Object.keys(achievements).length;
@@ -212,13 +223,13 @@ function embedConquistas(user, discordUser, embedColor) {
 
 const STATS_PAGES = ["inventario", "geral", "roubos", "recompensas", "mensagens", "estilo"];
 
-function getPageEmbed(user, discordUser, guildId, pageIndex, embedColor) {
+function getPageEmbed(user, discordUser, guildId, pageIndex, embedColor, transformedAvatarUrl = null) {
   const page = STATS_PAGES[pageIndex] || "geral";
   const cls = CLASSES[user.user_class || "none"];
   const penality = user.penality || "Nenhuma";
   const name = discordDisplayLabel(discordUser);
   const icon = resolveDisplayAvatarURL(discordUser);
-  const thumb = resolveDisplayAvatarURL(discordUser, { size: 256 });
+  const thumb = transformedAvatarUrl || resolveDisplayAvatarURL(discordUser, { size: 256 });
   const invResume = formatInventoryResume(user.id, guildId);
   const effectsResume = formatEffects(user.id, guildId);
 
@@ -442,13 +453,24 @@ export async function execute(client, data) {
     const embedColor = getRandomColor();
     let embed;
     const components = [createModeButtons(mode)];
+    let transformedAvatarUrl = null;
+    
+    if (shouldTransformAvatar()) {
+      try {
+        const avatarUrl = resolveDisplayAvatarURL(discordUser, { size: 1024 });
+        const transformedBuffer = await getRandomOverlayAvatar(avatarUrl);
+        transformedAvatarUrl = bufferToDataUrl(transformedBuffer);
+      } catch (err) {
+        log(`⚠️ Erro ao transformar avatar no stats: ${err.message}`, "Stats", 33);
+      }
+    }
 
     if (mode === "resumo") {
-      embed = embedResumo(userData, discordUser, guildId, embedColor);
+      embed = embedResumo(userData, discordUser, guildId, embedColor, transformedAvatarUrl);
     } else if (mode === "conquistas") {
       embed = embedConquistas(userData, discordUser, embedColor);
     } else {
-      embed = getPageEmbed(userData, discordUser, guildId, 0, embedColor);
+      embed = getPageEmbed(userData, discordUser, guildId, 0, embedColor, transformedAvatarUrl);
       components.push(createNavigationButtons(0, STATS_PAGES.length));
     }
 
@@ -473,23 +495,23 @@ export async function execute(client, data) {
         const newComponents = [createModeButtons(newMode)];
 
         if (newMode === "resumo") {
-          newEmbed = embedResumo(userData, discordUser, guildId, currentColor);
+          newEmbed = embedResumo(userData, discordUser, guildId, currentColor, transformedAvatarUrl);
         } else if (newMode === "conquistas") {
           newEmbed = embedConquistas(userData, discordUser, currentColor);
         } else {
-          newEmbed = getPageEmbed(userData, discordUser, guildId, 0, currentColor);
+          newEmbed = getPageEmbed(userData, discordUser, guildId, 0, currentColor, transformedAvatarUrl);
           newComponents.push(createNavigationButtons(0, STATS_PAGES.length));
         }
 
         await interaction.update({ embeds: [newEmbed], components: newComponents });
       } else if (interaction.customId === "stats_prev") {
         if (currentPage > 0) currentPage--;
-        const newEmbed = getPageEmbed(userData, discordUser, guildId, currentPage, currentColor);
+        const newEmbed = getPageEmbed(userData, discordUser, guildId, currentPage, currentColor, transformedAvatarUrl);
         const newComponents = [createModeButtons(currentMode), createNavigationButtons(currentPage, STATS_PAGES.length)];
         await interaction.update({ embeds: [newEmbed], components: newComponents });
       } else if (interaction.customId === "stats_next") {
         if (currentPage < STATS_PAGES.length - 1) currentPage++;
-        const newEmbed = getPageEmbed(userData, discordUser, guildId, currentPage, currentColor);
+        const newEmbed = getPageEmbed(userData, discordUser, guildId, currentPage, currentColor, transformedAvatarUrl);
         const newComponents = [createModeButtons(currentMode), createNavigationButtons(currentPage, STATS_PAGES.length)];
         await interaction.update({ embeds: [newEmbed], components: newComponents });
       }

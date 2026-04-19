@@ -48,7 +48,8 @@ export async function execute(client, data) {
     const newsHeadline = await generateFakeNews(channelId, guildId);
     const article = await generateFullArticle(newsHeadline);
 
-    const imageBuffer = await createNewsImage(newsHeadline, article);
+    const guild = client.guilds.cache.get(guildId);
+    const imageBuffer = await createNewsImage(newsHeadline, article, guild);
     const attachment = new AttachmentBuilder(imageBuffer, { name: "noticia.png" });
 
     const embed = new EmbedBuilder()

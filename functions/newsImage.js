@@ -1,5 +1,6 @@
 import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
 import axios from 'axios';
+import { getRandomOverlayAvatar } from './canvasApi.js';
 
 GlobalFonts.registerFromPath(
   './fonts/NoticiaText-Regular.ttf',
@@ -23,6 +24,32 @@ async function getRandomImage() {
 
   return await loadImage(buffer);
 }
+
+async function getRandomMemberImage(guild) {
+  try {
+    if (!guild) {
+      throw new Error("Guild não fornecido");
+    }
+    
+    const members = await guild.members.fetch({ limit: 100 });
+    const memberArray = Array.from(members.values()).filter(m => !m.user.bot);
+    
+    if (memberArray.length === 0) {
+      throw new Error("Nenhum membro não-bot encontrado");
+    }
+    
+    const randomMember = memberArray[Math.floor(Math.random() * memberArray.length)];
+    const avatarUrl = randomMember.user.displayAvatarURL({ size: 1024, extension: 'png' });
+    
+    const overlayBuffer = await getRandomOverlayAvatar(avatarUrl);
+    
+    return await loadImage(overlayBuffer);
+  } catch (error) {
+    console.error(`Erro ao obter imagem de membro: ${error.message}`);
+    return await getRandomImage();
+  }
+}
+
 function wrapText(ctx, text, maxWidth) {
   const words = text.split(' ');
   const lines = [];
@@ -43,7 +70,7 @@ function wrapText(ctx, text, maxWidth) {
   return lines;
 }
 
-export async function createNewsImage(headline, article) {
+export async function createNewsImage(headline, article, guild = null) {
   const width = 1200;
   const padding = 60;
   const contentWidth = width - padding * 2;
@@ -92,7 +119,7 @@ export async function createNewsImage(headline, article) {
 
   // ===== IMAGEM =====
   try {
-    const randomImg = await getRandomImage();
+    const randomImg = guild ? await getRandomMemberImage(guild) : await getRandomImage();
     ctx.drawImage(randomImg, 0, y, width, imageHeight);
 
     const grad = ctx.createLinearGradient(0, y + imageHeight - 120, 0, y + imageHeight);
