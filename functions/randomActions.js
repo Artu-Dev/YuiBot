@@ -1,7 +1,7 @@
 import { log } from "../bot.js";
 import { invertMessage } from "./ai/generateResponse.js";
 import { getOrCreateWebhook, messageContainsDailyWord } from "./utils.js";
-import { getRandomFilteredAvatar } from "./canvasApi.js";
+import { getRandomFilteredAvatar, getRandomOverlayAvatar } from "./canvasApi.js";
 
 async function randomResend(message) {
   if (message.author.bot) return false;
@@ -39,15 +39,16 @@ async function randomResend(message) {
     if (choice === "aiInvert") {
       try {
         if (Math.random() < 0.6) {
-          const filteredAvatarBuffer = await getRandomFilteredAvatar(avatarURL);
+          const filteredAvatarUrl = await getRandomOverlayAvatar(avatarURL);
           
           await myWebHook.send({
             content: result,
             username: message.member?.displayName || message.author.username,
-            files: [{ attachment: filteredAvatarBuffer, name: 'avatar.png' }],
+            avatarURL: filteredAvatarUrl,
           });
           message.delete().catch(() => {});
           return true;
+
         }
       } catch (err) {
         log(`⚠️ Não foi possível aplicar filtro ao avatar, enviando sem filtro: ${err.message}`, "RandomAction", 33);

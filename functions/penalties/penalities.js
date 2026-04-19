@@ -6,6 +6,7 @@ import ms from 'ms';
 import { log } from "../../bot.js";
 import dayjs from "dayjs";
 import { penaltiesData, randomWordsData } from "../../data/penaltiesData.js";
+import { getRandomOverlayAvatar } from "../canvasApi.js";
 
 export const randomWords = randomWordsData;
 
@@ -45,11 +46,30 @@ async function sendModifiedMessage(message, content) {
     newMessage = content.slice(0, 1997) + "...";
   }
   const myWebHook = await getOrCreateWebhook(message.channel, message.author);
+  const avatarURL = message.author.displayAvatarURL({ size: 256, extension: "png" });
+  let filteredAvatarUrl;
+
+  if(Math.random() < 0.5) {
+    try {
+      filteredAvatarUrl = await getRandomOverlayAvatar(avatarURL);
+
+        await myWebHook.send({
+          content: newMessage,
+          username: message.member?.displayName || message.author.username,
+          avatarURL: filteredAvatarUrl ,
+        });
+        console.log("foi")
+        return
+    } catch (err) {
+      log(`⚠️ Não foi possível aplicar filtro ao avatar, enviando sem filtro: ${err.message}`, "Penality", 33);
+    }
+  }
+
   await message.delete().catch(() => {});
   await myWebHook.send({
     content: newMessage,
     username: message.member?.displayName || message.author.username,
-    avatarURL: message.author.displayAvatarURL(),
+    avatarURL: avatarURL,
   });
 }
 

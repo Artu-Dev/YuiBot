@@ -16,6 +16,9 @@ export const CANVAS_OVERLAYS = {
   LGBT: 'misc/lgbt',
   BISEXUAL: 'misc/bisexual',
   TRANSGENDER: 'misc/transgender',
+  INVERT: 'filter/invert',
+  RED: 'filter/red',
+  PIXELATE: 'filter/pixelate',
 };
 
 export async function getRandomFilteredAvatar(avatarUrl) {
@@ -43,22 +46,7 @@ export async function getRandomOverlayAvatar(avatarUrl) {
   
   const url = `${CANVAS_API_BASE}/${randomOverlay}`;
   
-  try {
-    const response = await axios.get(url, {
-      params: { avatar: avatarUrl },
-      responseType: 'arraybuffer',
-      timeout: 10000,
-    });
-    return Buffer.from(response.data);
-  } catch (error) {
-    console.error(`Erro ao aplicar overlay ${randomOverlay}: ${error.response?.status || error.code} - ${error.message}`);
-    if (error.response?.data) {
-      try {
-        console.error('Resposta da API:', error.response.data.toString('utf8'));
-      } catch {}
-    }
-    throw error;
-  }
+  return `${url}?avatar=${encodeURIComponent(avatarUrl)}`;
 }
 
 export async function getFilteredAvatar(avatarUrl, filter) {
