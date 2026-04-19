@@ -12,101 +12,98 @@ export const CANVAS_OVERLAYS = {
   WASTED: 'overlay/wasted',
   JAIL: 'overlay/jail',
   COMRADE: 'overlay/comrade',
+  GAY: 'overlay/gay',
   LGBT: 'misc/lgbt',
-  TWEET: 'misc/tweet',
-  YOUTUBE_COMMENT: 'misc/youtube-comment',
+  BISEXUAL: 'misc/bisexual',
+  TRANSGENDER: 'misc/transgender',
 };
 
 export async function getRandomFilteredAvatar(avatarUrl) {
   const filters = Object.values(AVATAR_FILTERS);
   const randomFilter = filters[Math.floor(Math.random() * filters.length)];
   
-  const url = `${CANVAS_API_BASE}/${randomFilter}?avatar=${encodeURIComponent(avatarUrl)}`;
+  const url = `${CANVAS_API_BASE}/${randomFilter}`;
   
   try {
     const response = await axios.get(url, {
+      params: { avatar: avatarUrl },
       responseType: 'arraybuffer',
       timeout: 10000,
     });
     return Buffer.from(response.data);
   } catch (error) {
-    console.error(`Erro ao aplicar filtro ${randomFilter}:`, error.message);
+    console.error(`Erro ao aplicar filtro ${randomFilter}: ${error.response?.status || error.code} - ${error.message}`);
     throw error;
   }
 }
 
-export async function getRandomOverlayAvatar(avatarUrl, params = {}) {
+export async function getRandomOverlayAvatar(avatarUrl) {
   const overlays = Object.values(CANVAS_OVERLAYS);
   const randomOverlay = overlays[Math.floor(Math.random() * overlays.length)];
   
-  let url = `${CANVAS_API_BASE}/${randomOverlay}?avatar=${encodeURIComponent(avatarUrl)}`;
-  
-  if (randomOverlay === 'misc/tweet' && params.tweetData) {
-    const tweetParams = new URLSearchParams({
-      displayname: params.tweetData.displayname || 'Discord User',
-      username: params.tweetData.username || 'user',
-      comment: params.tweetData.comment || 'Que notícia incrível!',
-      theme: params.tweetData.theme || 'dark',
-      avatar: encodeURIComponent(avatarUrl),
-    });
-    url = `${CANVAS_API_BASE}/misc/tweet?${tweetParams}`;
-  } else if (randomOverlay === 'misc/youtube-comment' && params.youtubeData) {
-    const youtubeParams = new URLSearchParams({
-      username: params.youtubeData.username || 'Discord User',
-      comment: params.youtubeData.comment || 'Ótimo vídeo!',
-      avatar: encodeURIComponent(avatarUrl),
-    });
-    url = `${CANVAS_API_BASE}/misc/youtube-comment?${youtubeParams}`;
-  }
+  const url = `${CANVAS_API_BASE}/${randomOverlay}`;
   
   try {
     const response = await axios.get(url, {
+      params: { avatar: avatarUrl },
       responseType: 'arraybuffer',
       timeout: 10000,
     });
     return Buffer.from(response.data);
   } catch (error) {
-    console.error(`Erro ao aplicar overlay ${randomOverlay}:`, error.message);
+    console.error(`Erro ao aplicar overlay ${randomOverlay}: ${error.response?.status || error.code} - ${error.message}`);
+    if (error.response?.data) {
+      try {
+        console.error('Resposta da API:', error.response.data.toString('utf8'));
+      } catch {}
+    }
     throw error;
   }
 }
 
 export async function getFilteredAvatar(avatarUrl, filter) {
-  const url = `${CANVAS_API_BASE}/${filter}?avatar=${encodeURIComponent(avatarUrl)}`;
+  const url = `${CANVAS_API_BASE}/${filter}`;
   
   try {
     const response = await axios.get(url, {
+      params: { avatar: avatarUrl },
       responseType: 'arraybuffer',
       timeout: 10000,
     });
     return Buffer.from(response.data);
   } catch (error) {
-    console.error(`Erro ao aplicar filtro ${filter}:`, error.message);
+    console.error(`Erro ao aplicar filtro ${filter}: ${error.response?.status || error.code} - ${error.message}`);
     throw error;
   }
 }
 
 
-export async function getOverlayAvatar(avatarUrl, overlay, params = {}) {
-  let url = `${CANVAS_API_BASE}/${overlay}?avatar=${encodeURIComponent(avatarUrl)}`;
+export async function getOverlayAvatar(avatarUrl, overlay) {
+  const url = `${CANVAS_API_BASE}/${overlay}`;
   
-  if (overlay === 'misc/tweet' && params.tweetData) {
-    const tweetParams = new URLSearchParams({
-      displayname: params.tweetData.displayname || 'Discord User',
-      username: params.tweetData.username || 'user',
-      comment: params.tweetData.comment || 'Que notícia incrível!',
-      theme: params.tweetData.theme || 'dark',
-      avatar: encodeURIComponent(avatarUrl),
+  try {
+    const response = await axios.get(url, {
+      params: { avatar: avatarUrl },
+      responseType: 'arraybuffer',
+      timeout: 10000,
     });
-    url = `${CANVAS_API_BASE}/misc/tweet?${tweetParams}`;
-  } else if (overlay === 'misc/youtube-comment' && params.youtubeData) {
-    const youtubeParams = new URLSearchParams({
-      username: params.youtubeData.username || 'Discord User',
-      comment: params.youtubeData.comment || 'Ótimo vídeo!',
-      avatar: encodeURIComponent(avatarUrl),
-    });
-    url = `${CANVAS_API_BASE}/misc/youtube-comment?${youtubeParams}`;
+    return Buffer.from(response.data);
+  } catch (error) {
+    console.error(`Erro ao aplicar overlay ${overlay}: ${error.response?.status || error.code} - ${error.message}`);
+    throw error;
   }
+}
+
+export async function createTweetImage(avatarUrl, username, displayName, comment, theme = 'dark') {
+  const params = new URLSearchParams({
+    avatar: avatarUrl,
+    username: username || 'user',
+    displayname: displayName || 'Discord User',
+    comment: comment || '',
+    theme: theme,
+  });
+  
+  const url = `${CANVAS_API_BASE}/misc/tweet?${params.toString()}`;
   
   try {
     const response = await axios.get(url, {
@@ -115,7 +112,29 @@ export async function getOverlayAvatar(avatarUrl, overlay, params = {}) {
     });
     return Buffer.from(response.data);
   } catch (error) {
-    console.error(`Erro ao aplicar overlay ${overlay}:`, error.message);
+    console.error(`Erro ao criar tweet image: ${error.response?.status || error.code} - ${error.message}`);
+    throw error;
+  }
+}
+
+
+export async function createYoutubeCommentImage(avatarUrl, username, comment) {
+  const params = new URLSearchParams({
+    avatar: avatarUrl,
+    username: username || 'Discord User',
+    comment: comment || '',
+  });
+  
+  const url = `${CANVAS_API_BASE}/misc/youtube-comment?${params.toString()}`;
+  
+  try {
+    const response = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 10000,
+    });
+    return Buffer.from(response.data);
+  } catch (error) {
+    console.error(`Erro ao criar youtube comment image: ${error.response?.status || error.code} - ${error.message}`);
     throw error;
   }
 }

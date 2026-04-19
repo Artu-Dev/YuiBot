@@ -39,7 +39,7 @@ async function getRandomMemberImage(guild) {
     }
     
     const randomMember = memberArray[Math.floor(Math.random() * memberArray.length)];
-    const avatarUrl = randomMember.user.displayAvatarURL({ size: 1024, extension: 'png' });
+    const avatarUrl = randomMember.user.displayAvatarURL({ size: 256, extension: 'png' });
     
     const overlayBuffer = await getRandomOverlayAvatar(avatarUrl);
     

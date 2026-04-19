@@ -1,4 +1,4 @@
-import { EmbedBuilder, SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { EmbedBuilder, SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } from "discord.js";
 import { achievements } from "../functions/achievmentsData.js";
 import {
   getOrCreateUser,
@@ -26,12 +26,6 @@ function getRandomColor() {
 
 function shouldTransformAvatar() {
   return Math.random() < 0.1;
-}
-
-
-function bufferToDataUrl(buffer) {
-  const base64 = buffer.toString('base64');
-  return `data:image/png;base64,${base64}`;
 }
 
 export const data = new SlashCommandBuilder()
@@ -435,7 +429,9 @@ export async function execute(client, data) {
       id: userId,
       username,
       displayName,
-      displayAvatarURL: () => client.users.cache.get(userId)?.displayAvatarURL() || data.avatarURL?.(),
+      displayAvatarURL: (options) =>
+        client.users.cache.get(userId)?.displayAvatarURL(options) ||
+        data.avatarURL?.(options),
     };
     
     const targetDisplayName = mentionedUser
@@ -454,12 +450,14 @@ export async function execute(client, data) {
     let embed;
     const components = [createModeButtons(mode)];
     let transformedAvatarUrl = null;
+    let transformedAvatarFile = null;
     
     if (shouldTransformAvatar()) {
       try {
-        const avatarUrl = resolveDisplayAvatarURL(discordUser, { size: 1024 });
+        const avatarUrl = resolveDisplayAvatarURL(discordUser, { size: 256, extension: 'png' });
         const transformedBuffer = await getRandomOverlayAvatar(avatarUrl);
-        transformedAvatarUrl = bufferToDataUrl(transformedBuffer);
+        transformedAvatarUrl = 'attachment://stats-avatar.png';
+        transformedAvatarFile = new AttachmentBuilder(transformedBuffer, { name: 'stats-avatar.png' });
       } catch (err) {
         log(`⚠️ Erro ao transformar avatar no stats: ${err.message}`, "Stats", 33);
       }
@@ -474,7 +472,7 @@ export async function execute(client, data) {
       components.push(createNavigationButtons(0, STATS_PAGES.length));
     }
 
-    const reply = await data.reply({ embeds: [embed], components });
+    const reply = await data.reply({ embeds: [embed], components, files: transformedAvatarFile ? [transformedAvatarFile] : [] });
 
     const collector = reply.createMessageComponentCollector({
       time: 120000,
@@ -503,17 +501,21 @@ export async function execute(client, data) {
           newComponents.push(createNavigationButtons(0, STATS_PAGES.length));
         }
 
-        await interaction.update({ embeds: [newEmbed], components: newComponents });
+        await interaction.update({
+          embeds: [newEmbed],
+          components: newComponents,
+          files: transformedAvatarFile ? [transformedAvatarFile] : [],
+        });
       } else if (interaction.customId === "stats_prev") {
         if (currentPage > 0) currentPage--;
         const newEmbed = getPageEmbed(userData, discordUser, guildId, currentPage, currentColor, transformedAvatarUrl);
         const newComponents = [createModeButtons(currentMode), createNavigationButtons(currentPage, STATS_PAGES.length)];
-        await interaction.update({ embeds: [newEmbed], components: newComponents });
+        await interaction.update({ embeds: [newEmbed], components: newComponents, files: transformedAvatarFile ? [transformedAvatarFile] : [] });
       } else if (interaction.customId === "stats_next") {
         if (currentPage < STATS_PAGES.length - 1) currentPage++;
         const newEmbed = getPageEmbed(userData, discordUser, guildId, currentPage, currentColor, transformedAvatarUrl);
         const newComponents = [createModeButtons(currentMode), createNavigationButtons(currentPage, STATS_PAGES.length)];
-        await interaction.update({ embeds: [newEmbed], components: newComponents });
+        await interaction.update({ embeds: [newEmbed], components: newComponents, files: transformedAvatarFile ? [transformedAvatarFile] : [] });
       }
     });
 
@@ -521,7 +523,7 @@ export async function execute(client, data) {
       await reply.edit({ components: [] }).catch(() => {});
     });
   } catch (error) {
-    log(`❌ Erro ao executar comando stats: ${error.message}`, "Stats", 31);
+    log(`❌ Erro ao executar comando stats: ${error}`, "Stats", 31);
     return await data.reply("❌ Erro ao processar comando.");
   }
 }
