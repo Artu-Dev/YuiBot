@@ -1,4 +1,4 @@
-import fs from "fs";
+import { existsSync, mkdirSync } from "fs";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -16,11 +16,11 @@ class Config {
 
     // ========== MÉTODOS ==========
     static setupDirectories() {
-        if (!fs.existsSync(this.DATA_DIR)) {
-            fs.mkdirSync(this.DATA_DIR, { recursive: true });
+        if (!existsSync(this.DATA_DIR)) {
+            mkdirSync(this.DATA_DIR, { recursive: true });
         }
-        if (!fs.existsSync(this.AUDIO_DIR)) {
-            fs.mkdirSync(this.AUDIO_DIR, { recursive: true });
+        if (!existsSync(this.AUDIO_DIR)) {
+            mkdirSync(this.AUDIO_DIR, { recursive: true });
         }
     }
 }
