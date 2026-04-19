@@ -36,8 +36,8 @@ export const data = new SlashCommandBuilder()
 
 function parseArgs(data) {
   if (data.fromInteraction) {
-    const subcommand = data.options.getSubcommand();
-    const quantidade = data.options.getInteger('quantidade');
+    const subcommand = data.getSubcommand();
+    const quantidade = data.getInteger('quantidade');
     return { subcommand, quantidade };
   }
 
