@@ -153,7 +153,6 @@ export const ensureUserExists = (userId, guildId) => {
     return existing;
   }
 
-  // Cria novo usuário (sem forçar displayName)
   return getOrCreateUser(userId, null, guildId);
 };
 

@@ -106,9 +106,8 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
       return `Maldição lançada em <@${targetId}>! Agora ele vai gastar o dobro de chars (expira ${durStr}).`;
 
     case 'swap_chars': {
-      const { ensureUserExists } = await import('../database.js');
-      const userData = await ensureUserExists(userId, guildId);
-      const targetData = await ensureUserExists(targetId, guildId);
+      const userData = await getOrCreateUser(userId, guildId);
+      const targetData = await getOrCreateUser(targetId, guildId);
 
       if (!targetData || !targetData.charLeft) {
         return 'Usuário alvo não encontrado no banco de dados.';
@@ -238,8 +237,7 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
           name: 'Renda extra!',
           action: async () => {
             const bonus = randomInt(2000, 5000);
-            const { ensureUserExists } = await import('../database.js');
-            const userData = await ensureUserExists(userId, guildId);
+            const userData = await getOrCreateUser(userId, guildId);
             await setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) + bonus);
             return `Você ganhou **${bonus}** chars! 💰`;
           }
@@ -247,8 +245,7 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
         {
           name: 'IMPOSTO!!!',
           action: async () => {
-            const { ensureUserExists } = await import('../database.js');
-            const userData = await ensureUserExists(userId, guildId);
+            const userData = await getOrCreateUser(userId, guildId);
             const loss = Math.min(randomInt(1000, 3000), userData?.charLeft ?? 0);
             await setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) - loss);
             return `Você perdeu **${loss}** chars de imposto pra Yui! 😭`;
@@ -264,12 +261,11 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
         {
           name: 'Troca aleatória',
           action: async () => {
-            const { getGuildUsers, ensureUserExists } = await import('../database.js');
             const users = getGuildUsers(guildId);
             if (users.length > 1) {
               const randomUser = users[randomInt(0, users.length - 1)];
-              const userData = await ensureUserExists(userId, guildId);
-              const targetData = await ensureUserExists(randomUser.id, guildId);
+              const userData = await getOrCreateUser(userId, guildId);
+              const targetData = await getOrCreateUser(randomUser.id, guildId);
               const userChars = userData?.charLeft ?? 0;
               const targetChars = targetData?.charLeft ?? 0;
 
@@ -291,15 +287,13 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
         {
           name: 'Roleta do Silvio Santos',
           action: async () => {
-            const { ensureUserExists } = await import('../database.js');
             const resultado = randomInt(1, 3);
             if (resultado === 1) {
-              const userData = await ensureUserExists(userId, guildId);
+              const userData = await getOrCreateUser(userId, guildId);
               await setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) * 2);
               return 'Você DUPLICOU seus chars! 🤑';
             } else if (resultado === 2) {
-              const { ensureUserExists } = await import('../database.js');
-              const userData = await ensureUserExists(userId, guildId);
+              const userData = await getOrCreateUser(userId, guildId);
               await setUserProperty('charLeft', userId, guildId, Math.floor((userData?.charLeft ?? 0) / 2));
               return 'Você PERDEU METADE dos seus chars! 💸';
             } else {
@@ -317,8 +311,7 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
 
             const targetUser = users[randomInt(0, users.length - 1)];
             const bountyAmount = randomInt(500, 2500);
-            const { ensureUserExists } = await import('../database.js');
-            const userData = await ensureUserExists(userId, guildId);
+            const userData = await getOrCreateUser(userId, guildId);
 
             await setUserProperty('bounty_placer', targetUser.id, guildId, userData?.display_name || 'Usuário Desconhecido');
             await setUserProperty('total_bounty_value', targetUser.id, guildId, bountyAmount);
@@ -360,14 +353,12 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
     }
 
     case 'halve_wealth': {
-      const { ensureUserExists } = await import('../database.js');
-      const targetData = await ensureUserExists(targetId, guildId);
+      const targetData = await getOrCreateUser(targetId, guildId);
       const currentChars = targetData.charLeft;
 
       if(!currentChars || currentChars <= 1) {
         return `<@${targetId}> tem pouquíssimos chars, o **${itemDef.name}** não teve efeito!`;
       }
-
 
       const half = Math.floor(currentChars / 2);
       const destroyed = currentChars - half;
@@ -394,8 +385,7 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
     }
 
     case 'credit_card': {
-      const { ensureUserExists } = await import('../database.js');
-      const userData = await ensureUserExists(userId, guildId);
+      const userData = await getOrCreateUser(userId, guildId);
       const currentBalance = userData?.charLeft ?? 0;
       
       await setUserProperty('credit_limit', userId, guildId, currentBalance);

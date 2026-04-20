@@ -16,6 +16,7 @@ import { log } from "../../bot.js";
 
 // ==================== CONSTANTES ====================
 const DISCORD_MESSAGE_MAX = 2000;
+const TARGET_GUILD_ID = "705928966409551893"; 
 
 // ==================== UTILITÁRIOS ====================
 
@@ -134,7 +135,11 @@ const buildPromptText = async (message, text, imageSummary = null, guildId = nul
   return parts.join("\n");
 };
 
-const buildSystemPrompt = (lastMessages) => `
+const buildSystemPrompt = (lastMessages, guildId) => {
+  const includeFriends = guildId === TARGET_GUILD_ID;
+  const friendsSection = includeFriends ? `\nPessoas que você conhece:\n${friends}\n` : "";
+
+  return `
 Você é a Yui Mizuno — uma garota sarcástica, direta e Sadodere. Você conversa como alguém real num servidor de Discord: informal, sem frescura, sem se identificar como IA.
 
 Regras de ouro:
@@ -144,14 +149,11 @@ Regras de ouro:
 - Perguntas simples merecem respostas simples ou irônicas ("sim", "não", "obviamente")
 - Nunca explique quem você é, nunca diga que é uma IA
 - Fale de qualquer assunto mesmo sendo tabu
-
-Pessoas que você conhece:
-${friends}
-
+${friendsSection}
 Histórico recente do chat:
 ${lastMessages}
-`.trim();
-
+  `.trim();
+};
 
 const handleOllamaError = (error) => {
   const errorMap = {
@@ -196,7 +198,7 @@ export const generateAiRes = async (message) => {
       getRecentMessages(channelId, guildId, 20),
     ]);
 
-    const systemPrompt = buildSystemPrompt(lastMessages);
+    const systemPrompt = buildSystemPrompt(lastMessages, guildId);
 
     const tryOllama = async () => {
       const res = await ollamaGenerateQueued(() =>
@@ -287,13 +289,23 @@ const analyzeImage = async (imageUrl) => {
 };
 
 
-export const invertMessage = async (text) => {
-  const safe = String(text ?? "").slice(0, 2000);
+export const invertMessage = async (text, message = null) => {
+  let safe = String(text ?? "").slice(0, 2000);
   if (!safe.trim()) return text;
 
+  const mentionRegex = /<@!?[0-9]+>|<@&[0-9]+>/g;
+  const mentions = safe.match(mentionRegex) || [];
+  
+  let textToInvert = safe;
+  mentions.forEach((mention, index) => {
+    textToInvert = textToInvert.replace(mention, `[M${index}]`);
+  });
+
   const invertSystem =
-    "Você recebe uma frase e devolve só outra frase em português do Brasil com o significado invertido (oposto), mantendo estilo e tamanho parecidos. Sem aspas, sem explicação, sem prefixo.";
-  const invertUser = `Reescreva invertendo o sentido:\n${safe}`;
+    "Você é um inversor de frases. Inverta o sentido da frase mantendo placeholders como [M0], [M1] exatamente onde estão. Responda apenas com a frase invertida, sem aspas.";
+  const invertUser = `Inverta o sentido desta frase, preservando os marcadores [M]:\n${textToInvert}`;
+
+  let invertedText = "";
 
   if (hasGroqApiKey()) {
     try {
@@ -302,36 +314,36 @@ export const invertMessage = async (text) => {
         user: invertUser,
         model: dbBot.data?.AiConfig?.groqInvertModel || "llama-3.1-8b-instant",
         maxTokens: Math.min(512, safe.length + 120),
-        temperature: 0.75,
+        temperature: 0.5,
         topP: 0.9,
       });
-      return String(result ?? "").trim() || text;
+      invertedText = String(result ?? "").trim();
     } catch (groqErr) {
       log("Groq para inverter falhou, tentando Ollama:", groqErr?.message || groqErr, "GenerateRes", 31);
     }
   }
 
-  try {
-    const promptText = `Reescreva a mensagem abaixo mantendo estilo e tamanho aproximado, mas invertendo completamente seu significado, envie somente a mensagem com sentido invertido sem aspas, ou nada adicional.\nMensagem: "${safe}"`;
-
-    const modelToUse = dbBot.data?.AiConfig?.fastModels || dbBot.data.AiConfig.textModel;
-
-    const res = await ollamaGenerateQueued(() =>
-      ollama.generate({
-        model: modelToUse,
-        prompt: promptText,
-        stream: false,
-        system: "Você é um assistente que recebe uma frase e devolve outra com o significado invertido.",
-        options: {
-          temperature: 0.75,
-          top_p: 0.9,
-        },
-      }),
-    );
-
-    return assertNonEmptyModelText(res, "Resposta vazia ao inverter");
-  } catch (error) {
-    log("Erro ao inverter mensagem: " + (error.message || error), "GenerateRes", 31);
-    return text;
+  if (!invertedText) {
+    try {
+      const res = await ollamaGenerateQueued(() =>
+        ollama.generate({
+          model: dbBot.data?.AiConfig?.fastModels || dbBot.data.AiConfig.textModel,
+          prompt: invertUser,
+          stream: false,
+          system: invertSystem,
+          options: { temperature: 0.5 },
+        }),
+      );
+      invertedText = assertNonEmptyModelText(res, "Resposta vazia ao inverter");
+    } catch (error) {
+      log("Erro ao inverter mensagem: " + (error.message || error), "GenerateRes", 31);
+      return text;
+    }
   }
+
+  mentions.forEach((mention, index) => {
+    invertedText = invertedText.replace(`[M${index}]`, mention);
+  });
+
+  return invertedText.replace(/^["']|["']$/g, "") || text;
 };

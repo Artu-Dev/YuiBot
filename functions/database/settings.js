@@ -17,55 +17,75 @@ const DEFAULT_CONFIGS = {
 };
 
 export function getServerConfig(guildId, key) {
-  if (!guildId) return DEFAULT_CONFIGS[key];
-  const row = db.queries.getServerConfig.get(guildId);
-  if (!row) {
-    db.queries.setServerConfig.run(
-      guildId,
-      DEFAULT_CONFIGS.limitChar,
-      DEFAULT_CONFIGS.speakMessage,
-      DEFAULT_CONFIGS.charLimitEnabled,
-      DEFAULT_CONFIGS.generateMessage,
-      DEFAULT_CONFIGS.maxSavedAudios,
-      DEFAULT_CONFIGS.prefix,
-      DEFAULT_CONFIGS.guildSilenceUntil
-    );
+  if (!guildId || !key) {
+    return DEFAULT_CONFIGS[key] ?? null;
+  }
+
+  try {
+    const row = db.queries.getServerConfig.get(guildId);
+
+    if (!row) {
+      db.queries.setServerConfig.run(
+        guildId,
+        DEFAULT_CONFIGS.limitChar,
+        DEFAULT_CONFIGS.speakMessage,
+        DEFAULT_CONFIGS.charLimitEnabled,
+        DEFAULT_CONFIGS.generateMessage,
+        DEFAULT_CONFIGS.maxSavedAudios,
+        DEFAULT_CONFIGS.prefix,
+        DEFAULT_CONFIGS.guildSilenceUntil,
+        DEFAULT_CONFIGS.randomEventsEnabled,
+        DEFAULT_CONFIGS.dailyRobberyLimit,
+        DEFAULT_CONFIGS.shopEnabled,
+        DEFAULT_CONFIGS.classesEnabled
+      );
+      return DEFAULT_CONFIGS[key];
+    }
+
+    const value = row[key];
+    if (['speakMessage', 'charLimitEnabled', 'generateMessage', 'randomEventsEnabled', 'shopEnabled', 'classesEnabled'].includes(key)) {
+      return value === 1;
+    }
+    return value;
+  } catch (err) {
+    log(`[getServerConfig] Erro ao buscar ${key}: ${err.message}`, "Database", 31);
     return DEFAULT_CONFIGS[key];
   }
- 
-  if (key === 'speakMessage' || key === 'charLimitEnabled' || key === 'generateMessage' || key === 'randomEventsEnabled' || key === 'shopEnabled' || key === 'classesEnabled') {
-    return row[key] === 1;
-  }
-  return row[key];
 }
 
+// ====================== SET ======================
 export function setServerConfig(guildId, key, value) {
-  if (!guildId) return;
-  const row = db.queries.getServerConfig.get(guildId);
-  const config = row ? { ...row } : { ...DEFAULT_CONFIGS, guild_id: guildId };
+  if (!guildId || !key) return;
 
-  if (key === 'speakMessage' || key === 'charLimitEnabled' || key === 'generateMessage' || key === 'randomEventsEnabled' || key === 'shopEnabled' || key === 'classesEnabled') {
-    config[key] = value ? 1 : 0;
-  } else {
-    config[key] = value;
+  try {
+    const row = db.queries.getServerConfig.get(guildId) || { ...DEFAULT_CONFIGS, guild_id: guildId };
+
+    const config = { ...row };
+
+    if (['speakMessage', 'charLimitEnabled', 'generateMessage', 'randomEventsEnabled', 'shopEnabled', 'classesEnabled'].includes(key)) {
+      config[key] = value ? 1 : 0;
+    } else {
+      config[key] = value;
+    }
+
+    db.queries.setServerConfig.run(
+      guildId,
+      config.limitChar,
+      config.speakMessage,
+      config.charLimitEnabled,
+      config.generateMessage,
+      config.maxSavedAudios,
+      config.prefix,
+      config.guildSilenceUntil,
+      config.randomEventsEnabled,
+      config.dailyRobberyLimit,
+      config.shopEnabled,
+      config.classesEnabled
+    );
+  } catch (err) {
+    log(`[setServerConfig] Erro ao salvar ${key}: ${err.message}`, "Database", 31);
   }
-
-  db.queries.setServerConfig.run(
-    guildId,
-    config.limitChar,
-    config.speakMessage,
-    config.charLimitEnabled,
-    config.generateMessage,
-    config.maxSavedAudios,
-    config.prefix,
-    config.guildSilenceUntil,
-    config.randomEventsEnabled,
-    config.dailyRobberyLimit,
-    config.shopEnabled,
-    config.classesEnabled
-  );
 }
-
 export function isGuildAiSilenced(guildId) {
   if (!guildId) return false;
   const until = getServerConfig(guildId, 'guildSilenceUntil');
