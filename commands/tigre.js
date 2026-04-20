@@ -22,8 +22,8 @@ const MODES = {
     color: "#2ECC71",
     style: ButtonStyle.Success,
     getOutcomes: () => [
-      { type: "loss",     chance: 0.59, amount: 0,                      emoji: "💸", desc: "Perdeu" },
-      { type: "win",      chance: 0.27, amount: randomInt(100,  801),   emoji: "💰", desc: "Ganhou" },
+      { type: "loss",     chance: 0.67, amount: 0,                      emoji: "💸", desc: "Perdeu" },
+      { type: "win",      chance: 0.19, amount: randomInt(100,  801),   emoji: "💰", desc: "Ganhou" },
       { type: "double",   chance: 0.07, amount: 0,                      emoji: "🔄", desc: "Próximo resultado dobrado!" },
       { type: "jackpot",  chance: 0.01, amount: randomInt(2000, 8001),  emoji: "🎰", desc: "JACKPOT!" },
       { type: "revanche", chance: 0.06, amount: 0,                      emoji: "🔁", desc: "Revanche!" },
@@ -37,8 +37,8 @@ const MODES = {
     color: "#9B59B6",
     style: ButtonStyle.Primary,
     getOutcomes: () => [
-      { type: "loss",     chance: 0.49, amount: 0,                        emoji: "💸", desc: "Perdeu" },
-      { type: "win",      chance: 0.35, amount: randomInt(200,  2501),    emoji: "💰", desc: "Ganhou" },
+      { type: "loss",     chance: 0.57, amount: 0,                        emoji: "💸", desc: "Perdeu" },
+      { type: "win",      chance: 0.27, amount: randomInt(200,  2501),    emoji: "💰", desc: "Ganhou" },
       { type: "double",   chance: 0.09, amount: 0,                        emoji: "🔄", desc: "Próximo resultado dobrado!" },
       { type: "jackpot",  chance: 0.01, amount: randomInt(5000, 25001),   emoji: "🎰", desc: "JACKPOT!" },
       { type: "revanche", chance: 0.06, amount: 0,                        emoji: "🔁", desc: "Revanche!" },
@@ -66,9 +66,9 @@ function buildButtons(spendableChars) {
     ...Object.values(MODES).map(mode =>
       new ButtonBuilder()
         .setCustomId(mode.key)
-        .setLabel(`${mode.emoji} (${mode.cost} chars)`)
-        .setStyle(mode.style)
+        .setLabel(`${mode.emoji} ${mode.cost} chars`)
         .setDisabled(spendableChars < mode.cost)
+        // .setStyle(mode.style)
     )
   );
 }
@@ -208,7 +208,7 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
     .setColor(embedColor)
     .setTitle(`🎰 ${mode.label}`)
     .setDescription(`
-${hasRevanche ? `🔁 *Rodada de Revanche — gratuita!*\n` : ""}${resultMessage}
+${hasRevanche ? `*Rodada de Revanche — gratuita!*\n` : ""}${resultMessage}
 
 **📊 Estatísticas:**
 • **Caracteres atuais:** ${saldoFinal}
