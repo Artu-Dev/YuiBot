@@ -67,8 +67,8 @@ function buildButtons(spendableChars) {
       new ButtonBuilder()
         .setCustomId(mode.key)
         .setLabel(`${mode.emoji} ${mode.cost} chars`)
+        .setStyle(mode.style)
         .setDisabled(spendableChars < mode.cost)
-        // .setStyle(mode.style)
     )
   );
 }
