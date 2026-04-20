@@ -22,39 +22,39 @@ const MODES = {
     color: "#2ECC71",
     style: ButtonStyle.Success,
     getOutcomes: () => [
-      { type: "loss",    chance: 0.65, amount: 0,                      emoji: "💸", desc: "Perdeu" },
-      { type: "win",     chance: 0.27, amount: randomInt(100,  801),   emoji: "💰", desc: "Ganhou" },
-      { type: "double",  chance: 0.07, amount: 0,                      emoji: "🔄", desc: "Próximo resultado dobrado!" },
-      { type: "jackpot", chance: 0.01, amount: randomInt(2000, 8001),  emoji: "🎰", desc: "JACKPOT!" },
+      { type: "loss",     chance: 0.59, amount: 0,                      emoji: "💸", desc: "Perdeu" },
+      { type: "win",      chance: 0.27, amount: randomInt(100,  801),   emoji: "💰", desc: "Ganhou" },
+      { type: "double",   chance: 0.07, amount: 0,                      emoji: "🔄", desc: "Próximo resultado dobrado!" },
+      { type: "jackpot",  chance: 0.01, amount: randomInt(2000, 8001),  emoji: "🎰", desc: "JACKPOT!" },
+      { type: "revanche", chance: 0.06, amount: 0,                      emoji: "🔁", desc: "Revanche!" },
     ],
   },
   dragao: {
     key:   "dragao",
-    emoji: "🐉",
-
     label: "🐉 Dragão da Fortuna",
     cost:  250,
     color: "#9B59B6",
     style: ButtonStyle.Primary,
     getOutcomes: () => [
-      { type: "loss",    chance: 0.55, amount: 0,                        emoji: "💸", desc: "Perdeu" },
-      { type: "win",     chance: 0.35, amount: randomInt(200,  2501),    emoji: "💰", desc: "Ganhou" },
-      { type: "double",  chance: 0.09, amount: 0,                        emoji: "🔄", desc: "Próximo resultado dobrado!" },
-      { type: "jackpot", chance: 0.01, amount: randomInt(5000, 25001),   emoji: "🎰", desc: "JACKPOT!" },
+      { type: "loss",     chance: 0.49, amount: 0,                        emoji: "💸", desc: "Perdeu" },
+      { type: "win",      chance: 0.35, amount: randomInt(200,  2501),    emoji: "💰", desc: "Ganhou" },
+      { type: "double",   chance: 0.09, amount: 0,                        emoji: "🔄", desc: "Próximo resultado dobrado!" },
+      { type: "jackpot",  chance: 0.01, amount: randomInt(5000, 25001),   emoji: "🎰", desc: "JACKPOT!" },
+      { type: "revanche", chance: 0.06, amount: 0,                        emoji: "🔁", desc: "Revanche!" },
     ],
   },
   tigrinho: {
     key:   "tigrinho",
-    emoji: "🐯",
     label: "🐯 Tigrinho",
     cost:  400,
     color: "#F1C40F",
     style: ButtonStyle.Danger,
     getOutcomes: () => [
-      { type: "loss",    chance: 0.38, amount: 0,                        emoji: "💸", desc: "Perdeu" },
-      { type: "win",     chance: 0.50, amount: randomInt(400,  4001),    emoji: "💰", desc: "Ganhou" },
-      { type: "double",  chance: 0.09, amount: 0,                        emoji: "🔄", desc: "Próximo resultado dobrado!" },
-      { type: "jackpot", chance: 0.03, amount: randomInt(10000, 50001),  emoji: "🎰", desc: "JACKPOT!" },
+      { type: "loss",     chance: 0.32, amount: 0,                        emoji: "💸", desc: "Perdeu" },
+      { type: "win",      chance: 0.50, amount: randomInt(400,  4001),    emoji: "💰", desc: "Ganhou" },
+      { type: "double",   chance: 0.09, amount: 0,                        emoji: "🔄", desc: "Próximo resultado dobrado!" },
+      { type: "jackpot",  chance: 0.03, amount: randomInt(10000, 50001),  emoji: "🎰", desc: "JACKPOT!" },
+      { type: "revanche", chance: 0.06, amount: 0,                        emoji: "🔁", desc: "Revanche!" },
     ],
   },
 };
@@ -87,19 +87,23 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
     return;
   }
 
-  const loadingEmbed = new EmbedBuilder()
-    .setColor(mode.color)
-    .setTitle(`${customEmojis.loading} ${mode.label} — Apostando...`)
-    .setDescription("A sorte está decidindo o resultado...")
-    .setFooter({ text: "Contando os chars..." });
-
-  await btnInteraction.update({ embeds: [loadingEmbed], components: [] });
-  await reduceChars(userId, guildId, mode.cost, true);
-  await new Promise(resolve => setTimeout(resolve, LOADING_TIME));
-
   const user = getOrCreateUser(userId, displayName, guildId);
   const pendingStacks = Math.max(0, Math.min(8, Number(user.tiger_pending_double) || 0));
   const doubleMult = 2 ** pendingStacks;
+  const hasRevanche = Boolean(user.tiger_pending_revanche);
+
+  const loadingEmbed = new EmbedBuilder()
+    .setColor(mode.color)
+    .setTitle(`${customEmojis.loading} ${mode.label} — Apostando...`)
+    .setDescription(hasRevanche
+      ? "Usando sua **Revanche** — essa rodada é de graça!"
+      : "A sorte está decidindo o resultado...")
+    .setFooter({ text: "Contando os chars..." });
+
+  await btnInteraction.update({ embeds: [loadingEmbed], components: [] });
+  if (!hasRevanche) await reduceChars(userId, guildId, mode.cost, true);
+  setUserProperty("tiger_pending_revanche", userId, guildId, 0);
+  await new Promise(resolve => setTimeout(resolve, LOADING_TIME));
 
   const classLucky = getClassModifier(user.user_class, "lucky");
   const event = await getCurrentDailyEvent(guildId);
@@ -149,7 +153,12 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
     const keepDouble = pendingStacks > 0
       ? `\n🔄 Seu bônus de dobro continua valendo na próxima rodada que der win/jackpot.`
       : "";
-    resultMessage = `${selectedOutcome.emoji} **${selectedOutcome.desc}!** Foram **${mode.cost}** chars de aposta pro bolso da casa.${keepDouble}`;
+    resultMessage = `${selectedOutcome.emoji} **${selectedOutcome.desc}!** Foram **${hasRevanche ? 0 : mode.cost}** chars de aposta pro bolso da casa.${keepDouble}`;
+
+  } else if (selectedOutcome.type === "revanche") {
+    setUserProperty("tiger_pending_revanche", userId, guildId, 1);
+    resultMessage = `${selectedOutcome.emoji} **Revanche!** Você perdeu os chars, mas a próxima rodada é **de graça**!\n💡 O custo de **${mode.cost} chars** será pulado na sua próxima aposta.`;
+    lossesInc = 1;
 
   } else if (selectedOutcome.type === "win") {
     const payout = selectedOutcome.amount * doubleMult;
@@ -177,6 +186,7 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
   addUserPropertyByAmount("tiger_jackpots", userId, guildId, jackpotInc);
   setUserProperty("tiger_pending_double",   userId, guildId, newPending);
 
+
   await awardAchievementInCommand(client, interactionData, "tigrinho_lenda");
   await awardAchievementInCommand(client, interactionData, "tigre_centuria");
   await awardAchievementInCommand(client, interactionData, "apostador");
@@ -190,16 +200,19 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
     selectedOutcome.type === "jackpot" ? "#FFD700" :
     selectedOutcome.type === "loss"    ? "#FF6B6B" : "#4ECDC4";
 
+  const revancheAtiva = selectedOutcome.type === "revanche";
+
   const resultEmbed = new EmbedBuilder()
     .setColor(embedColor)
     .setTitle(`🎰 ${mode.label}`)
     .setDescription(`
-${resultMessage}
+${hasRevanche ? `> 🔁 *Rodada de Revanche — gratuita!*\n` : ""}${resultMessage}
 
 **📊 Estatísticas:**
 • **Caracteres atuais:** ${saldoFinal}
-• **Custo da rodada:** ${mode.cost} chars
+• **Custo da rodada:** ${hasRevanche ? `~~${mode.cost}~~ 0 chars (Revanche!)` : `${mode.cost} chars`}
 • **Dobro pendente (próxima vitória):** ${newPending > 0 ? `×${2 ** newPending}` : "nenhum"}
+• **Revanche pendente:** ${revancheAtiva ? "✅ próxima rodada grátis!" : "não"}
     `)
     .setFooter({ text: "Vicio em apostas é paia!" });
 
