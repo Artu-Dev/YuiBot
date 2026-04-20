@@ -182,7 +182,7 @@ export async function execute(client, data) {
       clearInterval(gameInterval);
 
       addUserPropertyByAmount("tiger_losses", userId, guildId, 1);
-
+      await checkAchievements(client, data);
       const updatedUser = getOrCreateUser(userId, displayName, guildId);
 
       embed
@@ -235,7 +235,7 @@ export async function execute(client, data) {
 
     await addChars(userId, guildId, totalRecebido);
     await addUserPropertyByAmount("tiger_wins", userId, guildId, 1);
-
+    await checkAchievements(client, data);
     const updatedUser = getOrCreateUser(userId, displayName, guildId);
 
     embed
@@ -261,22 +261,14 @@ export async function execute(client, data) {
     await msg.edit({ embeds: [embed], components: [disableRow] });
   });
 
-  await awardAchievementInCommand(client, data, "tigrinho_lenda");
-  await awardAchievementInCommand(client, data, "tigre_centuria"); 
-  await awardAchievementInCommand(client, data, "apostador"); 
-  await awardAchievementInCommand(client, data, "masoquista");  
-  await awardAchievementInCommand(client, data, "sortudo_no_tigre");
-  await awardAchievementInCommand(client, data, "tigreiro_nato");
-
   collector.on("end", async (collected, reason) => {
     if (reason !== "time" || !gameActive) return;
 
     gameActive = false;
     clearInterval(gameInterval);
 
-    addUserPropertyByAmount("tiger_plays", userId, guildId, 1);
     addUserPropertyByAmount("tiger_losses", userId, guildId, 1);
-
+    await checkAchievements(client, data);
     const updatedUser = getOrCreateUser(userId, displayName, guildId);
 
     embed
@@ -292,4 +284,16 @@ export async function execute(client, data) {
 
     await msg.edit({ embeds: [embed], components: [] });
   });
+
+
+  
+}
+
+async function checkAchievements(client, data) {
+  await awardAchievementInCommand(client, data, "tigrinho_lenda");
+  await awardAchievementInCommand(client, data, "tigre_centuria"); 
+  await awardAchievementInCommand(client, data, "apostador"); 
+  await awardAchievementInCommand(client, data, "masoquista");  
+  await awardAchievementInCommand(client, data, "sortudo_no_tigre");
+  await awardAchievementInCommand(client, data, "tigreiro_nato");
 }
