@@ -25,11 +25,10 @@ function generateWeeklyShop() {
   };
   
   const selectedItems = [];
-  const usedItems = new Set(); // Rastrear itens já selecionados
+  const usedItems = new Set();
   
   for (let i = 0; i < ITEMS_POR_SEMANA; i++) {
     let totalWeight = 0;
-    // Filtrar itens já usados
     const availableEntries = entries.filter(([id, item]) => !usedItems.has(id));
     
     const weightedEntries = availableEntries.map(([id, item]) => {
@@ -50,6 +49,7 @@ function generateWeeklyShop() {
         id: selected.id,
         price: typeof itemDef.price === 'function' ? itemDef.price() : (itemDef.price || 1000),
         duration: itemDef.duration ? (typeof itemDef.duration === 'function' ? itemDef.duration() : itemDef.duration) : null,
+        stock: 1,
       });
     }
   }

@@ -253,7 +253,7 @@ export const resetUserData = (userId, guildId) => {
       .filter(([col]) => !preserveFields.includes(col))
       .map(([col, type]) => {
         const defaultMatch = type.match(/DEFAULT\s+(.+)/i);
-        const defaultValue = defaultMatch ? defaultMatch[1].replace(/['"]/g, "") : "NULL";
+        const defaultValue = defaultMatch ? defaultMatch[1].trim() : "NULL"; //
         return `${col} = ${defaultValue}`;
       })
       .join(",\n            ");
@@ -265,8 +265,10 @@ export const resetUserData = (userId, guildId) => {
         WHERE id = ? AND guild_id = ?
       `).run(userId, guildId);
     })();
+
     return true;
   } catch (error) {
+    console.error("resetUserData error:", error);
     return false;
   }
 };
