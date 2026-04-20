@@ -17,9 +17,9 @@ const AI_COOLDOWN_MS = ms('12s');
 const COOLDOWN_CLEANUP_MS = ms('1m');
 const COOLDOWN_TTL_FACTOR = 5;
 
-const RESEND_CHANCE = 0.01;
+const RESEND_CHANCE = 0.005;
 const MENTION_REPLY_CHANCE = 0.5;
-const RANDOM_REPLY_CHANCE = 0.05;
+const RANDOM_REPLY_CHANCE = 0.01;
 
 const aiCooldowns = new Map();
 let cooldownCleanupInterval = null;
