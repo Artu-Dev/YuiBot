@@ -277,7 +277,7 @@ function getPageEmbed(user, discordUser, guildId, pageIndex, embedColor, transfo
       eb.addFields({
         name: "\u200b",
         value:
-          `**Saldo:** ${customEmojis.ironIngot} ${(user.charLeft ?? 0).toLocaleString()} chars\n` +
+          `**Saldo:** ${customEmojis.lapislazuli} ${(user.charLeft ?? 0).toLocaleString()} chars\n` +
           `**Classe:** ${cls?.name ?? "Nenhuma"}\n` +
           `**Penalidade ativa:** ${penality}\n` +
           `${penality === "palavra_obrigatoria" ? `**Palavra:** ${user.penalityWord || "—"}\n` : ""}` +

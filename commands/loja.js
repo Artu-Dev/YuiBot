@@ -45,7 +45,7 @@ function buildItemEmbed(shopItem, itemDef, index, total) {
     ? `${Math.round(shopItem.duration / 3_600_000)}h`
     : 'Instantâneo';
 
-  const priceEmoji = customEmojis.ironIngot || '💰';
+  const priceEmoji = customEmojis.lapislazuli || '💰';
   const priceLabel = `${priceEmoji} **${shopItem.price || 0}** chars`;
   const durationLabel = `${dur}`;
 
