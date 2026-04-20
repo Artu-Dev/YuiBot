@@ -1,6 +1,6 @@
 import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas';
 import axios from 'axios';
-import { getRandomOverlayAvatar } from './canvasApi.js';
+import { getRandomOverlayAvatar, getRandomOverlayAvatarBuffer } from './canvasApi.js';
 
 GlobalFonts.registerFromPath(
   './fonts/NoticiaText-Regular.ttf',
@@ -41,7 +41,7 @@ async function getRandomMemberImage(guild) {
     const randomMember = memberArray[Math.floor(Math.random() * memberArray.length)];
     const avatarUrl = randomMember.user.displayAvatarURL({ size: 256, extension: 'png' });
     
-    const overlayBuffer = await getRandomOverlayAvatar(avatarUrl);
+    const overlayBuffer = await getRandomOverlayAvatarBuffer(avatarUrl);
     
     return await loadImage(overlayBuffer);
   } catch (error) {

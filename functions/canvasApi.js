@@ -49,9 +49,11 @@ export async function getRandomOverlayAvatar(avatarUrl) {
   return `${url}?avatar=${encodeURIComponent(avatarUrl)}`;
 }
 
-export async function getFilteredAvatar(avatarUrl, filter) {
-  const url = `${CANVAS_API_BASE}/${filter}`;
-  
+export async function getRandomOverlayAvatarBuffer(avatarUrl) {
+  const overlays = Object.values(CANVAS_OVERLAYS);
+  const randomOverlay = overlays[Math.floor(Math.random() * overlays.length)];
+  const url = `${CANVAS_API_BASE}/${randomOverlay}`;
+
   try {
     const response = await axios.get(url, {
       params: { avatar: avatarUrl },
@@ -60,7 +62,7 @@ export async function getFilteredAvatar(avatarUrl, filter) {
     });
     return Buffer.from(response.data);
   } catch (error) {
-    console.error(`Erro ao aplicar filtro ${filter}: ${error.response?.status || error.code} - ${error.message}`);
+    console.error(`Erro ao aplicar overlay ${randomOverlay}: ${error.response?.status || error.code} - ${error.message}`);
     throw error;
   }
 }
