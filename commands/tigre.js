@@ -31,6 +31,7 @@ const MODES = {
   },
   dragao: {
     key:   "dragao",
+    emoji: "🐉",
     label: "🐉 Dragão da Fortuna",
     cost:  250,
     color: "#9B59B6",
@@ -45,6 +46,7 @@ const MODES = {
   },
   tigrinho: {
     key:   "tigrinho",
+    emoji: "🐯",
     label: "🐯 Tigrinho",
     cost:  400,
     color: "#F1C40F",
@@ -206,7 +208,7 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
     .setColor(embedColor)
     .setTitle(`🎰 ${mode.label}`)
     .setDescription(`
-${hasRevanche ? `> 🔁 *Rodada de Revanche — gratuita!*\n` : ""}${resultMessage}
+${hasRevanche ? `🔁 *Rodada de Revanche — gratuita!*\n` : ""}${resultMessage}
 
 **📊 Estatísticas:**
 • **Caracteres atuais:** ${saldoFinal}
@@ -241,16 +243,16 @@ export async function execute(client, data) {
     .setColor("#F1C40F")
     .setTitle("🎰 Cassino — Escolha sua aposta!")
     .setDescription([
-      `> ${customEmojis.lapislazuli} **Seus chars disponíveis:** ${spendableChars}`,
+      `${customEmojis.lapislazuli} **Seus chars disponíveis:** ${spendableChars}`,
       "",
       `**🐍 Cobra da Sorte** — \`50 chars\``,
-      `> Tens oque é necessario para domar a cobra? • Jackpot: 2.000–8.000`,
+      `Tens oque é necessario para domar a cobra? • Jackpot: 2.000–8.000`,
       "",
       `**🐉 Dragão da Fortuna** — \`250 chars\``,
-      `> O Dragão é justo e imparcial • Jackpot: 5.000–25.000`,
+      `O Dragão é justo e imparcial • Jackpot: 5.000–25.000`,
       "",
       `**🐯 Tigrinho** — \`400 chars\``,
-      `> O verdadeiro tigrinho! jogue nos horarios bugados • Jackpot: 10.000–50.000`,
+      `O verdadeiro tigrinho! jogue nos horarios bugados • Jackpot: 10.000–50.000`,
     ].join("\n"))
     .setFooter({ text: "Você tem 30 segundos para escolher • Botões desabilitados = chars insuficientes" });
 
