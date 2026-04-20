@@ -302,7 +302,7 @@ export const invertMessage = async (text, message = null) => {
   });
 
   const invertSystem =
-    "Você é um inversor de frases. Inverta o sentido da frase mantendo placeholders como [M0], [M1] exatamente onde estão. Responda apenas com a frase invertida, sem aspas.";
+    "Você é um inversor de frases. Inverta o sentido da frase mantendo placeholders como [M0], [M1] exatamente onde estão, se houver. Responda apenas com a frase invertida, sem aspas, idependente se for letras, numeros ou simbolos, nao precisa fazer nada, ex: 'oi tudo bem' vira 'tchau tudo pessimo', '12345' vira '54321', '!!!' vira '???', 'oi [M0]' vira '[M0] tchau'.";
   const invertUser = `Inverta o sentido desta frase, preservando os marcadores [M]:\n${textToInvert}`;
 
   let invertedText = "";
