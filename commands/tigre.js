@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { getOrCreateUser, getUser, reduceChars, addChars, getSpendableChars, db, addUserPropertyByAmount, getServerConfig } from "../database.js";
+import { getOrCreateUser, getUser, reduceChars, addChars, getSpendableChars, db, addUserPropertyByAmount, setUserProperty, getServerConfig } from "../database.js";
 import { getClassModifier } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { randomInt } from 'es-toolkit';
@@ -12,7 +12,6 @@ export const requiresCharLimit = true;
 
 const TIGRE_CUSTO = 350;
 const LOADING_TIME = 2200;
-let TIGRE_SUCCESS_MULTIPLIER = 1.0;
 
 export const data = new SlashCommandBuilder()
   .setName("tigre")
@@ -61,7 +60,7 @@ export async function execute(client, data) {
   const successMult = event?.tigerSuccess ?? 1.0; 
 
   let adjusted = outcomes.map(outcome => {
-    let chance = outcome.baseChance;
+    let chance = outcome.chance;
     if (outcome.type === "loss") {
       chance *= (1 - classLucky * LUCK_WEIGHT);
     } else {
@@ -70,31 +69,15 @@ export async function execute(client, data) {
     if ((outcome.type === "win" || outcome.type === "jackpot") && successMult !== 1.0) {
       chance *= successMult;
     }
-
     return { ...outcome, chance };
   });
 
   const total = adjusted.reduce((sum, o) => sum + o.chance, 0);
   adjusted = adjusted.map(o => ({ ...o, chance: o.chance / total }));
 
-  // const adjustedOutcomes = outcomes.map((outcome) => {
-  //   const modifier = outcome.type === "loss"
-  //     ? 1 - classLucky * LUCK_WEIGHT
-  //     : 1 + classLucky * LUCK_WEIGHT;
-  //   return { ...outcome, chance: outcome.chance * modifier };
-  // });
-  // const totalChance = adjustedOutcomes.reduce((sum, o) => sum + o.chance, 0);
-
-
-
-
   const rand = Math.random();
   let cumulativeChance = 0;
   let selectedOutcome = null;
-  
-  if (event && event.tigerSuccess !== null) {
-    TIGRE_SUCCESS_MULTIPLIER = event.tigerSuccess;
-  }
 
   for (const outcome of adjusted) {
     cumulativeChance += outcome.chance;
@@ -104,18 +87,6 @@ export async function execute(client, data) {
     }
   }
 
-  // for (const outcome of adjustedOutcomes) {
-  //   if(outcome.type === "win" || outcome.type === "jackpot") {
-  //     outcome.chance *= TIGRE_SUCCESS_MULTIPLIER;
-  //   }
-  //   cumulativeChance += outcome.chance / totalChance;
-  //   if (rand <= cumulativeChance) {
-  //     selectedOutcome = outcome;
-  //     break;
-  //   }
-  // }
-
-  // if (!selectedOutcome) selectedOutcome = adjustedOutcomes[0];
   if (!selectedOutcome) selectedOutcome = adjusted[0];
 
   let newPending = pendingStacks;
@@ -154,11 +125,11 @@ export async function execute(client, data) {
     resultMessage = `${selectedOutcome.emoji} **${selectedOutcome.desc}**\nAcúmulo de dobro: **×${2 ** newPending}** na próxima vitória (win ou jackpot).`;
   }
 
-  addUserPropertyByAmount("tiger_plays", userId, guildId, 1);
-  addUserPropertyByAmount("tiger_wins", userId, guildId, winsInc);
-  addUserPropertyByAmount("tiger_losses", userId, guildId, lossesInc);
-  addUserPropertyByAmount("tiger_jackpots", userId, guildId, jackpotInc);
-  addUserPropertyByAmount("tiger_pending_double", userId, guildId, newPending);
+  addUserPropertyByAmount("tiger_plays",   userId, guildId, 1);
+  addUserPropertyByAmount("tiger_wins",    userId, guildId, winsInc);
+  addUserPropertyByAmount("tiger_losses",  userId, guildId, lossesInc);
+  addUserPropertyByAmount("tiger_jackpots",userId, guildId, jackpotInc);
+  setUserProperty("tiger_pending_double",  userId, guildId, newPending);
 
   // ── Conquistas ───────────────────────────────────────────────────────────────
   await awardAchievementInCommand(client, data, "tigrinho_lenda");
@@ -174,6 +145,7 @@ export async function execute(client, data) {
     selectedOutcome.type === "jackpot" ? "#FFD700" :
     selectedOutcome.type === "loss"    ? "#FF6B6B" : "#4ECDC4";
 
+  loadingMsg.delete().catch(() => {});
   const embed = new EmbedBuilder()
     .setColor(embedColor)
     .setTitle("🎰 Tigrinho da YuiMizuno 🎰")
