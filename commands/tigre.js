@@ -248,7 +248,7 @@ export async function execute(client, data) {
       `**🐯 Tigrinho** — \`400 chars\``,
       `O verdadeiro tigrinho! jogue nos horarios bugados • Jackpot: 10.000–50.000`,
     ].join("\n"))
-    .setFooter({ text: "Após cada resultado os botões voltam automaticamente • Escolha o próximo modo sem usar /tigre" });
+    .setFooter({ text: "escolha com sabedoria!" });
 
   const selectionMsg = await data.reply({
     embeds: [selectionEmbed],
