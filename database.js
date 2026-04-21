@@ -172,6 +172,12 @@ const USERS_SCHEMA = {
   total_bank_interest: "INTEGER DEFAULT 0",
   credit_limit: "INTEGER DEFAULT 0",
   credit_debt: "INTEGER DEFAULT 0",
+
+  wordle_wins: "INTEGER DEFAULT 0",
+  wordle_losses: "INTEGER DEFAULT 0",
+  wordle_streak: "INTEGER DEFAULT 0",
+  wordle_best_streak: "INTEGER DEFAULT 0"
+
 };
 
 function buildUsersColumnsSQL() {
@@ -396,6 +402,26 @@ export const initializeDbBot = async () => {
     )
   `).run();
 
+  db.prepare(`
+  CREATE TABLE IF NOT EXISTS wordle_daily (
+    guild_id  TEXT PRIMARY KEY,
+    date      TEXT NOT NULL,
+    word      TEXT NOT NULL
+    )
+  `).run();
+  
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS wordle_history (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id   TEXT NOT NULL,
+      date       TEXT NOT NULL,
+      word       TEXT NOT NULL,
+      won        INTEGER NOT NULL DEFAULT 0,   -- 1 = venceram, 0 = perderam
+      attempts   INTEGER NOT NULL DEFAULT 0,
+      players    TEXT NOT NULL DEFAULT '[]'    -- JSON: array de userIds
+    )
+  `).run();
+
 
  
   // ====================== QUERIES PREPARADAS ======================
@@ -488,3 +514,69 @@ export const initializeDbBot = async () => {
     `),
   };
 };
+
+
+export function getOrCreateDailyWord(guildId, wordList) {
+  const today = todayString();
+  const row   = db.prepare(
+    `SELECT word FROM wordle_daily WHERE guild_id = ? AND date = ?`
+  ).get(guildId, today);
+ 
+  if (row) return row.word;
+ 
+  // Sorteia palavra nova — diferente da de ontem se possível
+  const yesterday = db.prepare(
+    `SELECT word FROM wordle_history WHERE guild_id = ? ORDER BY id DESC LIMIT 1`
+  ).get(guildId);
+ 
+  let word;
+  do {
+    word = wordList[Math.floor(Math.random() * wordList.length)];
+  } while (word === yesterday?.word);
+ 
+  db.prepare(
+    `INSERT OR REPLACE INTO wordle_daily (guild_id, date, word) VALUES (?, ?, ?)`
+  ).run(guildId, today, word);
+ 
+  return word;
+}
+
+export function saveWordleResult({ guildId, word, won, attempts, playerIds }) {
+  db.prepare(`
+    INSERT INTO wordle_history (guild_id, date, word, won, attempts, players)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(guildId, todayString(), word, won ? 1 : 0, attempts, JSON.stringify(playerIds));
+}
+ 
+
+export function wordlePlayedToday(guildId) {
+  const row = db.prepare(
+    `SELECT id FROM wordle_history WHERE guild_id = ? AND date = ? LIMIT 1`
+  ).get(guildId, todayString());
+  return !!row;
+}
+
+export function updateWordleStats(userId, guildId, won) {
+  if (won) {
+    db.prepare(`
+      UPDATE users SET
+        wordle_wins   = wordle_wins   + 1,
+        wordle_streak = wordle_streak + 1,
+        wordle_best_streak = MAX(wordle_best_streak, wordle_streak + 1)
+      WHERE id = ? AND guild_id = ?
+    `).run(userId, guildId);
+  } else {
+    db.prepare(`
+      UPDATE users SET
+        wordle_losses = wordle_losses + 1,
+        wordle_streak = 0
+      WHERE id = ? AND guild_id = ?
+    `).run(userId, guildId);
+  }
+}
+ 
+// Helper interno
+function todayString() {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
