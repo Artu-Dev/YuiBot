@@ -24,7 +24,7 @@ import { customEmojis } from "../functions/utils.js";
 import { isValidUserId, isValidGuildId } from "../functions/validation.js";  
 // ==================== CONFIG ====================
 const STEAL_PERCENTAGE_MIN = 0.05;
-const STEAL_PERCENTAGE_MAX = 0.3;
+const STEAL_PERCENTAGE_MAX = 0.20;
 const SUCCESS_CHANCE_TARGETED = 0.22;
 const SUCCESS_CHANCE_RANDOM = 0.38;
 const PENALTY_TARGETED = 150;
@@ -200,7 +200,7 @@ export async function execute(client, data) {
     removeEffect(userId, guildId, 'guaranteed_rob');
   }
 
-  let penalty = applyClassModifier(
+  let penality = applyClassModifier(
     isTargeted ? PENALTY_TARGETED : PENALTY_RANDOM,
     "robCost",
     userClass,
@@ -286,14 +286,14 @@ export async function execute(client, data) {
   } else {
     addUserPropertyByAmount("consecutive_robbery_losses", userId, guildId, 1)
 
-    if (userChars >= penalty) {
-      await reduceChars(userId, guildId, penalty, true);
-      addChars(victimId, guildId, penalty);
+    if (userChars >= penality) {
+      await reduceChars(userId, guildId, penality, true);
+      addChars(victimId, guildId, penality);
     } else if (userChars > 0) {
       const partialPenalty = userChars;
       await reduceChars(userId, guildId, partialPenalty, true);
       addChars(victimId, guildId, partialPenalty);
-      penalty = partialPenalty;
+      penality = partialPenalty;
     }
 
 
@@ -312,21 +312,21 @@ export async function execute(client, data) {
 
     const failReplies = isTargeted
       ? [
-          `${displayName} tentou roubar ${victimName} na surdina... mas ${victimName} pegou com a mao na jaca. ${displayName} perdeu pra ele ${penalty} caracteres igual um betinha.`,
-          `${victimName} estava paranoico com os cara no teto, viu ${displayName} chegando, pegou a makita e passou a mao em ${penalty} caracteres.`,
-          `deu ruim menó! ${displayName} foi pego ao tentar roubar ${victimName} e teve que fazer um pix ${penalty} chars pra ele.`,
+          `${displayName} tentou roubar ${victimName} na surdina... mas ${victimName} pegou com a mao na jaca. ${displayName} perdeu pra ele ${penality} caracteres igual um betinha.`,
+          `${victimName} estava paranoico com os cara no teto, viu ${displayName} chegando, pegou a makita e passou a mao em ${penality} caracteres.`,
+          `deu ruim menó! ${displayName} foi pego ao tentar roubar ${victimName} e teve que fazer um pix ${penality} chars pra ele.`,
         ]
       : [
-          `${displayName} foi roubar um aleatorio e se fodeu, foi pego no flagra e perdeu ${penalty} caracteres para ${victimName}!`,
-          `${displayName} se deu mal na ação e acabou doando contra sua vontade ${penalty} caracteres para ${victimName}.`,
-          `${displayName} foi burrao e acabou doando ${penalty} chars pra ${victimName} viva a benevolencia.`,
+          `${displayName} foi roubar um aleatorio e se fodeu, foi pego no flagra e perdeu ${penality} caracteres para ${victimName}!`,
+          `${displayName} se deu mal na ação e acabou doando contra sua vontade ${penality} caracteres para ${victimName}.`,
+          `${displayName} foi burrao e acabou doando ${penality} chars pra ${victimName} viva a benevolencia.`,
         ];
 
     finalReply = userChars === 0 ? sample(failRepliesNoChars) : sample(failReplies);
   }
 
 
-  const finalChars = userChars + (success ? stolenAmount : -penalty);
+  const finalChars = userChars + (success ? stolenAmount : -penality);
   const resultEmbed = new EmbedBuilder()
     .setColor(success ? "#00FF00" : "#FF0000")
     .setTitle(success ? `${customEmojis.pointingGun} Roubo deu bom!` : `${customEmojis.pepeCry} Roubo deu B.O!`)

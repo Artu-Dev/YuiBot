@@ -29,22 +29,21 @@ async function generateDailyEventKey(today) {
   const holidayName = holidays.get(today);
   if (holidayName) {
     const multiplier = Math.random() < 0.5 ? 0.5 : 1.5;
-    log(`🎉 Feriado detectado: ${holidayName} → multiplicador ${multiplier}x`, "DailyEvent", 35);
-    return `holiday_${multiplier}`;
+    log(`🎉 Feriado detectado: ${holidayName} → ${multiplier}x`, "DailyEvent", 35);
+    return `holiday_${multiplier}:::${holidayName}`;
   }
 
   const month = dayjs(today).month();
   const day = dayjs(today).date();
 
   if (month === 9) return "halloween";
-
   if (month === 11 && day >= 25) return "natal";
-
   if (Math.random() < 0.8) return "normal";
 
   const random = randomEventsData[Math.floor(Math.random() * randomEventsData.length)];
   return random.key;
 }
+
 
 export async function generateAndCacheDailyEvent(guildId) {
   if (!guildId || !isValidGuildId(guildId)) return "normal";
@@ -92,14 +91,17 @@ export async function getCurrentDailyEvent(guildId) {
 export function getEventDataByKey(eventKey) {
   if (!eventKey || eventKey === "normal") return createNormalEvent();
 
-  // Feriado
   if (eventKey.startsWith("holiday_")) {
-    const multiplier = parseFloat(eventKey.split("_")[1]);
-    const bonus = multiplier > 1 ? `bônus de ${multiplier}x` : `penalidade de ${multiplier}x`;
+    const [keyPart, holidayName = "Feriado Nacional"] = eventKey.split(":::");
+    const multiplier = parseFloat(keyPart.split("_")[1]);
+    const bonus = multiplier > 1
+      ? `Bônus de **${multiplier}x** nos chars!`
+      : `Penalidade de **${multiplier}x** nos chars.`;
+
     return {
       eventKey,
-      name: "Feriado Nacional 🎉",
-      description: `Hoje é feriado! ${bonus} nos chars.`,
+      name: `${holidayName} 🎉`,
+      description: bonus,
       charMultiplier: multiplier,
       casinoMultiplier: 1.0,
       robSuccess: null,
