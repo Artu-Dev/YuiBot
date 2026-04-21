@@ -54,7 +54,6 @@ export async function handleRandomActions(message, userId, mentions) {
 
   const genOn = getServerConfig(message.guildId, 'generateMessage') !== false;
 
-  // Tentar resend aleatório
   if (genOn && Math.random() < RESEND_CHANCE) {
     try {
       await randomResend(message);
@@ -64,7 +63,6 @@ export async function handleRandomActions(message, userId, mentions) {
     return;
   }
 
-  // Decidir se vai responder
   const shouldReplyToMention = mentions.isMentioningClient && Math.random() < MENTION_REPLY_CHANCE;
   const shouldReplyRandomly =
     genOn &&

@@ -10,7 +10,7 @@ import {
 import { getShop, getShopItem, decrementStock } from '../functions/shop.js';
 import { addToInventory, getInventory } from '../functions/inventario.js';
 import { getUser, reduceChars, getSpendableChars, getServerConfig } from '../database.js';
-import {SHOP_ITEMS} from '../data/shopItems.js';
+import {SHOP_ITEMS} from '../data/shopItemsData.js';
 import { customEmojis } from '../functions/utils.js';
 
 export const name = "loja";

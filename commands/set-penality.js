@@ -11,13 +11,13 @@ import {
 import { getOrCreateUser, setUserPenality } from "../database.js";
 import { penaltiesData } from "../data/penaltiesData.js";
 
-export const name = "set-penality";
-export const aliases = ["set-penalidade", "add-penality", "add-penalidade", "add-p", "set-p"];
+export const name = "set-penalty";
+export const aliases = ["set-penalidade","set-penality", "add-penalty", "add-penalidade", "add-p", "set-p"];
 
 const PENALTIES = Object.entries(penaltiesData).map(([key, data]) => ({ key, nome: data.nome }));
 
 export const data = new SlashCommandBuilder()
-  .setName("set-penality")
+  .setName("set-penalty")
   .setDescription("Adiciona uma penalidade a um usuário.");
 
 export async function execute(client, data) {

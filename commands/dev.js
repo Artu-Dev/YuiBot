@@ -264,7 +264,7 @@ async function handleUserInfo(data, guildId, targetUser, args = []) {
       { name: "ID", value: user.id, inline: true },
       { name: "Chars", value: String(user.charLeft || 0), inline: true },
       { name: "Mensagens", value: String(user.messages_sent || 0), inline: true },
-      { name: "Penalidade", value: user.penality || "Nenhuma", inline: true },
+      { name: "Penalidade", value: user.penalty || "Nenhuma", inline: true },
       { name: "Conquistas", value: String(Object.keys(JSON.parse(user.achievements_unlocked || "{}")).length), inline: true }
     );
 

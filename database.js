@@ -115,7 +115,6 @@ export const dbBot = new Low(new JSONFile("./data/dbBot.json"), {
 export const db = new Database("./data/data.db");
 db.pragma("journal_mode = WAL");
 
-// User schema for dynamic column creation
 const USERS_SCHEMA = {
   display_name: "TEXT",
   charLeft: `INTEGER DEFAULT 4000`,
@@ -123,11 +122,11 @@ const USERS_SCHEMA = {
 
   messages_sent: "INTEGER DEFAULT 0",
   achievements_unlocked: "TEXT DEFAULT '{}'",
-  penality: "TEXT",
-  penalitySetByAdmin: "INTEGER DEFAULT 0", 
-  penalityWord: "TEXT DEFAULT ''",
+  penalty: "TEXT",
+  penaltySetByAdmin: "INTEGER DEFAULT 0", 
+  penaltyWord: "TEXT DEFAULT ''",
   slowmodeLastTime: "TEXT DEFAULT ''",
-  penalityExpires: "TEXT DEFAULT ''",
+  penaltyExpires: "TEXT DEFAULT ''",
 
   last_message_time: "TEXT",
   mentions_received: "INTEGER DEFAULT 0",
@@ -439,8 +438,8 @@ export const initializeDbBot = async () => {
     
     getUserById: db.prepare("SELECT * FROM users WHERE id = ? AND guild_id = ?"),
     insertUser: db.prepare("INSERT OR IGNORE INTO users (id, display_name, guild_id) VALUES (?, ?, ?)"),
-    addUserPenalty: db.prepare("UPDATE users SET penality = ?, penalitySetByAdmin = ? WHERE id = ? AND guild_id = ?"),
-    removeUserPenalty: db.prepare("UPDATE users SET penality = NULL, penalitySetByAdmin = 0 WHERE id = ? AND guild_id = ?"),
+    addUserPenalty: db.prepare("UPDATE users SET penalty = ?, penaltySetByAdmin = ? WHERE id = ? AND guild_id = ?"),
+    removeUserPenalty: db.prepare("UPDATE users SET penalty = NULL, penaltySetByAdmin = 0 WHERE id = ? AND guild_id = ?"),
 
     getGuildRandomUser: db.prepare("SELECT id FROM users WHERE guild_id = ? AND id != ? ORDER BY RANDOM() LIMIT 1"),
     getGuildAllUsers: db.prepare("SELECT * FROM users WHERE guild_id = ?"),
@@ -516,67 +515,3 @@ export const initializeDbBot = async () => {
 };
 
 
-export function getOrCreateDailyWord(guildId, wordList) {
-  const today = todayString();
-  const row   = db.prepare(
-    `SELECT word FROM wordle_daily WHERE guild_id = ? AND date = ?`
-  ).get(guildId, today);
- 
-  if (row) return row.word;
- 
-  // Sorteia palavra nova — diferente da de ontem se possível
-  const yesterday = db.prepare(
-    `SELECT word FROM wordle_history WHERE guild_id = ? ORDER BY id DESC LIMIT 1`
-  ).get(guildId);
- 
-  let word;
-  do {
-    word = wordList[Math.floor(Math.random() * wordList.length)];
-  } while (word === yesterday?.word);
- 
-  db.prepare(
-    `INSERT OR REPLACE INTO wordle_daily (guild_id, date, word) VALUES (?, ?, ?)`
-  ).run(guildId, today, word);
- 
-  return word;
-}
-
-export function saveWordleResult({ guildId, word, won, attempts, playerIds }) {
-  db.prepare(`
-    INSERT INTO wordle_history (guild_id, date, word, won, attempts, players)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(guildId, todayString(), word, won ? 1 : 0, attempts, JSON.stringify(playerIds));
-}
- 
-
-export function wordlePlayedToday(guildId) {
-  const row = db.prepare(
-    `SELECT id FROM wordle_history WHERE guild_id = ? AND date = ? LIMIT 1`
-  ).get(guildId, todayString());
-  return !!row;
-}
-
-export function updateWordleStats(userId, guildId, won) {
-  if (won) {
-    db.prepare(`
-      UPDATE users SET
-        wordle_wins   = wordle_wins   + 1,
-        wordle_streak = wordle_streak + 1,
-        wordle_best_streak = MAX(wordle_best_streak, wordle_streak + 1)
-      WHERE id = ? AND guild_id = ?
-    `).run(userId, guildId);
-  } else {
-    db.prepare(`
-      UPDATE users SET
-        wordle_losses = wordle_losses + 1,
-        wordle_streak = 0
-      WHERE id = ? AND guild_id = ?
-    `).run(userId, guildId);
-  }
-}
- 
-// Helper interno
-function todayString() {
-  const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-}

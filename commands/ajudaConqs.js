@@ -77,8 +77,6 @@ const CAT_FALLBACK_ICON = {
 };
 
 function resolveIcon(ach) {
-  // Usa o emoji definido em ach.icon (pode ser emoji normal ou ID de emoji custom do Discord no formato <:nome:id>)
-  // Se não tiver icon definido, cai no fallback da categoria
   return ach.icon && String(ach.icon).trim() !== ""
     ? ach.icon
     : CAT_FALLBACK_ICON[ach.category] ?? "🏆";

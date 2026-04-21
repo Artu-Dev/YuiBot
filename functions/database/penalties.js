@@ -13,16 +13,16 @@ export const getUserPenality = (userId, guildId) => {
     return null;
   }
   const user = getUser(userId, guildId);
-  return user?.penality || null;
+  return user?.penalty || null;
 };
 
-export const setUserPenality = (userId, guildId, penality, penalitySetByAdmin = false) => {
+export const setUserPenality = (userId, guildId, penalty, penaltySetByAdmin = false) => {
   if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
     logInvalidId(userId, guildId, "setUserPenality");
     return false;
   }
   try {
-    db.queries.addUserPenalty.run(penality, penalitySetByAdmin ? 1 : 0, userId, guildId);
+    db.queries.addUserPenalty.run(penalty, penaltySetByAdmin ? 1 : 0, userId, guildId);
     return true;
   } catch (error) {
     log(`❌ Erro ao atualizar penalidade: ${error.message}`, "Database", 31);

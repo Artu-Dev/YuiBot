@@ -1,24 +1,53 @@
-
 import { EmbedBuilder } from "discord.js";
 import { getCurrentDailyEvent, generateAndCacheDailyEvent } from "./getTodaysEvent.js";
-import { shouldAnnounceDailyEvent, markDailyEventAsAnnounced } from "../database.js";
+import { getChannels, markDailyEventAsAnnounced } from "../database.js";
 import { log } from "../bot.js";
 
-const ANNOUNCEMENT_CACHE = new Map(); 
+const ANNOUNCEMENT_CACHE = new Map();
 
-// =============== ANÚNCIO POR SERVIDOR ===============
+function getEventColor(eventKey) {
+  if (eventKey === "halloween") return 0xff6600;
+  if (eventKey === "natal") return 0x00cc44;
+  if (eventKey?.startsWith("holiday_")) return 0xffd700;
+  return 0xff00ff;
+}
+
+function buildEventEmbed(event) {
+  const modifiers = [];
+
+  if (event.charMultiplier !== 1.0)
+    modifiers.push(`💰 Chars: **${event.charMultiplier}x**`);
+  if (event.casinoMultiplier !== 1.0)
+    modifiers.push(`🎰 Cassino: **${event.casinoMultiplier}x**`);
+  if (event.robSuccess !== null)
+    modifiers.push(`🔫 Roubo: **${(event.robSuccess * 100).toFixed(0)}%**`);
+
+  const embed = new EmbedBuilder()
+    .setColor(getEventColor(event.eventKey))
+    .setTitle(`🗓️ Evento de Hoje: ${event.name}`)
+    .setDescription(event.description)
+    .setTimestamp();
+
+  if (modifiers.length > 0) {
+    embed.addFields({
+      name: "⚙️ Modificadores",
+      value: modifiers.join("\n"),
+      inline: false,
+    });
+  }
+
+  return embed;
+}
+
 export async function announceDailyEventInGuild(guild) {
-  if (!guild || !guild.id) return false;
+  if (!guild?.id) return false;
 
   const guildId = guild.id;
 
-  if (ANNOUNCEMENT_CACHE.has(guildId)) {
-    return false;
-  }
+  if (ANNOUNCEMENT_CACHE.has(guildId)) return false;
 
   try {
-    const eventKey = await generateAndCacheDailyEvent(guildId);
-    
+    await generateAndCacheDailyEvent(guildId);
     const event = await getCurrentDailyEvent(guildId);
 
     if (!event || event.eventKey === "normal") {
@@ -26,71 +55,51 @@ export async function announceDailyEventInGuild(guild) {
       return false;
     }
 
-    const channels = guild.channels.cache.filter(
-      (ch) =>
-        ch.isTextBased() &&
-        ch.permissionsFor(guild.members.me).has("SendMessages")
-    );
+    const registeredChannelIds = getChannels(guildId);
 
-    if (channels.size === 0) {
-      log(
-        `Nenhum canal com permissão em ${guild.name} para anúncio de evento`,
-        "DailyAnnouncer",
-        33
-      );
+    if (!registeredChannelIds || registeredChannelIds.length === 0) {
+      log(`Nenhum canal cadastrado em ${guild.name}`, "DailyAnnouncer", 33);
       ANNOUNCEMENT_CACHE.set(guildId, true);
       return false;
     }
 
-    const embed = new EmbedBuilder()
-      .setColor(0xff00ff)
-      .setTitle(`Evento de Hoje`)
-      .setDescription(`**${event.name}**\n${event.description}`)
-      .addFields([
-        {
-          name: "⚙️ Modificadores",
-          value:
-            `Chars: **${event.charMultiplier}x** ${
-              event.casinoMultiplier !== 1.0
-                ? `| Cassino: **${event.casinoMultiplier}x**`
-                : ""
-            }`.trim(),
-          inline: true,
-        },
-      ])
-      .setTimestamp();
+    const randomId = registeredChannelIds[Math.floor(Math.random() * registeredChannelIds.length)];
+    const channel = guild.channels.cache.get(randomId);
 
-    const channel = channels.first();
+    if (!channel?.isTextBased()) {
+      log(`Canal ${randomId} inválido ou não encontrado em ${guild.name}`, "DailyAnnouncer", 33);
+      ANNOUNCEMENT_CACHE.set(guildId, true);
+      return false;
+    }
+
+    const canSend = channel.permissionsFor(guild.members.me)?.has("SendMessages");
+    if (!canSend) {
+      log(`Sem permissão para enviar em #${channel.name} (${guild.name})`, "DailyAnnouncer", 33);
+      ANNOUNCEMENT_CACHE.set(guildId, true);
+      return false;
+    }
+
+    const embed = buildEventEmbed(event);
     await channel.send({ embeds: [embed] });
 
     markDailyEventAsAnnounced(guildId);
     ANNOUNCEMENT_CACHE.set(guildId, true);
 
-
+    log(`📢 Evento "${event.name}" anunciado em #${channel.name} (${guild.name})`, "DailyAnnouncer", 36);
     return true;
+
   } catch (error) {
-    log(
-      `❌ Erro ao anunciar evento em ${guildId}: ${error.message}`,
-      "DailyAnnouncer",
-      31
-    );
+    log(`❌ Erro ao anunciar evento em ${guildId}: ${error.message}`, "DailyAnnouncer", 31);
     return false;
   }
 }
 
 export async function announceDailyEventForAllGuilds(client) {
-  if (!client || !client.guilds || client.guilds.cache.size === 0) {
-    return;
-  }
-
+  if (!client?.guilds?.cache?.size) return;
 
   const promises = Array.from(client.guilds.cache.values()).map((guild) =>
     announceDailyEventInGuild(guild).catch((error) => {
-      log(
-        `Erro ao anunciar em ${guild.name}: ${error.message}`,
-        "DailyAnnouncer",
-        31
-      );
+      log(`Erro ao anunciar em ${guild.name}: ${error.message}`, "DailyAnnouncer", 31);
       return false;
     })
   );
@@ -99,14 +108,14 @@ export async function announceDailyEventForAllGuilds(client) {
   const successful = results.filter((r) => r.status === "fulfilled" && r.value).length;
 
   log(
-    `✅ Anúncio de eventos concluído: ${successful}/${client.guilds.cache.size} servidores`,
+    `✅ Anúncio concluído: ${successful}/${client.guilds.cache.size} servidores`,
     "DailyAnnouncer",
     36
   );
 }
 
-
 export function resetDailyAnnouncementCache() {
   const size = ANNOUNCEMENT_CACHE.size;
   ANNOUNCEMENT_CACHE.clear();
+  log(`🔄 Cache de anúncios resetado (${size} servidores)`, "DailyAnnouncer", 32);
 }

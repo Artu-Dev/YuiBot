@@ -293,17 +293,26 @@ export const invertMessage = async (text, message = null) => {
   let safe = String(text ?? "").slice(0, 2000);
   if (!safe.trim()) return text;
 
-  const mentionRegex = /<@!?[0-9]+>|<@&[0-9]+>/g;
+  // Placeholder mais robusto e menos provável de ser alterado pelo LLM
+  const mentionRegex = /<@!?[0-9]+>|<@&[0-9]+>|<#[0-9]+>/g;
   const mentions = safe.match(mentionRegex) || [];
-  
+
   let textToInvert = safe;
   mentions.forEach((mention, index) => {
-    textToInvert = textToInvert.replace(mention, `[M${index}]`);
+    textToInvert = textToInvert.replace(mention, `PLACEHOLDER${index}END`);
   });
 
-  const invertSystem =
-    "Você é um inversor de frases. Inverta o sentido da frase mantendo placeholders como [M0], [M1] exatamente onde estão, se houver. Responda apenas com a frase invertida, sem aspas, idependente se for letras, numeros ou simbolos, nao precisa fazer nada, ex: 'oi tudo bem' vira 'tchau tudo pessimo', '12345' vira '54321', '!!!' vira '???', 'oi [M0]' vira '[M0] tchau'.";
-  const invertUser = `Inverta o sentido desta frase, preservando os marcadores [M]:\n${textToInvert}`;
+  // System prompt sem contradições
+  const invertSystem = [
+    "Você é um inversor de significado de frases em português.",
+    "Sua tarefa: retorne APENAS a frase com o sentido invertido/oposto.",
+    "Regras:",
+    "- Inverta o significado (ex: 'oi tudo bem' → 'tchau tudo mal', 'eu te amo' → 'eu te odeio')",
+    "- Preserve EXATAMENTE qualquer token no formato PLACEHOLDERnEND (ex: PLACEHOLDER0END deve aparecer igual na saída)",
+    "- Não adicione aspas, explicações ou comentários. Responda só com a frase.",
+  ].join("\n");
+
+  const invertUser = `Inverta o sentido:\n${textToInvert}`;
 
   let invertedText = "";
 
@@ -314,12 +323,12 @@ export const invertMessage = async (text, message = null) => {
         user: invertUser,
         model: dbBot.data?.AiConfig?.groqInvertModel || "llama-3.1-8b-instant",
         maxTokens: Math.min(512, safe.length + 120),
-        temperature: 0.5,
+        temperature: 0.4,
         topP: 0.9,
       });
       invertedText = String(result ?? "").trim();
     } catch (groqErr) {
-      log("Groq para inverter falhou, tentando Ollama:", groqErr?.message || groqErr, "GenerateRes", 31);
+      log("Groq para inverter falhou, tentando Ollama: " + (groqErr?.message || groqErr), "GenerateRes", 31);
     }
   }
 
@@ -327,11 +336,11 @@ export const invertMessage = async (text, message = null) => {
     try {
       const res = await ollamaGenerateQueued(() =>
         ollama.generate({
-          model: dbBot.data?.AiConfig?.fastModels || dbBot.data.AiConfig.textModel,
+          model: dbBot.data?.AiConfig?.textModel,
           prompt: invertUser,
           stream: false,
           system: invertSystem,
-          options: { temperature: 0.5 },
+          options: { temperature: 0.4 },
         }),
       );
       invertedText = assertNonEmptyModelText(res, "Resposta vazia ao inverter");
@@ -341,9 +350,11 @@ export const invertMessage = async (text, message = null) => {
     }
   }
 
+  // Restaura menções com regex case-insensitive pra cobrir variações do LLM
   mentions.forEach((mention, index) => {
-    invertedText = invertedText.replace(`[M${index}]`, mention);
+    const placeholderRegex = new RegExp(`PLACEHOLDER${index}END`, "gi");
+    invertedText = invertedText.replace(placeholderRegex, mention);
   });
 
-  return invertedText.replace(/^["']|["']$/g, "") || text;
+  return invertedText.replace(/^["']|["']$/g, "").trim() || text;
 };

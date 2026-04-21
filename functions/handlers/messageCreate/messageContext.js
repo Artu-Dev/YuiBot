@@ -17,6 +17,7 @@ export async function processMessageContext(message, userId, displayName, guildI
   const userData = getOrCreateUser(userId, displayName, guildId);
   if (!userData) return false;
 
+
   const validCharsMessage = await limitChar(message, userData);
   if (!validCharsMessage) return false;
 

@@ -12,7 +12,7 @@ import {
 import { log } from "../bot.js";
 import { getInventory } from "../functions/inventario.js";
 import { getActiveEffects } from "../functions/effects.js";
-import { SHOP_ITEMS } from "../data/shopItems.js";
+import { SHOP_ITEMS } from "../data/shopItemsData.js";
 import { ALLOWED_MESSAGE_BOT_ID } from "../data/config.js";
 import { getRandomOverlayAvatar } from "../functions/canvasApi.js";
 
@@ -125,7 +125,7 @@ function formatAchievements(unlocked) {
 
 function embedResumo(user, discordUser, guildId, embedColor, transformedAvatarUrl = null) {
   const cls = CLASSES[user.user_class || "none"];
-  const penalityName = user && user.penality ? user.penality : "Nenhuma";
+  const penaltyName = user && user.penalty ? user.penalty : "Nenhuma";
   const name = discordDisplayLabel(discordUser);
   const icon = resolveDisplayAvatarURL(discordUser);
   const thumb = transformedAvatarUrl || resolveDisplayAvatarURL(discordUser, { size: 256 });
@@ -156,7 +156,7 @@ function embedResumo(user, discordUser, guildId, embedColor, transformedAvatarUr
 
   eb.addFields({
     name: `${customEmojis.skullAndRoses || "⚠️"} Penalidade`,
-    value: `${penalityName}`,
+    value: `${penaltyName}`,
     inline: true,
   });
 
@@ -220,7 +220,7 @@ const STATS_PAGES = ["inventario", "geral", "roubos", "recompensas", "mensagens"
 function getPageEmbed(user, discordUser, guildId, pageIndex, embedColor, transformedAvatarUrl = null) {
   const page = STATS_PAGES[pageIndex] || "geral";
   const cls = CLASSES[user.user_class || "none"];
-  const penality = user.penality || "Nenhuma";
+  const penalty = user.penalty || "Nenhuma";
   const name = discordDisplayLabel(discordUser);
   const icon = resolveDisplayAvatarURL(discordUser);
   const thumb = transformedAvatarUrl || resolveDisplayAvatarURL(discordUser, { size: 256 });
@@ -279,8 +279,8 @@ function getPageEmbed(user, discordUser, guildId, pageIndex, embedColor, transfo
         value:
           `**Saldo:** ${customEmojis.lapislazuli} ${(user.charLeft ?? 0).toLocaleString()} chars\n` +
           `**Classe:** ${cls?.name ?? "Nenhuma"}\n` +
-          `**Penalidade ativa:** ${penality}\n` +
-          `${penality === "palavra_obrigatoria" ? `**Palavra:** ${user.penalityWord || "—"}\n` : ""}` +
+          `**Penalidade ativa:** ${penalty}\n` +
+          `${penalty === "palavra_obrigatoria" ? `**Palavra:** ${user.penaltyWord || "—"}\n` : ""}` +
           `**Sorte:** ${formatModifier(luckValue)}`,
         inline: false,
       });

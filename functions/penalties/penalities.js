@@ -21,26 +21,10 @@ const SLOWMODE_COOLDOWN_MS = ms('10s');
 
 
 // ==================== UTILITÁRIOS INTERNOS ====================
-async function tryInvertMessage(text) {
-  try {
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("timeout")), INVERT_TIMEOUT_MS)
-    );
-
-    return await Promise.race([
-      invertMessage(text),
-      timeoutPromise,
-    ]);
-  } catch (error) {
-    const simple = text.split(" ").reverse().join(" ");
-    if (error.message !== "timeout") {
-      log(`❌ Erro ao inverter mensagem: ${error.message}`, "Penality", 31);
-    }
-    return simple;
-  }
-}
 
 async function sendModifiedMessage(message, content) {
+  await message.delete().catch(() => {});
+
   let newMessage = content;
   if (typeof content !== "string" && content.length > 2000) {
     newMessage = content.slice(0, 1997) + "...";
@@ -65,7 +49,6 @@ async function sendModifiedMessage(message, content) {
     }
   }
 
-  await message.delete().catch(() => {});
   await myWebHook.send({
     content: newMessage,
     username: message.member?.displayName || message.author.username,
@@ -136,13 +119,12 @@ export async function handlePenalities(message, userData) {
     return false; 
   }
 
-  const penalityKey = userData.penality;
-  
-  if (Number(userData.charLeft) > 0 && userData.penalitySetByAdmin !== 1) {
+  const penaltyKey = userData.penalty;
+  if (Number(userData.charLeft) > 0 && userData.penaltySetByAdmin !== 1) {
     return false;
   }
 
-  if (!penalityKey || !penaltiesData[penalityKey]) {
+  if (!penaltyKey || !penaltiesData[penaltyKey]) {
     return false;
   }
 
@@ -151,13 +133,13 @@ export async function handlePenalities(message, userData) {
   let warning = "";
 
   // ===== HATER DE VOGAIS =====
-  if (penalityKey === "hater_vogais" && /[aeiou]/i.test(content)) {
+  if (penaltyKey === "hater_vogais" && /[aeiou]/i.test(content)) {
     isPunished = true;
     warning = "Você não pode usar vogais!";
 
   // ===== PALAVRA OBRIGATÓRIA =====
-  } else if (penalityKey === "palavra_obrigatoria") {
-    const required = userData.penalityWord || "";
+  } else if (penaltyKey === "palavra_obrigatoria") {
+    const required = userData.penaltyWord || "";
     if (!content.endsWith(required)) {
       isPunished = true;
       warning = `Sua mensagem precisa terminar com: ${required}`;
@@ -165,7 +147,7 @@ export async function handlePenalities(message, userData) {
 
   // ===== COMO DIMINUI A FONTE? =====
   } else if (
-    penalityKey === "como_diminui_a_fonte" &&
+    penaltyKey === "como_diminui_a_fonte" &&
     content !== content.toUpperCase()
   ) {
     isPunished = true;
@@ -173,7 +155,7 @@ export async function handlePenalities(message, userData) {
 
   // ===== TIMIDEZ =====
   } else if (
-    penalityKey === "timidez"
+    penaltyKey === "timidez"
   ) {
     const palavras = content.trim().split(/\s+/);
     if (palavras.length > 1) {
@@ -183,7 +165,7 @@ export async function handlePenalities(message, userData) {
 
   // ===== REDIGIDO =====
   } else if (
-    penalityKey === "redigido"
+    penaltyKey === "redigido"
   ) {
     const textPunished =
       (message.content || "")
@@ -195,15 +177,15 @@ export async function handlePenalities(message, userData) {
     return false;
 
   // ===== SENTIDO INVERTIDO =====
-  } else if (penalityKey === "sentido_invertido") {
+  } else if (penaltyKey === "sentido_invertido") {
     let invertedText = message.content || "";
-    invertedText = await tryInvertMessage(invertedText);
+    invertedText = await invertMessage(invertedText);
 
     await sendModifiedMessage(message, invertedText);
     return false;
 
   // ===== SLOWMODE =====
-  } else if (penalityKey === "slowmode") {
+  } else if (penaltyKey === "slowmode") {
     const now = dayjs().valueOf();
 
     const lastMessageTime = getLastAuthorMessage(
@@ -218,13 +200,12 @@ export async function handlePenalities(message, userData) {
     if (timeSinceLast < SLOWMODE_COOLDOWN_MS) {
         isPunished = true;
 
-        const expiryTimeMs = lastTime + SLOWMODE_COOLDOWN_MS;
-        const expiryUnix = Math.floor(expiryTimeMs / 1000);
+        const remainingMs = SLOWMODE_COOLDOWN_MS - timeSinceLast;
+        let remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
 
-        warning = `Você está em slowmode! Aguarde <t:${expiryUnix}:R> antes de enviar outra mensagem.`;
+        warning = `⏳ Você está em **slowmode**! Aguarde **${remainingSeconds}** segundos antes de enviar outra mensagem.`;
     }
-  // ===== IRRELEVÂNCIA =====
-  } else if (penalityKey === "irrelevancia") {
+  } else if (penaltyKey === "irrelevancia") {
     isPunished = true;
     setTimeout(() => {
       message.delete().catch(() => {});
@@ -232,7 +213,7 @@ export async function handlePenalities(message, userData) {
     return true;
 
   // ===== APENAS GIFS =====
-  } else if (penalityKey === "gif_only") {
+  } else if (penaltyKey === "gif_only") {
     const isGifOnly = isGifOnlyMessage(message);
     if (!isGifOnly) {
       isPunished = true;

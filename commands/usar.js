@@ -10,7 +10,7 @@ import {
 } from 'discord.js';
 import { getInventory, removeFromInventory } from '../functions/inventario.js';
 import { addEffect } from '../functions/effects.js';
-import { SHOP_ITEMS } from '../data/shopItems.js';
+import { SHOP_ITEMS } from '../data/shopItemsData.js';
 import { db, getServerConfig } from '../database.js';
 import { randomInt } from 'es-toolkit';
 import { setCharsBulk } from '../functions/database/users.js';

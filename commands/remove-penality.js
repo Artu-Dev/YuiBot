@@ -5,11 +5,11 @@ import {
   getUserPenality,
 } from "../database.js";
 
-export const name = "remove-penality";
-export const aliases = ["remover-penalidade", "remover-penality", "rm-penality", "rm-penalidade", "rm-p"];
+export const name = "remove-penalty";
+export const aliases = ["remover-penalidade", "remove-penality", "rm-penalty", "rm-penalidade", "rm-p"];
 
 export const data = new SlashCommandBuilder()
-  .setName("remove-penality")
+  .setName("remove-penalty")
   .setDescription("Remove a penalidade de um usuário.")
   .addUserOption(option =>
     option.setName("usuário")
@@ -42,9 +42,9 @@ export async function execute(client, data) {
 
   getOrCreateUser(finalTargetUser.id, finalTargetUser.username, guildId);
 
-  const penality = getUserPenality(finalTargetUser.id, guildId);
+  const penalty = getUserPenality(finalTargetUser.id, guildId);
 
-  if (!penality) {
+  if (!penalty) {
     return data.reply(`${finalTargetUser.username} não possui penalidades.`);
   }
 

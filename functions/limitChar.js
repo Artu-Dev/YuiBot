@@ -130,7 +130,7 @@ export const limitChar = async (message, userData) => {
   }
 
   // ====================== PENALIDADES ======================
-  const hasCreditCardProtection = newValue <= 0 && hasEffect(userId, guildId, "credit_card_active") && !userData.penality;
+  const hasCreditCardProtection = newValue <= 0 && hasEffect(userId, guildId, "credit_card_active") && !userData.penalty;
   
   if (hasCreditCardProtection) {
     return true;
@@ -139,17 +139,17 @@ export const limitChar = async (message, userData) => {
   const wasPunished = await handlePenalities(message, userData);
   if (wasPunished) return false;
 
-  if (newValue <= 0 && !userData.penality ) {
-    const penalityKeys = Object.keys(penalities);
-    const randomKey = penalityKeys[Math.floor(Math.random() * penalityKeys.length)];
+  if (newValue <= 0 && !userData.penalty ) {
+    const penaltyKeys = Object.keys(penalities);
+    const randomKey = penaltyKeys[Math.floor(Math.random() * penaltyKeys.length)];
     const randomPenality = penalities[randomKey];
     let randomWord = "";
 
-    setUserProperty("penality", userId, guildId, randomKey);
+    setUserProperty("penalty", userId, guildId, randomKey);
 
     if (randomKey === "palavra_obrigatoria") {
       randomWord = randomWords[Math.floor(Math.random() * randomWords.length)];
-      setUserProperty("penalityWord", userId, guildId, randomWord);
+      setUserProperty("penaltyWord", userId, guildId, randomWord);
     }
 
     await safeReplyToMessage(
@@ -157,9 +157,9 @@ export const limitChar = async (message, userData) => {
       `!${displayName} seus caracteres acabaram! Você recebeu a penalidade: **${randomPenality.nome}**`
     );
     await message.channel.send(`${randomPenality.description} ${randomWord}`);
-  } else if (userData.penalitySetByAdmin !== 1 && newValue > 0 && userData.penality) {
+  } else if (userData.penaltySetByAdmin !== 1 && newValue > 0 && userData.penalty) {
     removeUserPenality(userId, guildId);
-    setUserProperty("penalityWord", userId, guildId, "");
+    setUserProperty("penaltyWord", userId, guildId, "");
     await safeReplyToMessage(
       message,
       `${displayName} seus caracteres voltaram ao positivo! como seu nome saiu do Serasa, Suas penalidades foram removidas.`

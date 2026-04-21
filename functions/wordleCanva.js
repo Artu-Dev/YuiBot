@@ -61,10 +61,10 @@ export function renderWordleImage(attempts, usedLetters) {
 
   // ── Header ─────────────────────────────────────────────────────────────────
   ctx.fillStyle = C.text;
-  ctx.font      = "bold 26px sans-serif";
+  ctx.font      = "bold 26px Verdana";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("TERMOO", canvasW / 2, HEADER_H / 2);
+  ctx.fillText("TERMOOO DA YUI", canvasW / 2, HEADER_H / 2);
 
   ctx.strokeStyle = C.header_line;
   ctx.lineWidth   = 1;

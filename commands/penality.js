@@ -2,11 +2,11 @@ import { SlashCommandBuilder } from "discord.js";
 import { getOrCreateUser, getUserPenality } from "../database.js";
 import { penalities } from "../functions/penalties/penalities.js";
 
-export const name = "penality";
-export const aliases = ["penalidade", "penalidades", "penalitys"];
+export const name = "penalty";
+export const aliases = ["penalidade", "penalidades", "penaltys", "penality"];
 
 export const data = new SlashCommandBuilder()
-  .setName("penality")
+  .setName("penalty")
   .setDescription("Mostra as penalidades de um usuário.")
   .addUserOption(option =>
     option.setName("usuário")
@@ -34,15 +34,15 @@ export async function execute(client, data) {
   const displayName = targetUser.username;
   getOrCreateUser(targetUser.id, displayName, guildId);
 
-  const penality = getUserPenality(targetUser.id, guildId);
+  const penalty = getUserPenality(targetUser.id, guildId);
 
-  if (!penality) {
+  if (!penalty) {
     return data.reply(`${displayName} não tem penalidades.`);
   }
 
   return data.reply(
-    `Penalidade de ${displayName}: ${penality}\n
-    ${Object.values(penalities).find(p => p.nome === penality)?.description || "Descrição não encontrada"}
+    `Penalidade de ${displayName}: ${penalty}\n
+    ${Object.values(penalities).find(p => p.nome === penalty)?.description || "Descrição não encontrada"}
     `
 
   );

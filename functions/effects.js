@@ -1,5 +1,5 @@
 import { db } from '../database.js';
-import { SHOP_ITEMS } from '../data/shopItems.js';
+import { SHOP_ITEMS } from '../data/shopItemsData.js';
 
 export function getActiveEffects(userId, guildId) {
   if (!userId || !guildId) return [];
