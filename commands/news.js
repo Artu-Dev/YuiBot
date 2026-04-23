@@ -59,7 +59,7 @@ export async function execute(client, data) {
       .setImage("attachment://noticia.png")
       .setTimestamp()
       .setFooter({
-        text: "⚠️ Esta notícia é 100% REAL PORRA!!!!",
+        text: "⚠️ Esta notícia é 100% REAL MALDITO!!!!",
       });
 
     if (loadingMsg && typeof loadingMsg.edit === "function") {

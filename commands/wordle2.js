@@ -12,6 +12,7 @@ import {
   getOrCreateDailyDueto,
   duoPlayedToday,
   saveDuoResult,
+  wordlePlayedToday,
 } from "../functions/database/wordle.js";
 
 export const name = "dueto";
@@ -30,21 +31,40 @@ function normalizeWord(w) {
   return w.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 }
 
-function checkGuess(guess, answer) {
-  const result = Array.from({ length: 5 }, (_, i) => ({ letter: guess[i], status: "absent" }));
-  const ans    = [...answer];
-  const used   = Array(5).fill(false);
+function checkGuess(normalizedGuess, accentedAnswer) {
+  const normAnswer = accentedAnswer.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const result = Array.from({ length: 5 }, (_, i) => ({
+    letter: normalizedGuess[i],
+    status: "absent",
+  }));
+
+  const used = Array(5).fill(false);
+
   for (let i = 0; i < 5; i++) {
-    if (guess[i] === answer[i]) { result[i].status = "correct"; used[i] = true; }
+    if (normalizedGuess[i] === normAnswer[i]) {
+      result[i].status = "correct";
+      result[i].letter = accentedAnswer[i];
+      used[i] = true;
+    }
   }
+
   for (let i = 0; i < 5; i++) {
     if (result[i].status === "correct") continue;
     for (let j = 0; j < 5; j++) {
-      if (!used[j] && guess[i] === ans[j]) { result[i].status = "present"; used[j] = true; break; }
+      if (!used[j] && normalizedGuess[i] === normAnswer[j]) {
+        result[i].status = "present";
+        used[j] = true;
+        break;
+      }
     }
   }
+
   return result;
 }
+
+
+
 
 const STATUS_PRIORITY = { correct: 3, present: 2, absent: 1 };
 function mergeStatus(prev, next) {
@@ -122,8 +142,8 @@ async function startDuoGame(client, channel, initialMsg, answers, players, guild
       ].join("\n");
     } else {
       for (const pid of playerIds) {
-        const current = getSpendableChars(pid, guildId);
-        if (current > 0) await reduceChars(pid, guildId, current);
+        const current = await getSpendableChars(pid, guildId);
+        await reduceChars(pid, guildId, current, true);
       }
       announceDesc = [
         `💀 **Destruídos.** As palavras eram **${answerLeft}** e **${answerRight}**.`,
@@ -155,7 +175,7 @@ async function startDuoGame(client, channel, initialMsg, answers, players, guild
 
   collector.on("collect", async (msg) => {
     const rawGuess = msg.content.trim();
-    const guess    = normalizeWord(rawGuess);
+    const guess = normalizeWord(rawGuess);
     const willDelete = msg.delete().catch(() => {});
 
     if (!/^[A-Z]{5}$/.test(guess) || !DICTIONARY.has(guess)) {
@@ -213,6 +233,7 @@ async function startDuoGame(client, channel, initialMsg, answers, players, guild
 
   collector.on("end", async (_, reason) => {
     if (reason === "finished") return;
+    await finish(false);
     activeDuoGames.delete(guildId);
     await replaceMessage(currentMsg, {
       embeds: [
@@ -241,8 +262,8 @@ export async function execute(client, data) {
 
   getOrCreateUser(userId, displayName, guildId);
 
-  const wordArray  = Array.from(DICTIONARY);
-  const dailyWords = getOrCreateDailyDueto(guildId, wordArray);
+  const dailyWords = getOrCreateDailyDueto(guildId);
+
 
   const players = new Map([[userId, displayName]]);
   activeDuoGames.set(guildId, true);

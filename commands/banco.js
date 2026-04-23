@@ -59,9 +59,8 @@ export async function execute(client, data) {
       flags: ChannelFlags.Ephemeral
     });
   }
-
-  const { ensureUserExists } = await import('../database.js');
-  const user = await ensureUserExists(userId, guildId);
+  
+  const user = await getOrCreateUser(userId, data.displayName, guildId);
 
   if (!user) {
     return await data.reply({

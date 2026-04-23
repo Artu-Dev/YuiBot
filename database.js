@@ -11,7 +11,6 @@ export {
   getUser,
   deleteUser,
   getOrCreateUser,
-  ensureUserExists,
   addUserProperty,
   setUserProperty,
   addUserPropertyByAmount,

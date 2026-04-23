@@ -293,7 +293,6 @@ export const invertMessage = async (text, message = null) => {
   let safe = String(text ?? "").slice(0, 2000);
   if (!safe.trim()) return text;
 
-  // Placeholder mais robusto e menos provável de ser alterado pelo LLM
   const mentionRegex = /<@!?[0-9]+>|<@&[0-9]+>|<#[0-9]+>/g;
   const mentions = safe.match(mentionRegex) || [];
 
@@ -302,7 +301,6 @@ export const invertMessage = async (text, message = null) => {
     textToInvert = textToInvert.replace(mention, `PLACEHOLDER${index}END`);
   });
 
-  // System prompt sem contradições
   const invertSystem = [
     "Você é um inversor de significado de frases em português.",
     "Sua tarefa: retorne APENAS a frase com o sentido invertido/oposto.",
@@ -350,7 +348,6 @@ export const invertMessage = async (text, message = null) => {
     }
   }
 
-  // Restaura menções com regex case-insensitive pra cobrir variações do LLM
   mentions.forEach((mention, index) => {
     const placeholderRegex = new RegExp(`PLACEHOLDER${index}END`, "gi");
     invertedText = invertedText.replace(placeholderRegex, mention);

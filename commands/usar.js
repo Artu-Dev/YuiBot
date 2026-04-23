@@ -80,7 +80,7 @@ function buildInventoryButtons(inventory) {
 }
 
 // ───────────────────────── aplicar item ─────────────────────
-async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
+async function applyInventoryItem(userId, guildId, item, itemDef, targetId, displayName) {
   const { getOrCreateUser, setUserProperty } = await import('../database.js');
   const { hasEffect } = await import('../functions/effects.js');
 
@@ -106,8 +106,8 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
       return `Maldição lançada em <@${targetId}>! Agora ele vai gastar o dobro de chars (expira ${durStr}).`;
 
     case 'swap_chars': {
-      const userData = await getOrCreateUser(userId, guildId);
-      const targetData = await getOrCreateUser(targetId, guildId);
+      const userData = await getOrCreateUser(userId, displayName, guildId);
+      const targetData = await getOrCreateUser(targetId, displayName, guildId);
 
       if (!targetData || !targetData.charLeft) {
         return 'Usuário alvo não encontrado no banco de dados.';
@@ -237,7 +237,7 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
           name: 'Renda extra!',
           action: async () => {
             const bonus = randomInt(2000, 5000);
-            const userData = await getOrCreateUser(userId, guildId);
+            const userData = await getOrCreateUser(userId, displayName, guildId);
             await setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) + bonus);
             return `Você ganhou **${bonus}** chars! 💰`;
           }
@@ -245,7 +245,7 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
         {
           name: 'IMPOSTO!!!',
           action: async () => {
-            const userData = await getOrCreateUser(userId, guildId);
+            const userData = await getOrCreateUser(userId, displayName, guildId);
             const loss = Math.min(randomInt(1000, 3000), userData?.charLeft ?? 0);
             await setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) - loss);
             return `Você perdeu **${loss}** chars de imposto pra Yui! 😭`;
@@ -264,8 +264,8 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
             const users = getGuildUsers(guildId);
             if (users.length > 1) {
               const randomUser = users[randomInt(0, users.length - 1)];
-              const userData = await getOrCreateUser(userId, guildId);
-              const targetData = await getOrCreateUser(randomUser.id, guildId);
+              const userData = await getOrCreateUser(userId, displayName, guildId);
+              const targetData = await getOrCreateUser(randomUser.id, randomUser.displayName, guildId);
               const userChars = userData?.charLeft ?? 0;
               const targetChars = targetData?.charLeft ?? 0;
 
@@ -289,11 +289,11 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
           action: async () => {
             const resultado = randomInt(1, 3);
             if (resultado === 1) {
-              const userData = await getOrCreateUser(userId, guildId);
+              const userData = await getOrCreateUser(userId, displayName, guildId);
               await setUserProperty('charLeft', userId, guildId, (userData?.charLeft ?? 0) * 2);
               return 'Você DUPLICOU seus chars! 🤑';
             } else if (resultado === 2) {
-              const userData = await getOrCreateUser(userId, guildId);
+              const userData = await getOrCreateUser(userId, displayName, guildId);
               await setUserProperty('charLeft', userId, guildId, Math.floor((userData?.charLeft ?? 0) / 2));
               return 'Você PERDEU METADE dos seus chars! 💸';
             } else {
@@ -311,7 +311,7 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
 
             const targetUser = users[randomInt(0, users.length - 1)];
             const bountyAmount = randomInt(500, 2500);
-            const userData = await getOrCreateUser(userId, guildId);
+            const userData = await getOrCreateUser(userId, displayName, guildId);
 
             await setUserProperty('bounty_placer', targetUser.id, guildId, userData?.display_name || 'Usuário Desconhecido');
             await setUserProperty('total_bounty_value', targetUser.id, guildId, bountyAmount);
@@ -353,7 +353,7 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
     }
 
     case 'halve_wealth': {
-      const targetData = await getOrCreateUser(targetId, guildId);
+      const targetData = await getOrCreateUser(targetId, displayName, guildId);
       const currentChars = targetData.charLeft;
 
       if(!currentChars || currentChars <= 1) {
@@ -385,7 +385,7 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId) {
     }
 
     case 'credit_card': {
-      const userData = await getOrCreateUser(userId, guildId);
+      const userData = await getOrCreateUser(userId, displayName, guildId);
       const currentBalance = userData?.charLeft ?? 0;
       
       await setUserProperty('credit_limit', userId, guildId, currentBalance);
@@ -413,6 +413,14 @@ export const data = new SlashCommandBuilder()
 export async function execute(client, data) {
   const userId = data.userId;
   const guildId = data.guildId;
+  const displayName = data.displayName;
+
+  if(!guildId || !userId) {
+    return await data.reply({
+      content: "❌ Erro ao processar comando.",
+      flags: ChannelFlags.Ephemeral
+    });
+  }
 
   if (!getServerConfig(guildId, 'charLimitEnabled')) {
     return await data.reply({
@@ -489,7 +497,7 @@ export async function execute(client, data) {
 
 
 
-      const result = await applyInventoryItem(userId, guildId, item, itemDef, userId);
+      const result = await applyInventoryItem(userId, guildId, item, itemDef, userId, displayName);
       removeFromInventory(userId, guildId, slotIndex);
       inventory.splice(slotIndex, 1);
       collector.stop();
@@ -509,7 +517,7 @@ export async function execute(client, data) {
 
       const item = inventory[pendingSlot];
       const itemDef = SHOP_ITEMS[item.id];
-      const result = await applyInventoryItem(userId, guildId, item, itemDef, targetId);
+      const result = await applyInventoryItem(userId, guildId, item, itemDef, targetId, displayName);
 
       removeFromInventory(userId, guildId, pendingSlot);
       inventory.splice(pendingSlot, 1);

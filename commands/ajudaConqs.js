@@ -296,7 +296,6 @@ export async function execute(client, data) {
 
     const unlockedSet = parseUnlocked(userData);
 
-    // Função central para gerar a interface com base no estado atual
     const getPayload = () => {
       if (!currentCat) {
         return {

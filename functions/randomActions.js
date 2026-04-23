@@ -1,7 +1,7 @@
 import { log } from "../bot.js";
 import { invertMessage } from "./ai/generateResponse.js";
 import { getOrCreateWebhook, messageContainsDailyWord } from "./utils.js";
-import { getRandomFilteredAvatar, getRandomOverlayAvatar } from "./canvasApi.js";
+import { getRandomOverlayAvatar } from "./canvasApi.js";
 
 async function randomResend(message) {
   if (message.author.bot) return false;
@@ -34,33 +34,27 @@ async function randomResend(message) {
 
   try {
     const myWebHook = await getOrCreateWebhook(message.channel, message.author);
-    
-    let avatarURL = message.author.displayAvatarURL();
-    if (choice === "aiInvert") {
-      try {
-        if (Math.random() < 0.5) {
-          const filteredAvatarUrl = await getRandomOverlayAvatar(avatarURL);
-          
-          await myWebHook.send({
-            content: result,
-            username: message.member?.displayName || message.author.username,
-            avatarURL: filteredAvatarUrl,
-          });
-          message.delete().catch(() => {});
-          return true;
 
+    let avatarURL = message.author.displayAvatarURL();
+
+    if (choice === "aiInvert") {
+      if (Math.random() < 0.5) {
+        try {
+          avatarURL = await getRandomOverlayAvatar(avatarURL);
+        } catch (err) {
+          log(`⚠️ Não foi possível aplicar filtro ao avatar, enviando sem filtro: ${err.message}`, "RandomAction", 33);
         }
-      } catch (err) {
-        log(`⚠️ Não foi possível aplicar filtro ao avatar, enviando sem filtro: ${err.message}`, "RandomAction", 33);
       }
     }
-    
+
+    await message.delete();
+
     await myWebHook.send({
       content: result,
       username: message.member?.displayName || message.author.username,
-      avatarURL: avatarURL,
+      avatarURL,
     });
-    message.delete().catch(() => {});
+
     return true;
   } catch (err) {
     log(`❌ Falha ao reenviar mensagem aleatória: ${err.message}`, "RandomAction", 31);

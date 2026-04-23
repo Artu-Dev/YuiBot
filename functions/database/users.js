@@ -140,22 +140,6 @@ export const getPoorestGuildUsers = (guildId, excludeUserId, limit = 10) => {
   `).all(guildId, excludeUserId || "", limit);
 };
 
-
-export const ensureUserExists = (userId, guildId) => {
-  if (!isValidUserId(userId) || !isValidGuildId(guildId)) {
-    logInvalidId(userId, guildId, "ensureUserExists");
-    return null;
-  }
-
-  // Tenta obter usuário existente
-  const existing = db.queries.getUserById.get(userId, guildId);
-  if (existing) {
-    return existing;
-  }
-
-  return getOrCreateUser(userId, null, guildId);
-};
-
 export async function getSpendableChars(userId, guildId) {
   const user = getUser(userId, guildId);
   if (!user) return 0;
@@ -167,5 +151,5 @@ export async function getSpendableChars(userId, guildId) {
     return Math.max(0, user.charLeft);
   }
   
-  return Math.max(0, user.charLeft) + (user.credit_limit || 0);
+  return user.charLeft + (user.credit_limit || 0);
 }
