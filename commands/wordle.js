@@ -31,7 +31,6 @@ const activeGames = new Map();
 
 
 
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function normalizeWord(w) {
   return w.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -92,7 +91,7 @@ async function startGame(client, channel, initialMsg, answer, players, guildId) 
   let currentMsg = await replaceMessage(initialMsg,
     buildGamePayload(attempts, usedLetters, `Tentativas: 0/${MAX_ATT}`, {
       title: "Termoo da YUI!",
-      description: `**Jogadores:**\n${playerList()}\n\nMande uma palavra de 5 letras no chat!`,
+      description: `**Jogadores:**\n${playerList()}`,
     })
   );
 
@@ -204,7 +203,7 @@ async function startGame(client, channel, initialMsg, answer, players, guildId) 
       `Tentativas: ${attempts.length}/${MAX_ATT}  •  Última: ${guesserName} → ${guess}`,
       {
         title: "Termoo da YUI!",
-        description: `**Jogadores:**\n${playerList()}\n\nMande uma palavra de 5 letras no chat!`,
+        description: `**Jogadores:**\n${playerList()}`,
       }
     );
 
@@ -259,9 +258,9 @@ export async function execute(client, data) {
         "Precisa de pelo menos **2 jogadores** para começar.",
         "O jogo começa em **30 segundos** (ou quando o dono iniciar).",
         "",
-        "💰 **Recompensa por vitória:**",
-        "• +100 a +600 chars conforme menos tentativas",
-        "• +50 chars por jogador extra",
+        "Se ganharem podem ganhar ate 600 chars (-100 a cada tentativa).",
+        "+50 chars a cada player!.",
+        "Se perderem, cada jogador um dos malditos perdem 500 chars.",
         "",
         `**Jogadores (${players.size}):**`,
         ...[...players.values()].map(n => `• ${n}`),
@@ -300,7 +299,7 @@ export async function execute(client, data) {
       if (btnInt.user.id !== userId) {
         return btnInt.reply({ content: "Só quem iniciou pode forçar o início!", flags: ChannelFlags.Ephemeral });
       }
-      if (players.size < 1) {
+      if (players.size < 2) {
         return btnInt.reply({ content: "Precisa de pelo menos 2 jogadores!", flags: ChannelFlags.Ephemeral });
       }
       joinCollector.stop("force_start");
@@ -309,7 +308,7 @@ export async function execute(client, data) {
   });
 
   joinCollector.on("end", async () => {
-    if (players.size < 1) {
+    if (players.size < 2) {
       activeGames.delete(guildId);
       return lobbyMsg.edit({
         embeds: [

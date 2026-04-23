@@ -53,7 +53,6 @@ function parseAchievements(user) {
   }
 }
 
-// ===== FORMATAÇÃO DE TEMPO =====
 function formatTimeRemaining(milliseconds) {
   if (milliseconds < 0) return "Expirado";
   const hours = Math.floor(milliseconds / (1000 * 60 * 60));
@@ -74,7 +73,6 @@ function formatInventoryResume(userId, guildId) {
   return items.join("\n");
 }
 
-// ===== MAPEAMENTO DE EFEITOS =====
 function getEffectLabel(effectName) {
   const effectMap = {
     char_discount: `${customEmojis.enchantedBook || "📦"} Desconto (msgs -50% chars)`,
@@ -89,7 +87,6 @@ function getEffectLabel(effectName) {
   return effectMap[effectName] || `✨ ${effectName}`;
 }
 
-// ===== FORMATAÇÃO DE EFEITOS =====
 function formatEffects(userId, guildId) {
   const effects = getActiveEffects(userId, guildId);
   if (!effects || effects.length === 0) return null;

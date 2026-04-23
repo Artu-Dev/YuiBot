@@ -122,3 +122,61 @@ function todayString() {
   const d = new Date();
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
+
+
+(function initDuetoDB() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS dueto_daily (
+      guild_id TEXT NOT NULL,
+      date     TEXT NOT NULL,
+      word1    TEXT NOT NULL,
+      word2    TEXT NOT NULL,
+      PRIMARY KEY (guild_id, date)
+    );
+    CREATE TABLE IF NOT EXISTS dueto_history (
+      id       INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      date     TEXT NOT NULL,
+      word1    TEXT NOT NULL,
+      word2    TEXT NOT NULL,
+      won      INTEGER NOT NULL,
+      attempts INTEGER NOT NULL,
+      players  TEXT NOT NULL
+    );
+  `);
+})();
+
+export function getOrCreateDailyDueto(guildId, wordArray) {
+  const today = todayString();
+  const row   = db.prepare(
+    `SELECT word1, word2 FROM dueto_daily WHERE guild_id = ? AND date = ?`
+  ).get(guildId, today);
+
+  if (row) return [row.word1, row.word2];
+
+  let word1, word2;
+  do {
+    word1 = wordArray[Math.floor(Math.random() * wordArray.length)];
+    word2 = wordArray[Math.floor(Math.random() * wordArray.length)];
+  } while (word1 === word2);
+
+  db.prepare(
+    `INSERT OR REPLACE INTO dueto_daily (guild_id, date, word1, word2) VALUES (?, ?, ?, ?)`
+  ).run(guildId, today, word1, word2);
+
+  return [word1, word2];
+}
+
+export function duoPlayedToday(guildId) {
+  const row = db.prepare(
+    `SELECT id FROM dueto_history WHERE guild_id = ? AND date = ? LIMIT 1`
+  ).get(guildId, todayString());
+  return !!row;
+}
+
+export function saveDuoResult({ guildId, word1, word2, won, attempts, playerIds }) {
+  db.prepare(`
+    INSERT INTO dueto_history (guild_id, date, word1, word2, won, attempts, players)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(guildId, todayString(), word1, word2, won ? 1 : 0, attempts, JSON.stringify(playerIds));
+}
