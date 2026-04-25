@@ -161,6 +161,7 @@ const USERS_SCHEMA = {
   tiger_plays: "INTEGER DEFAULT 0",
   tiger_losses: "INTEGER DEFAULT 0",
   tiger_wins: "INTEGER DEFAULT 0",
+  tiger_win_streak: "INTEGER DEFAULT 0",
 
   total_chars_donated: "INTEGER DEFAULT 0",
   user_class: "TEXT DEFAULT 'none'",

@@ -1,17 +1,27 @@
 import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
-import { getOrCreateUser, getUser, reduceChars, addChars, getSpendableChars, addUserPropertyByAmount, setUserProperty, getServerConfig } from "../database.js";
+import {
+  getOrCreateUser, getUser, reduceChars, addChars,
+  getSpendableChars, addUserPropertyByAmount, setUserProperty, getServerConfig
+} from "../database.js";
 import { getClassModifier } from "../functions/classes.js";
 import { awardAchievementInCommand } from "../functions/achievements.js";
 import { randomInt } from 'es-toolkit';
 import { getCurrentDailyEvent } from "../functions/getTodaysEvent.js";
 import { customEmojis } from "../functions/utils.js";
+import { getBankBalance } from "../functions/database/bank.js";
 
 export const name = "tigre";
 export const aliases = ["tigrinho", "casino", "slot", "slots", "apostar"];
 export const requiresCharLimit = true;
 
 const LOADING_TIME = 2200;
-const LUCK_WEIGHT = 0.40;
+
+const LUCK_WEIGHT         = 0.25; 
+const WEALTH_THRESHOLD    = 4000;  // saldo no banco a partir do qual penaliza a sorte
+const WEALTH_PENALTY_CAP  = 0.20;  // penalidade máxima por riqueza
+const STREAK_PENALTY_STEP = 0.04;  // penalidade por vitória consecutiva sem perder
+const MAX_STREAK_PENALTY  = 0.25;  // cap do streak
+
 
 const MODES = {
   cobra: {
@@ -60,6 +70,7 @@ const MODES = {
     ],
   },
 };
+
 function buildButtons(spendableChars) {
   return new ActionRowBuilder().addComponents(
     ...Object.values(MODES).map(mode =>
@@ -72,8 +83,24 @@ function buildButtons(spendableChars) {
   );
 }
 
+function calcEffectiveLuck(classLucky) {
+  const sign = Math.sign(classLucky);
+  return sign * Math.sqrt(Math.abs(classLucky)) * LUCK_WEIGHT;
+}
+
+
+function calcWealthPenalty(bankBalance) {
+  if (bankBalance <= WEALTH_THRESHOLD) return 0;
+  return Math.min(WEALTH_PENALTY_CAP, Math.log10(bankBalance / WEALTH_THRESHOLD) * 0.075);
+}
+
+function calcStreakPenalty(winStreak) {
+  return Math.min(MAX_STREAK_PENALTY, winStreak * STREAK_PENALTY_STEP);
+}
+
 async function runGame(client, interactionData, btnInteraction, mode, selectionMsg) {
   const { userId, guildId, displayName } = interactionData;
+
   const currentChars = await getSpendableChars(userId, guildId);
   if (currentChars < mode.cost) {
     await btnInteraction.update({
@@ -90,8 +117,8 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
   const user = getOrCreateUser(userId, displayName, guildId);
   const pendingStacks = Math.max(0, Math.min(8, Number(user.tiger_pending_double) || 0));
   const doubleMult = 2 ** pendingStacks;
+  const winStreak = Math.max(0, Number(user.tiger_win_streak) || 0);
 
-  // Sempre cobra primeiro
   await reduceChars(userId, guildId, mode.cost, true);
 
   const loadingEmbed = new EmbedBuilder()
@@ -101,43 +128,58 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
     .setFooter({ text: "Contando os chars..." });
 
   await btnInteraction.update({ embeds: [loadingEmbed], components: [] });
-
   await new Promise(resolve => setTimeout(resolve, LOADING_TIME));
 
-  const classLucky = getClassModifier(user.user_class, "lucky");
-  const event = await getCurrentDailyEvent(guildId);
-  const successMult = event?.tigerSuccess ?? 1.0;
+  const classLucky   = getClassModifier(user.user_class, "lucky");
+  const luck         = calcEffectiveLuck(classLucky);
+  const bankBalance  = getBankBalance(userId, guildId);
+  const richPenalty = luck > 0 ? calcWealthPenalty(bankBalance) : 0;
+  const finalLuck   = luck > 0 ? Math.max(0, luck - richPenalty) : luck;
+
+  const streak       = calcStreakPenalty(winStreak);
+
+  const event        = await getCurrentDailyEvent(guildId);
+  const successMult  = event?.tigerSuccess ?? 1.0;
 
   let adjusted = mode.getOutcomes().map(outcome => {
     let chance = outcome.chance;
-    if (outcome.type === "loss") {
-      chance *= (1 - classLucky * LUCK_WEIGHT);
-    } else {
-      chance *= (1 + classLucky * LUCK_WEIGHT);
+
+    switch (outcome.type) {
+      case "loss":
+        chance *= (1 - finalLuck) * (1 + streak);
+        break;
+
+      case "win":
+      case "double":
+      case "revanche":
+        chance *= (1 + finalLuck) * (1 - streak);
+        if (outcome.type === "win" && successMult !== 1.0) chance *= successMult;
+        break;
+
+      case "jackpot":
+        chance *= (1 - streak * 0.5);
+        if (successMult !== 1.0) chance *= successMult;
+        break;
     }
-    if ((outcome.type === "win" || outcome.type === "jackpot") && successMult !== 1.0) {
-      chance *= successMult;
-    }
+
     return { ...outcome, chance };
   });
 
   const total = adjusted.reduce((sum, o) => sum + o.chance, 0);
-  adjusted = adjusted.map(o => ({ ...o, chance: o.chance / total }));
+  adjusted    = adjusted.map(o => ({ ...o, chance: o.chance / total }));
 
+  // Rolagem
   const rand = Math.random();
-  let cumulativeChance = 0;
-  let selectedOutcome = null;
+  let cumulative = 0;
+  let selectedOutcome = adjusted[0];
   for (const outcome of adjusted) {
-    cumulativeChance += outcome.chance;
-    if (rand <= cumulativeChance) {
-      selectedOutcome = outcome;
-      break;
-    }
+    cumulative += outcome.chance;
+    if (rand <= cumulative) { selectedOutcome = outcome; break; }
   }
-  if (!selectedOutcome) selectedOutcome = adjusted[0];
 
-  let newPending = pendingStacks;
-  let jackpotInc = 0, winsInc = 0, lossesInc = 0;
+  let newPending  = pendingStacks;
+  let newStreak   = winStreak;
+  let jackpotInc  = 0, winsInc = 0, lossesInc = 0;
   let extraMultLine = "";
   let resultMessage = "";
 
@@ -147,41 +189,44 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
 
   if (selectedOutcome.type === "loss") {
     lossesInc = 1;
+    newStreak  = 0;
     const keepDouble = pendingStacks > 0
-      ? `\n🔄 Seu bônus de dobro continua valendo na próxima rodada que der win/jackpot.`
+      ? `\n🔄 Seu bônus de dobro continua valendo na próxima vitória.`
       : "";
-    resultMessage = `${selectedOutcome.emoji} **${selectedOutcome.desc}!** Foram **${mode.cost}** chars de aposta pro bolso da casa.${keepDouble}`;
-  } 
+    resultMessage = `${selectedOutcome.emoji} **${selectedOutcome.desc}!** Foram **${mode.cost}** chars pro bolso da casa.${keepDouble}`;
+  }
   else if (selectedOutcome.type === "revanche") {
-    await addChars(userId, guildId, mode.cost); // devolve o que foi gasto
+    await addChars(userId, guildId, mode.cost);
     resultMessage = `${selectedOutcome.emoji} **Revanche!** Você recuperou os **${mode.cost} chars** gastos nesta rodada!`;
-    lossesInc = 0;
-  } 
+  }
   else if (selectedOutcome.type === "win") {
     const payout = selectedOutcome.amount * doubleMult;
     await addChars(userId, guildId, payout);
     newPending = 0;
-    winsInc = 1;
+    newStreak  = winStreak + 1;
+    winsInc    = 1;
     resultMessage = `${selectedOutcome.emoji} **${selectedOutcome.desc} ${payout} caracteres!**\n🎉 O TIGRE TA PAGANDO!!!!!!${extraMultLine}`;
-  } 
+  }
   else if (selectedOutcome.type === "jackpot") {
     const payout = selectedOutcome.amount * doubleMult;
     await addChars(userId, guildId, payout);
     newPending = 0;
+    newStreak  = winStreak + 1;
     jackpotInc = 1;
-    winsInc = 1;
+    winsInc    = 1;
     resultMessage = `${selectedOutcome.emoji} **${selectedOutcome.desc} +${payout} caracteres!!**\n🚨🚨 JACKPOT CAIU! RESENHA COMEÇOU!!! 🚨🚨${extraMultLine}`;
-  } 
+  }
   else if (selectedOutcome.type === "double") {
     newPending = Math.min(8, pendingStacks + 1);
     resultMessage = `${selectedOutcome.emoji} **${selectedOutcome.desc}**\nAcúmulo de dobro: **×${2 ** newPending}** na próxima vitória (win ou jackpot).`;
   }
 
-  addUserPropertyByAmount("tiger_plays", userId, guildId, 1);
-  addUserPropertyByAmount("tiger_wins", userId, guildId, winsInc);
-  addUserPropertyByAmount("tiger_losses", userId, guildId, lossesInc);
+  addUserPropertyByAmount("tiger_plays",    userId, guildId, 1);
+  addUserPropertyByAmount("tiger_wins",     userId, guildId, winsInc);
+  addUserPropertyByAmount("tiger_losses",   userId, guildId, lossesInc);
   addUserPropertyByAmount("tiger_jackpots", userId, guildId, jackpotInc);
-  setUserProperty("tiger_pending_double", userId, guildId, newPending);
+  setUserProperty("tiger_pending_double",   userId, guildId, newPending);
+  setUserProperty("tiger_win_streak",       userId, guildId, newStreak);
 
   await awardAchievementInCommand(client, interactionData, "tigrinho_lenda");
   await awardAchievementInCommand(client, interactionData, "tigre_centuria");
@@ -190,12 +235,16 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
   await awardAchievementInCommand(client, interactionData, "sortudo_no_tigre");
   await awardAchievementInCommand(client, interactionData, "tigreiro_nato");
 
-  const saldoFinal = getUser(userId, guildId)?.charLeft ?? 0;
+  const saldoFinal       = getUser(userId, guildId)?.charLeft ?? 0;
   const currentSpendable = await getSpendableChars(userId, guildId);
+
+  const streakLine = newStreak > 1
+    ? `\n• **Sequência de vitórias:** ${newStreak} 🔥${streak > 0 ? ` (odds -${Math.round(streak * 100)}%)` : ""}`
+    : "";
 
   const embedColor =
     selectedOutcome.type === "jackpot" ? "#FFD700" :
-    selectedOutcome.type === "loss" ? "#FF6B6B" : "#4ECDC4";
+    selectedOutcome.type === "loss"    ? "#FF6B6B" : "#4ECDC4";
 
   const resultEmbed = new EmbedBuilder()
     .setColor(embedColor)
@@ -204,20 +253,18 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
 ${resultMessage}
 
 **📊 Estatísticas:**
-• **Caracteres atuais:** ${saldoFinal}
-• **Custo da rodada:** ${selectedOutcome.type === "revanche" ? `0 (devolvidos pela Revanche!)` : `${mode.cost}`} chars
-• **Dobro pendente (próxima vitória):** ${newPending > 0 ? `×${2 ** newPending}` : "nenhum"}
+- **Caracteres atuais:** ${saldoFinal}
+- **Custo da rodada:** ${selectedOutcome.type === "revanche" ? `0 (devolvidos pela Revanche!)` : `${mode.cost}`} chars
+- **Dobro pendente (próxima vitória):** ${newPending > 0 ? `×${2 ** newPending}` : "nenhum"}${streakLine}
     `)
     .setFooter({ text: "Vicio em apostas é paia!" });
 
-  const components = [buildButtons(currentSpendable)];
-
-  await selectionMsg.edit({ embeds: [resultEmbed], components });
+  await selectionMsg.edit({ embeds: [resultEmbed], components: [buildButtons(currentSpendable)] });
 }
 
 export async function execute(client, data) {
-  const userId = data.userId;
-  const guildId = data.guildId;
+  const userId      = data.userId;
+  const guildId     = data.guildId;
   const displayName = data.displayName;
 
   if (!getServerConfig(guildId, 'charLimitEnabled')) {
@@ -264,7 +311,6 @@ export async function execute(client, data) {
   collector.on("collect", async (btnInteraction) => {
     const mode = MODES[btnInteraction.customId];
     if (!mode) return;
-
     await runGame(client, data, btnInteraction, mode, selectionMsg);
   });
 

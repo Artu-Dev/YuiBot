@@ -1,6 +1,7 @@
-import { getServerConfig } from "../../../database.js";
+import { getServerConfig, unlockAchievement } from "../../../database.js";
 import { contextFromMessage, safeReplyToMessage } from "../../utils.js";
 import { log } from "../../../bot.js";
+import { awardAchievementInCommand } from "../../achievements.js";
 
 /**
  * Handler para execução de comandos com prefix
