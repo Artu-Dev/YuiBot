@@ -17,9 +17,9 @@ export const requiresCharLimit = true;
 const LOADING_TIME = 2200;
 
 const LUCK_WEIGHT         = 0.25; 
-const WEALTH_THRESHOLD    = 4000;  // saldo no banco a partir do qual penaliza a sorte
+const WEALTH_THRESHOLD    = 4000;  // saldo no banco a partir do qual penaliza
 const WEALTH_PENALTY_CAP  = 0.20;  // penalidade máxima por riqueza
-const STREAK_PENALTY_STEP = 0.04;  // penalidade por vitória consecutiva sem perder
+const STREAK_PENALTY_STEP = 0.04;  // penalidade por vitória consecutiva
 const MAX_STREAK_PENALTY  = 0.25;  // cap do streak
 
 
@@ -32,11 +32,12 @@ const MODES = {
     color: "#2ECC71",
     style: ButtonStyle.Success,
     getOutcomes: () => [
-      { type: "loss",     chance: 0.82, amount: 0, emoji: "💸", desc: "Perdeu" },
-      { type: "win",      chance: 0.09, amount: randomInt(100, 801), emoji: "💰", desc: "Ganhou" },
-      { type: "double",   chance: 0.05, amount: 0, emoji: "🔄", desc: "Próximo resultado dobrado!" },
-      { type: "jackpot",  chance: 0.01, amount: randomInt(2000, 8001), emoji: "🎰", desc: "JACKPOT!" },
-      { type: "revanche", chance: 0.03, amount: 0, emoji: "🔁", desc: "Revanche!" },
+      { type: "loss",      chance: 0.520, amount: 0,                    emoji: "💸", desc: "Perdeu" },
+      { type: "small_win", chance: 0.250, amount: randomInt(10, 41),    emoji: "🪙", desc: "Migalhas" },
+      { type: "win",       chance: 0.120, amount: randomInt(70, 221),   emoji: "💰", desc: "Ganhou" },
+      { type: "double",    chance: 0.050, amount: 0,                    emoji: "🔄", desc: "Próximo resultado dobrado!" },
+      { type: "revanche",  chance: 0.030, amount: 0,                    emoji: "🔁", desc: "Revanche!" },
+      { type: "jackpot",   chance: 0.005, amount: randomInt(800, 3001), emoji: "🎰", desc: "JACKPOT!" },
     ],
   },
   dragao: {
@@ -47,11 +48,12 @@ const MODES = {
     color: "#9B59B6",
     style: ButtonStyle.Primary,
     getOutcomes: () => [
-      { type: "loss",     chance: 0.72, amount: 0, emoji: "💸", desc: "Perdeu" },
-      { type: "win",      chance: 0.17, amount: randomInt(200, 2501), emoji: "💰", desc: "Ganhou" },
-      { type: "double",   chance: 0.07, amount: 0, emoji: "🔄", desc: "Próximo resultado dobrado!" },
-      { type: "jackpot",  chance: 0.01, amount: randomInt(5000, 25001), emoji: "🎰", desc: "JACKPOT!" },
-      { type: "revanche", chance: 0.03, amount: 0, emoji: "🔁", desc: "Revanche!" },
+      { type: "loss",      chance: 0.530, amount: 0,                       emoji: "💸", desc: "Perdeu" },
+      { type: "small_win", chance: 0.230, amount: randomInt(50, 201),      emoji: "🪙", desc: "Migalhas" },
+      { type: "win",       chance: 0.140, amount: randomInt(300, 1161),    emoji: "💰", desc: "Ganhou" },
+      { type: "double",    chance: 0.060, amount: 0,                       emoji: "🔄", desc: "Próximo resultado dobrado!" },
+      { type: "revanche",  chance: 0.030, amount: 0,                       emoji: "🔁", desc: "Revanche!" },
+      { type: "jackpot",   chance: 0.004, amount: randomInt(4000, 16001),  emoji: "🎰", desc: "JACKPOT!" },
     ],
   },
   tigrinho: {
@@ -62,11 +64,12 @@ const MODES = {
     color: "#F1C40F",
     style: ButtonStyle.Danger,
     getOutcomes: () => [
-      { type: "loss",     chance: 0.58, amount: 0, emoji: "💸", desc: "Perdeu" },
-      { type: "win",      chance: 0.29, amount: randomInt(400, 4001), emoji: "💰", desc: "Ganhou" },
-      { type: "double",   chance: 0.07, amount: 0, emoji: "🔄", desc: "Próximo resultado dobrado!" },
-      { type: "jackpot",  chance: 0.02, amount: randomInt(10000, 50001), emoji: "🎰", desc: "JACKPOT!" },
-      { type: "revanche", chance: 0.04, amount: 0, emoji: "🔁", desc: "Revanche!" },
+      { type: "loss",      chance: 0.520, amount: 0,                        emoji: "💸", desc: "Perdeu" },
+      { type: "small_win", chance: 0.220, amount: randomInt(80, 301),       emoji: "🪙", desc: "Migalhas" },
+      { type: "win",       chance: 0.160, amount: randomInt(450, 1501),     emoji: "💰", desc: "Ganhou" },
+      { type: "double",    chance: 0.060, amount: 0,                        emoji: "🔄", desc: "Próximo resultado dobrado!" },
+      { type: "revanche",  chance: 0.030, amount: 0,                        emoji: "🔁", desc: "Revanche!" },
+      { type: "jackpot",   chance: 0.003, amount: randomInt(10000, 40001),  emoji: "🎰", desc: "JACKPOT!" },
     ],
   },
 };
@@ -87,7 +90,6 @@ function calcEffectiveLuck(classLucky) {
   const sign = Math.sign(classLucky);
   return sign * Math.sqrt(Math.abs(classLucky)) * LUCK_WEIGHT;
 }
-
 
 function calcWealthPenalty(bankBalance) {
   if (bankBalance <= WEALTH_THRESHOLD) return 0;
@@ -114,10 +116,10 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
     return;
   }
 
-  const user = getOrCreateUser(userId, displayName, guildId);
+  const user          = getOrCreateUser(userId, displayName, guildId);
   const pendingStacks = Math.max(0, Math.min(8, Number(user.tiger_pending_double) || 0));
-  const doubleMult = 2 ** pendingStacks;
-  const winStreak = Math.max(0, Number(user.tiger_win_streak) || 0);
+  const doubleMult    = 2 ** pendingStacks;
+  const winStreak     = Math.max(0, Number(user.tiger_win_streak) || 0);
 
   await reduceChars(userId, guildId, mode.cost, true);
 
@@ -130,16 +132,18 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
   await btnInteraction.update({ embeds: [loadingEmbed], components: [] });
   await new Promise(resolve => setTimeout(resolve, LOADING_TIME));
 
-  const classLucky   = getClassModifier(user.user_class, "lucky");
-  const luck         = calcEffectiveLuck(classLucky);
-  const bankBalance  = getBankBalance(userId, guildId);
+  // ── Modificadores ─────────────────────────────────────────────────────────
+  const classLucky  = getClassModifier(user.user_class, "lucky");
+  const luck        = calcEffectiveLuck(classLucky);
+
+  const bankBalance = getBankBalance(userId, guildId);
   const richPenalty = luck > 0 ? calcWealthPenalty(bankBalance) : 0;
   const finalLuck   = luck > 0 ? Math.max(0, luck - richPenalty) : luck;
 
-  const streak       = calcStreakPenalty(winStreak);
+  const streak      = calcStreakPenalty(winStreak);
 
-  const event        = await getCurrentDailyEvent(guildId);
-  const successMult  = event?.tigerSuccess ?? 1.0;
+  const event       = await getCurrentDailyEvent(guildId);
+  const successMult = event?.tigerSuccess ?? 1.0;
 
   let adjusted = mode.getOutcomes().map(outcome => {
     let chance = outcome.chance;
@@ -149,6 +153,7 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
         chance *= (1 - finalLuck) * (1 + streak);
         break;
 
+      case "small_win":
       case "win":
       case "double":
       case "revanche":
@@ -183,7 +188,7 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
   let extraMultLine = "";
   let resultMessage = "";
 
-  if (doubleMult > 1 && (selectedOutcome.type === "win" || selectedOutcome.type === "jackpot")) {
+  if (doubleMult > 1 && selectedOutcome.type === "win" || doubleMult > 1 && selectedOutcome.type === "jackpot") {
     extraMultLine = `\n💎 **×${doubleMult}** do acúmulo "resultado dobrado" aplicado nesta vitória!`;
   }
 
@@ -195,8 +200,14 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
       : "";
     resultMessage = `${selectedOutcome.emoji} **${selectedOutcome.desc}!** Foram **${mode.cost}** chars pro bolso da casa.${keepDouble}`;
   }
+  else if (selectedOutcome.type === "small_win") {
+    const payout = selectedOutcome.amount;
+    await addChars(userId, guildId, payout);
+    resultMessage = `${selectedOutcome.emoji} **${selectedOutcome.desc}** — Recuperou apenas **${payout}** dos **${mode.cost}** chars apostados. A casa agradece.`;
+  }
   else if (selectedOutcome.type === "revanche") {
     await addChars(userId, guildId, mode.cost);
+    // revanche não altera streak
     resultMessage = `${selectedOutcome.emoji} **Revanche!** Você recuperou os **${mode.cost} chars** gastos nesta rodada!`;
   }
   else if (selectedOutcome.type === "win") {
@@ -239,12 +250,21 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
   const currentSpendable = await getSpendableChars(userId, guildId);
 
   const streakLine = newStreak > 1
-    ? `\n• **Sequência de vitórias:** ${newStreak} 🔥${streak > 0 ? ` (odds -${Math.round(streak * 100)}%)` : ""}`
+    ? `\n- **Sequência de vitórias:** ${newStreak} 🔥${streak > 0 ? ` (odds -${Math.round(streak * 100)}%)` : ""}`
     : "";
 
   const embedColor =
-    selectedOutcome.type === "jackpot" ? "#FFD700" :
-    selectedOutcome.type === "loss"    ? "#FF6B6B" : "#4ECDC4";
+    selectedOutcome.type === "jackpot"   ? "#FFD700" :
+    selectedOutcome.type === "win"       ? "#4ECDC4" :
+    selectedOutcome.type === "small_win" ? "#95A5A6" :
+    selectedOutcome.type === "loss"      ? "#FF6B6B" : "#4ECDC4";
+
+  const custoEfetivo = (() => {
+    if (selectedOutcome.type === "revanche")  return `0 (devolvidos pela Revanche!)`;
+    if (selectedOutcome.type === "small_win") return `${mode.cost - selectedOutcome.amount} (recuperou ${selectedOutcome.amount})`;
+    if (selectedOutcome.type === "win" || selectedOutcome.type === "jackpot") return `0 (lucro!)`;
+    return `${mode.cost}`;
+  })();
 
   const resultEmbed = new EmbedBuilder()
     .setColor(embedColor)
@@ -254,7 +274,7 @@ ${resultMessage}
 
 **📊 Estatísticas:**
 - **Caracteres atuais:** ${saldoFinal}
-- **Custo da rodada:** ${selectedOutcome.type === "revanche" ? `0 (devolvidos pela Revanche!)` : `${mode.cost}`} chars
+- **Custo efetivo da rodada:** ${custoEfetivo} chars
 - **Dobro pendente (próxima vitória):** ${newPending > 0 ? `×${2 ** newPending}` : "nenhum"}${streakLine}
     `)
     .setFooter({ text: "Vicio em apostas é paia!" });
@@ -287,13 +307,13 @@ export async function execute(client, data) {
       `${customEmojis.lapislazuli} **Seus chars disponíveis:** ${spendableChars}`,
       "",
       `**🐍 Cobra da Sorte** — \`50 chars\``,
-      `Tens oque é necessario para domar a cobra? • Jackpot: 2.000–8.000`,
+      `Tens oque é necessario para domar a cobra? • Jackpot: 800–3.000`,
       "",
       `**🐉 Dragão da Fortuna** — \`250 chars\``,
-      `O Dragão é justo e imparcial • Jackpot: 5.000–25.000`,
+      `O Dragão é justo, imparcial e impiedoso • Jackpot: 4.000–16.000`,
       "",
       `**🐯 Tigrinho** — \`400 chars\``,
-      `O verdadeiro tigrinho! jogue nos horarios bugados • Jackpot: 10.000–50.000`,
+      `O verdadeiro tigrinho! jogue nos horarios bugados • Jackpot: 10.000–40.000`,
     ].join("\n"))
     .setFooter({ text: "escolha com sabedoria!" });
 
