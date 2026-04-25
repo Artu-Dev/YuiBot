@@ -33,8 +33,8 @@ const MODES = {
     style: ButtonStyle.Success,
     getOutcomes: () => [
       { type: "loss",      chance: 0.520, amount: 0,                    emoji: "💸", desc: "Perdeu" },
-      { type: "small_win", chance: 0.250, amount: randomInt(10, 41),    emoji: "🪙", desc: "Migalhas" },
-      { type: "win",       chance: 0.120, amount: randomInt(70, 221),   emoji: "💰", desc: "Ganhou" },
+      { type: "small_win", chance: 0.250, amount: randomInt(2, 41),    emoji: "🪙", desc: "Migalhas" },
+      { type: "win",       chance: 0.120, amount: randomInt(51, 221),   emoji: "💰", desc: "Ganhou" },
       { type: "double",    chance: 0.050, amount: 0,                    emoji: "🔄", desc: "Próximo resultado dobrado!" },
       { type: "revanche",  chance: 0.030, amount: 0,                    emoji: "🔁", desc: "Revanche!" },
       { type: "jackpot",   chance: 0.005, amount: randomInt(800, 3001), emoji: "🎰", desc: "JACKPOT!" },
@@ -50,7 +50,7 @@ const MODES = {
     getOutcomes: () => [
       { type: "loss",      chance: 0.530, amount: 0,                       emoji: "💸", desc: "Perdeu" },
       { type: "small_win", chance: 0.230, amount: randomInt(50, 201),      emoji: "🪙", desc: "Migalhas" },
-      { type: "win",       chance: 0.140, amount: randomInt(300, 1161),    emoji: "💰", desc: "Ganhou" },
+      { type: "win",       chance: 0.140, amount: randomInt(251, 1161),    emoji: "💰", desc: "Ganhou" },
       { type: "double",    chance: 0.060, amount: 0,                       emoji: "🔄", desc: "Próximo resultado dobrado!" },
       { type: "revanche",  chance: 0.030, amount: 0,                       emoji: "🔁", desc: "Revanche!" },
       { type: "jackpot",   chance: 0.004, amount: randomInt(4000, 16001),  emoji: "🎰", desc: "JACKPOT!" },
