@@ -440,7 +440,7 @@ export async function execute(client, data) {
     embeds: [embed],
     components: components.length ? components : [],
     flags: ChannelFlags.Ephemeral,
-    fetchReply: true,
+    withResponse: true,
   });
 
   if (!inventory.length) return;

@@ -53,7 +53,7 @@ export async function execute(client, data) {
       new ActionRowBuilder().addComponents(cancelBtn),
     ],
     flags: ChannelFlags.Ephemeral,
-    fetchReply: true,
+    withResponse: true,
   });
 
   const collector = reply.createMessageComponentCollector({ time: 60_000 });

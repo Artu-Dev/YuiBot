@@ -267,7 +267,7 @@ export async function execute(client, data) {
   const lobbyMsg = await data.reply({
     embeds: [buildLobbyEmbed()],
     components: [joinRow],
-    fetchReply: true,
+    withResponse: true,
   });
 
   const joinCollector = lobbyMsg.createMessageComponentCollector({ time: JOIN_TIME });

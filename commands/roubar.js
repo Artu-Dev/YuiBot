@@ -152,7 +152,7 @@ export async function execute(client, data) {
     .setDescription(`${getRandomLoadingPhrase(isTargeted, victimName)}`)
     .setFooter({ text: `o roubo esta sendo planejado...` });
 
-  const loadingMsg = await data.reply({ embeds: [loadingEmbed], fetchReply: true });
+  const loadingMsg = await data.reply({ embeds: [loadingEmbed], withResponse: true });
 
   await new Promise((resolve) => setTimeout(resolve, LOADING_TIME));
 

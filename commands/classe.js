@@ -87,7 +87,7 @@ export async function execute(client, data) {
   const reply = await data.reply({
     embeds: [embed],
     components: [row],
-    fetchReply: true
+    withResponse: true
   });
 
   const collector = reply.createMessageComponentCollector({

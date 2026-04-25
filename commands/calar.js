@@ -52,7 +52,7 @@ export async function execute(client, data) {
     .setDescription("Aguarde enquanto seu pedido de silêncio é preparado...")
     .setFooter({ text: "Calculando a chance de sucesso..." });
 
-  const loadingMsg = await data.reply({ embeds: [loadingEmbed], fetchReply: true });
+  const loadingMsg = await data.reply({ embeds: [loadingEmbed], withResponse: true });
   await new Promise((resolve) => setTimeout(resolve, LOADING_TIME));
 
   if (Math.random() < CHANCE_SUCESSO) {

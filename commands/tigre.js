@@ -320,7 +320,7 @@ export async function execute(client, data) {
   const selectionMsg = await data.reply({
     embeds: [selectionEmbed],
     components: [buildButtons(spendableChars)],
-    fetchReply: true,
+    withResponse: true,
   });
 
   const collector = selectionMsg.createMessageComponentCollector({

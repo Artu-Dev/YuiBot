@@ -19,7 +19,7 @@ export async function execute(client, data) {
   if (data.fromInteraction) {
     const replyOpts = {
       content: "Calculando ping...",
-      fetchReply: true,
+      withResponse: true,
     };
     if (data.isEphemeral) replyOpts.flags = ChannelFlags.Ephemeral;
     sent = await data.reply(replyOpts);

@@ -192,7 +192,7 @@ export async function execute(client, data) {
   const reply = await data.reply({
     embeds:     [buildItemEmbed(getCurrentItem(), getCurrentDef(), index, shop.items.length)],
     components: [buildNavRow(getCurrentItem(), index, shop.items.length, userChars)],
-    fetchReply: true,
+    withResponse: true,
   });
 
   const collector = reply.createMessageComponentCollector({

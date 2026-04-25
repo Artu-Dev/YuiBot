@@ -166,7 +166,7 @@ export async function execute(client, data) {
       { name: "Aposta", value: `${aposta.toLocaleString()} chars`, inline: true }
     );
 
-  const msg = await data.reply({ embeds: [embed], components: [row], fetchReply: true });
+  const msg = await data.reply({ embeds: [embed], components: [row], withResponse: true });
 
   // ===================== LOOP =====================
   const gameInterval = setInterval(async () => {

@@ -41,7 +41,7 @@ export async function execute(client, data) {
     const loadingMsg = data.fromInteraction
       ? await data.reply({
           content: "📰 *Gerando notícia exclusiva...*",
-          fetchReply: true,
+          withResponse: true,
         })
       : await data.reply("📰 *Gerando notícia exclusiva...*");
 

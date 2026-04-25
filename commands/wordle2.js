@@ -290,7 +290,7 @@ export async function execute(client, data) {
     new ButtonBuilder().setCustomId("dueto_start").setLabel("COMEÇAR LOGO!").setStyle(ButtonStyle.Success)
   );
 
-  const lobbyMsg = await data.reply({ embeds: [buildLobbyEmbed()], components: [joinRow], fetchReply: true });
+  const lobbyMsg = await data.reply({ embeds: [buildLobbyEmbed()], components: [joinRow], withResponse: true });
   const joinCollector = lobbyMsg.createMessageComponentCollector({ time: JOIN_TIME });
 
   joinCollector.on("collect", async (btnInt) => {
