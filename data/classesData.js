@@ -99,16 +99,16 @@ export const classesData = {
 
   sortudo: {
     name: "Sortudo",
-    description: "A sorte está sempre ao seu lado, mas falta habilidade para outras coisas.",
+    description: "A sorte está sempre ao seu lado, mas de resto vc é todo ferrado.",
     image: "https://media.tenor.com/YsqeTAex5aoAAAAM/gamblecore-stickman.gif",
     modifiers: {
-      lucky: 0.60,
-      robCost: 0.10,
-      robDamage: -0.20,
-      robSuccess: -0.10,
-      singleRobSuccess: -0.10,
-      singleRobDamage: -0.20,
-      robDefense: 0.10,
+      lucky: 0.70,
+      robCost: 0.20,
+      robDamage: -0.50,
+      robSuccess: -0.20,
+      singleRobSuccess: -0.20,
+      singleRobDamage: -0.50,
+      robDefense: -0.20,
     },
     unlockCost: 1800,
   },
@@ -142,6 +142,6 @@ export const classesData = {
       singleRobDamage: 1,
       robDefense: 1,
     },
-    unlockCost: 20000,
+    unlockCost: 100000,
   },
 };
