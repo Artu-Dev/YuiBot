@@ -201,13 +201,15 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
     resultMessage = `${selectedOutcome.emoji} **${selectedOutcome.desc}!** Foram **${mode.cost}** chars pro bolso da casa.${keepDouble}`;
   }
   else if (selectedOutcome.type === "small_win") {
-    const payout = selectedOutcome.amount;
+    const payout = selectedOutcome.amount * doubleMult;
     await addChars(userId, guildId, payout);
-    resultMessage = `${selectedOutcome.emoji} **${selectedOutcome.desc}** — Recuperou apenas **${payout}** dos **${mode.cost}** chars apostados. A casa agradece.`;
+    newPending = 0;
+    newStreak  = winStreak + 1;
+    winsInc    = 1;
+    resultMessage = `${selectedOutcome.emoji} **${selectedOutcome.desc} ${payout} caracteres!**\n🎉 O TIGRE TA PAGANDO!!!!!!${extraMultLine}`;
   }
   else if (selectedOutcome.type === "revanche") {
     await addChars(userId, guildId, mode.cost);
-    // revanche não altera streak
     resultMessage = `${selectedOutcome.emoji} **Revanche!** Você recuperou os **${mode.cost} chars** gastos nesta rodada!`;
   }
   else if (selectedOutcome.type === "win") {
@@ -249,14 +251,10 @@ async function runGame(client, interactionData, btnInteraction, mode, selectionM
   const saldoFinal       = getUser(userId, guildId)?.charLeft ?? 0;
   const currentSpendable = await getSpendableChars(userId, guildId);
 
-  const streakLine = newStreak > 1
-    ? `\n- **Sequência de vitórias:** ${newStreak} 🔥${streak > 0 ? ` (odds -${Math.round(streak * 100)}%)` : ""}`
-    : "";
-
   const embedColor =
     selectedOutcome.type === "jackpot"   ? "#FFD700" :
     selectedOutcome.type === "win"       ? "#4ECDC4" :
-    selectedOutcome.type === "small_win" ? "#95A5A6" :
+    selectedOutcome.type === "small_win" ? "#74AEB2" :
     selectedOutcome.type === "loss"      ? "#FF6B6B" : "#4ECDC4";
 
   const custoEfetivo = (() => {
@@ -275,7 +273,7 @@ ${resultMessage}
 **📊 Estatísticas:**
 - **Caracteres atuais:** ${saldoFinal}
 - **Custo efetivo da rodada:** ${custoEfetivo} chars
-- **Dobro pendente (próxima vitória):** ${newPending > 0 ? `×${2 ** newPending}` : "nenhum"}${streakLine}
+- **Dobro pendente (próxima vitória):** ${newPending > 0 ? `×${2 ** newPending}` : "nenhum"}
     `)
     .setFooter({ text: "Vicio em apostas é paia!" });
 
