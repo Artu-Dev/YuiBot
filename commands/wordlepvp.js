@@ -16,14 +16,14 @@ import {
   withdrawFromBank,
 } from "../database.js";
 import { renderDuetoImage } from "../functions/wordleCanva.js";
-import { DICTIONARY } from "../functions/database/wordle.js";
+import { DICTIONARY, versusPlayedToday, saveVersusResult } from "../functions/database/wordle.js";
 
 export const name = "termoversus";
 export const aliases = ["versus", "termovs", "wordlevs", "vs"];
 export const requiresCharLimit = true;
 
 const JOIN_TIME      = 60_000;
-const GAME_TIME      = 300_000;
+const GAME_TIME      = 600_000;
 const MAX_ATT        = 6;
 const LOSS_PER_LOSER = 500;
 
@@ -97,7 +97,6 @@ async function replaceMessage(oldMsg, payload) {
   await oldMsg.delete().catch(() => {});
   return oldMsg.channel.send(payload);
 }
-
 
 async function deductWithBankFallback(userId, guildId, amount) {
   const available = await getSpendableChars(userId, guildId);
@@ -176,6 +175,16 @@ async function startVersusGame(client, channel, initialMsg, answerA, answerB, te
     collector.stop("finished");
     activeVersusGames.delete(guildId);
 
+    const allPlayerIds = [...teamAIds, ...teamBIds];
+    saveVersusResult({
+      guildId,
+      word1: answerA,
+      word2: answerB,
+      winner: draw ? null : winnerLabel,
+      draw,
+      playerIds: allPlayerIds,
+    });
+
     let color, title, desc;
 
     if (draw) {
@@ -221,10 +230,10 @@ async function startVersusGame(client, channel, initialMsg, answerA, answerB, te
         `Palavra do ${nameA}: **${answerA}**`,
         `Palavra do ${nameB}: **${answerB}**`,
         "",
-        `**${loserLabel}** perdeu ${LOSS_PER_LOSER} chars por jogador:`,
+        `**${loserLabel}** perdeu ${LOSS_PER_LOSER} chars cada:`,
         ...lossLines,
         "",
-        `**${winnerLabel}** recebeu o pote de **${totalCollected} chars** — **+${rewardPerWin}** por jogador.`,
+        `**${winnerLabel}** recebeu **${totalCollected} chars** — **+${rewardPerWin}** cada.`,
       ].join("\n");
 
       currentMsg = await replaceMessage(currentMsg, buildPayload(`${winnerLabel} venceu`, mainDesc(), color));
@@ -319,6 +328,8 @@ export async function execute(client, data) {
     return data.reply("O sistema de caracteres está desligado neste servidor.");
   if (activeVersusGames.has(guildId))
     return data.reply("Já tem uma partida de Versus rolando neste servidor.");
+  if (versusPlayedToday(guildId))
+    return data.reply("O Versus de hoje já foi jogado. Volte amanhã.");
 
   getOrCreateUser(userId, displayName, guildId);
 
@@ -335,7 +346,7 @@ export async function execute(client, data) {
         "Os jogadores serão divididos aleatoriamente em dois times.",
         "Cada time recebe uma palavra diferente e tenta resolver antes do adversário.",
         "",
-        `O time perdedor perde **${LOSS_PER_LOSER} chars** por jogador — que vão direto pro time vencedor.`,
+        `O time perdedor perde **${LOSS_PER_LOSER} chars** cada — que vão direto pro time vencedor.`,
         "Se não tiver chars suficientes, o restante é descontado do banco.",
         "",
         `**Inscritos (${players.size}):**`,
@@ -413,7 +424,7 @@ export async function execute(client, data) {
         "",
         "O jogo começa em instantes.",
       ].join("\n"))
-      .setFooter({ text: `${LOSS_PER_LOSER} chars por jogador do time perdedor vão pro time vencedor.` });
+      .setFooter({ text: `${LOSS_PER_LOSER} chars cada do time perdedor vão pro time vencedor.` });
 
     await lobbyMsg.edit({ embeds: [revealEmbed], components: [] });
 

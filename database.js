@@ -421,6 +421,18 @@ export const initializeDbBot = async () => {
     )
   `).run();
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS versus_history (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id   TEXT NOT NULL,
+      date       TEXT NOT NULL,
+      word1      TEXT NOT NULL,
+      word2      TEXT NOT NULL,
+      winner     TEXT NOT NULL,
+      draw       INTEGER NOT NULL DEFAULT 0,
+      players    TEXT NOT NULL
+    );
+  `);
 
  
   // ====================== QUERIES PREPARADAS ======================

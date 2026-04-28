@@ -147,7 +147,20 @@ export function saveDuoResult({ guildId, word1, word2, won, attempts, playerIds 
   `).run(guildId, todayString(), word1, word2, won ? 1 : 0, attempts, JSON.stringify(playerIds));
 }
 
-// ─── Utils ────────────────────────────────────────────────────────────────────
+export function versusPlayedToday(guildId) {
+  const row = db.prepare(
+    `SELECT id FROM versus_history WHERE guild_id = ? AND date = ? LIMIT 1`
+  ).get(guildId, todayString());
+  return !!row;
+}
+
+export function saveVersusResult({ guildId, word1, word2, winner, draw, playerIds }) {
+  db.prepare(`
+    INSERT INTO versus_history (guild_id, date, word1, word2, winner, draw, players)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(guildId, todayString(), word1, word2, winner ?? "", draw ? 1 : 0, JSON.stringify(playerIds));
+}
+
 
 function todayString() {
   const d = new Date();
