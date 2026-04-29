@@ -9,7 +9,7 @@ import {
 } from 'discord.js';
 import { getShop, getShopItem, decrementStock } from '../functions/shop.js';
 import { addToInventory, getInventory } from '../functions/inventario.js';
-import { getUser, reduceChars, getSpendableChars, getServerConfig } from '../database.js';
+import { getUser, reduceChars, getSpendableChars, getServerConfig, db } from '../database.js';
 import {SHOP_ITEMS} from '../data/shopItemsData.js';
 import { customEmojis } from '../functions/utils.js';
 
@@ -61,10 +61,10 @@ function buildItemEmbed(shopItem, itemDef, index, total, itemPrice = 0) {
     .setThumbnail(itemDef.image);
 }
 
-function buildNavRow(shopItem, index, total, userChars = 0) {
+function buildNavRow(shopItem, index, total, userChars, effectivePrice) {
   const outOfStock = !shopItem || (shopItem.stock || 0) <= 0;
-  const price = shopItem?.price ?? 0;
-  const canAfford = userChars >= price;
+  const price      = effectivePrice ?? shopItem?.price ?? 0;
+  const canAfford  = userChars >= price;
 
   let buyLabel = 'Comprar';
   let buyStyle = ButtonStyle.Success;
@@ -109,54 +109,50 @@ function buildDisabledRow() {
 }
 
 async function handleBuy(user, guildId, itemId) {
-  if (!user || !guildId || !itemId) return '❌ Parâmetros inválidos.';
-  
-  const userId = user.id;
+  if (!user || !guildId || !itemId) return 'Parametros invalidos.';
+ 
+  const userId   = user.id;
   const shopItem = getShopItem(guildId, itemId);
-  const itemPrice = shopItem.price || 0;
-  const itemDef = SHOP_ITEMS[itemId];
-
-  if (!shopItem || !itemDef) return '❌ Item não encontrado na loja de hoje.';
-  if (shopItem.stock <= 0) return '❌ Este item acabou de esgotar!';
+  const itemDef  = SHOP_ITEMS[itemId];
+ 
+  if (!shopItem || !itemDef) return 'Item nao encontrado na loja de hoje.';
+  if (shopItem.stock <= 0)   return 'Este item acabou de esgotar!';
+ 
+  const itemPrice = applyInflation(shopItem.price, userId, guildId);
 
   const userData = getUser(userId, guildId);
-  if (!userData) return '❌ Usuário não encontrado no banco de dados.';
-  
-  const userChars = userData.charLeft ?? 0;
+  if (!userData) return 'Usuario nao encontrado no banco de dados.';
+ 
   const spendableChars = await getSpendableChars(userId, guildId);
-  
   if (spendableChars < itemPrice)
-    return `❌ Você tem **${userChars} chars** mas precisa de **${itemPrice}**.`;
-
+    return `Voce tem **${userData.charLeft} chars** mas precisa de **${itemPrice}**.`;
+ 
   const inv = getInventory(userId, guildId);
   if (inv.length >= MAX_INVENTORY)
-    return `❌ Seu inventário está cheio! (${MAX_INVENTORY}/${MAX_INVENTORY})\nUse \`/usar\` para usar um item antes.`;
-
-  // Deduz chars
+    return `Seu inventario esta cheio! (${MAX_INVENTORY}/${MAX_INVENTORY})\nUse /usar para usar um item antes.`;
+ 
   await reduceChars(userId, guildId, itemPrice, true);
   decrementStock(guildId, itemId);
-  
-  // Adiciona ao inventário
-  addToInventory(userId, guildId, { 
-    id: itemId, 
-    duration: shopItem.duration 
-  });
-  
-  return `✅ **${itemDef.name}** comprado! 📦 Adicionado ao seu inventário.\nUse \`/usar\` para ativá-lo.`;
+  addToInventory(userId, guildId, { id: itemId, duration: shopItem.duration });
+ 
+  return `**${itemDef.name}** comprado! Adicionado ao seu inventario.\nUse /usar para ativa-lo.`;
 }
 
+
+let _stmtInflation = null;
 function applyInflation(basePrice, buyerUserId, guildId) {
-  const inflator = db.prepare(`
-    SELECT user_id FROM active_effects
-    WHERE guild_id = ? AND effect = 'inflacao' AND (expires_at IS NULL OR expires_at > ?)
-    LIMIT 1
-  `).get(guildId, Date.now());
- 
-  if (!inflator) return basePrice;
-  if (inflator.user_id === buyerUserId) return basePrice;
- 
+  if (!_stmtInflation) {
+    _stmtInflation = db.prepare(`
+      SELECT user_id FROM active_effects
+      WHERE guild_id = ? AND effect = 'inflacao' AND (expires_at IS NULL OR expires_at > ?)
+      LIMIT 1
+    `);
+  }
+  const inflator = _stmtInflation.get(guildId, Date.now());
+  if (!inflator || inflator.user_id === buyerUserId) return basePrice;
   return Math.ceil(basePrice * 1.5);
 }
+
 
 export const data = new SlashCommandBuilder()
   .setName('loja')
@@ -185,9 +181,9 @@ export async function execute(client, data) {
     return data.reply({ content: 'A loja está vazia hoje ou houve um erro ao carregar!', flags: ChannelFlags.Ephemeral });
   }
 
-  shop.items.forEach(item => {
-    item.price = applyInflation(item.price, data.userId, guildId);
-  });
+  function getEffectivePrice(item, userId, guildId) {
+    return applyInflation(item.price, userId, guildId);
+  }
 
   const userId = data.userId;  
   const userData = getUser(userId, guildId);
@@ -207,7 +203,7 @@ export async function execute(client, data) {
 
   const reply = await data.reply({
     embeds:     [buildItemEmbed(getCurrentItem(), getCurrentDef(), index, shop.items.length, getCurrentItem()?.price || 0)],
-    components: [buildNavRow(getCurrentItem(), index, shop.items.length, userChars)],
+    components: [buildNavRow(getCurrentItem(), index, shop.items.length, userChars, getEffectivePrice(getCurrentItem(), userId, guildId))],
     withResponse: true,
   });
 

@@ -11,6 +11,7 @@ import {
   getBankBalance,
   withdrawFromBank,
   db,
+  reduceCharsRob 
 } from "../database.js";
 import {
   applyClassModifier,
@@ -243,8 +244,18 @@ export async function execute(client, data) {
       removeEffect(userId, guildId, 'next_rob_takes_all');
     }
 
-    addChars(userId, guildId, stolenAmount);
-    await reduceChars(victimId, guildId, stolenAmount, true);
+    const sombrasTrigadas = addChars(userId, guildId, stolenAmount);
+    const { parasitasTrigados } = await reduceCharsRob(victimId, guildId, stolenAmount);
+
+    if (sombrasTrigadas.length > 0) {
+      const mentions = sombrasTrigadas.map(({ userId: sid }) => `<@${sid}>`).join(", ");
+      await data.followUp(`${mentions} ganharam **${sombrasTrigadas[0].gain} chars** pela Sombra — estavam monitorando ${displayName}.`);
+    }
+    if (parasitasTrigados.length > 0) {
+      const mentions = parasitasTrigados.map(({ userId: pid }) => `<@${pid}>`).join(", ");
+      await data.followUp(`${mentions} ganharam **${parasitasTrigados[0].gain} chars** pelo Parasita — estavam grudados em ${victimName}.`);
+    }
+    
     setUserProperty("consecutive_robbery_losses", userId, guildId, 0);
 
     let bankRobHint = "";
@@ -334,6 +345,8 @@ export async function execute(client, data) {
     .setFooter({ text: `Total de chars: ${finalChars}` });
 
   await loadingMsg.edit({ embeds: [resultEmbed] });
+
+
 
   if (success && isTargeted) {
     const bountyValue = Number(victimDataRefresh.total_bounty_value) || 0;

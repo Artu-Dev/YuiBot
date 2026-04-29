@@ -46,20 +46,6 @@ const activeVersusGames = new Map();
 let penaltyA = 0;
 let penaltyB = 0;
  
-for (const pid of teamAIds) {
-  if (hasEffect(pid, guildId, 'sabotador')) {
-    penaltyB += 2;
-    removeEffect(pid, guildId, 'sabotador');
-    break; 
-  }
-}
-for (const pid of teamBIds) {
-  if (hasEffect(pid, guildId, 'sabotador')) {
-    penaltyA += 2;
-    removeEffect(pid, guildId, 'sabotador');
-    break;
-  }
-}
 
 function normalizeWord(w) {
   return w.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -146,6 +132,22 @@ async function startVersusGame(client, channel, initialMsg, answerA, answerB, te
   const teamBIds = new Set(teamB.keys());
   const maxAttA = MAX_ATT - penaltyA;
   const maxAttB = MAX_ATT - penaltyB;
+
+
+  for (const pid of teamAIds) {
+  if (hasEffect(pid, guildId, 'sabotador')) {
+    penaltyB += 2;
+    removeEffect(pid, guildId, 'sabotador');
+    break; 
+  }
+  }
+  for (const pid of teamBIds) {
+    if (hasEffect(pid, guildId, 'sabotador')) {
+      penaltyA += 2;
+      removeEffect(pid, guildId, 'sabotador');
+      break;
+    }
+  }
 
   const formatTeam = (team, label) =>
     `**${label}**\n${[...team.values()].map(n => `• ${n}`).join("\n")}`;

@@ -22,7 +22,7 @@ export {
   getRandomUserId,
   getGuildUsers,
   getPoorestGuildUsers,
-  initPassiveCache
+  reduceCharsRob 
 } from "./functions/database/users.js";
 
 // Penalties
@@ -296,7 +296,6 @@ export const initializeDbBot = async () => {
 
   updateUserDb();
   updateServerConfigsDb();
-  initPassiveCache();
 
   // bot channels
   db.prepare(`
