@@ -193,4 +193,121 @@ export const SHOP_ITEMS = {
     duration: () => null,
     effect: 'bank_robber',
   },
+  oraculo: {
+    name: 'Oráculo',
+    description: 'Revela uma letra aleatória da palavra do Termoo de hoje.',
+    image: "https://c.tenor.com/Xd2KkTbO97QAAAAd/tenor.gif",
+    rarity: 'incomum',
+    price: () => randomInt(300, 700),
+    duration: () => null,
+    effect: 'oraculo',
+  },
+ 
+  sabotador: {
+    name: 'Sabotador',
+    description: 'No próximo Termo Versus, o time adversário começa com 2 tentativas a menos.',
+    image: "https://c.tenor.com/ZLkzMjMwwbwAAAAd/tenor.gif",
+    rarity: 'raro',
+    price: () => randomInt(600, 1400),
+    duration: () => null,
+    effect: 'sabotador',
+  },
+ 
+  amnesia_coletiva: {
+    name: 'Amnésia Coletiva',
+    description: 'Apaga o Termoo de hoje — permite jogar de novo com uma palavra nova.',
+    image: "https://c.tenor.com/iWNFtSYq7OAAAAAC/tenor.gif",
+    rarity: 'lendário',
+    price: () => randomInt(2000, 4000),
+    duration: () => null,
+    effect: 'amnesia_coletiva',
+  },
+ 
+  // ── Proteção ─────────────────────────────────────────────────────────────────
+ 
+  cofre_blindado: {
+    name: 'Cofre Blindado',
+    description: 'Seus chars ficam imunes a qualquer item externo por 24h.',
+    image: "https://c.tenor.com/sTHEJ2FVNV8AAAAd/tenor.gif",
+    rarity: 'raro',
+    price: () => randomInt(800, 1600),
+    duration: () => 24 * 60 * 60 * 1000,
+    effect: 'vault',
+  },
+ 
+  seguro_desemprego: {
+    name: 'Seguro Desemprego',
+    description: 'Se seus chars chegarem a 0, você recebe 300 automaticamente. Uso único.',
+    image: "https://c.tenor.com/mI0i2QOGG5gAAAAd/tenor.gif",
+    rarity: 'incomum',
+    price: () => randomInt(200, 500),
+    duration: () => null,
+    effect: 'safety_net',
+  },
+ 
+  // ── Passivos sociais ──────────────────────────────────────────────────────────
+ 
+  sombra: {
+    name: 'Sombra',
+    description: 'Escolha alguém: nas próximas 6h, toda vez que essa pessoa ganhar chars, você ganha 5% junto.',
+    image: "https://c.tenor.com/5dHuT0dHbBEAAAAd/tenor.gif",
+    rarity: 'raro',
+    price: () => randomInt(700, 1500),
+    duration: () => 6 * 60 * 60 * 1000,
+    effect: 'sombra',
+    requiresTarget: true,
+  },
+ 
+  parasita: {
+    name: 'Parasita',
+    description: 'Escolha alguém: nas próximas 6h, toda vez que essa pessoa perder chars, você ganha metade.',
+    image: "https://c.tenor.com/dEj7U4kJSbMAAAAd/tenor.gif",
+    rarity: 'raro',
+    price: () => randomInt(700, 1500),
+    duration: () => 6 * 60 * 60 * 1000,
+    effect: 'parasita',
+    requiresTarget: true,
+  },
+ 
+  // ── Caos ─────────────────────────────────────────────────────────────────────
+ 
+  roleta_russa: {
+    name: 'Roleta Russa',
+    description: 'Sorteia alguém aleatório do servidor — pode ser você. Quem for sorteado perde TUDO.',
+    image: "https://c.tenor.com/DgCGFXm7JZAAAAAC/tenor.gif",
+    rarity: 'lendário',
+    price: () => randomInt(1500, 3000),
+    duration: () => null,
+    effect: 'roleta_russa',
+  },
+ 
+  fundo_do_poco: {
+    name: 'Fundo do Poço',
+    description: 'O jogador mais rico perde metade dos chars, dividido igualmente entre os 3 mais pobres.',
+    image: "https://c.tenor.com/IaYULWmOjbAAAAAC/tenor.gif",
+    rarity: 'lendário',
+    price: () => randomInt(4000, 7000),
+    duration: () => null,
+    effect: 'fundo_do_poco',
+  },
+ 
+  imposto_progressivo: {
+    name: 'Imposto Progressivo',
+    description: 'Todo mundo com mais de 2000 chars perde 10% — redistribuído entre quem tem menos de 500.',
+    image: "https://c.tenor.com/rk6mJHiqEcgAAAAd/tenor.gif",
+    rarity: 'lendário',
+    price: () => randomInt(3000, 6000),
+    duration: () => null,
+    effect: 'imposto_progressivo',
+  },
+ 
+  inflacao: {
+    name: 'Inflação',
+    description: 'Por 24h, todos os itens da loja custam 50% a mais para todo mundo — menos pra você.',
+    image: "https://c.tenor.com/bN9C7iAMFEoAAAAd/tenor.gif",
+    rarity: 'raro',
+    price: () => randomInt(1000, 2500),
+    duration: () => 24 * 60 * 60 * 1000,
+    effect: 'inflacao',
+  },
 };

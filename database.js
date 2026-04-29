@@ -22,6 +22,7 @@ export {
   getRandomUserId,
   getGuildUsers,
   getPoorestGuildUsers,
+  initPassiveCache
 } from "./functions/database/users.js";
 
 // Penalties
@@ -179,6 +180,20 @@ const USERS_SCHEMA = {
 
 };
 
+const SERVER_CONFIGS_SCHEMA = {
+  limitChar: "INTEGER DEFAULT 4000",
+  speakMessage: "INTEGER DEFAULT 0",
+  charLimitEnabled: "INTEGER DEFAULT 1",
+  generateMessage: "INTEGER DEFAULT 1",
+  maxSavedAudios: "INTEGER DEFAULT 50",
+  prefix: "TEXT DEFAULT '$'",
+  guildSilenceUntil: "TEXT DEFAULT '0'",
+  randomEventsEnabled: "INTEGER DEFAULT 1",
+  dailyRobberyLimit: "INTEGER DEFAULT 3",
+  shopEnabled: "INTEGER DEFAULT 1",
+  classesEnabled: "INTEGER DEFAULT 1"
+};
+
 function buildUsersColumnsSQL() {
   return Object.entries(USERS_SCHEMA)
     .map(([col, type]) => `${col} ${type}`)
@@ -208,20 +223,6 @@ function updateUserDb() {
     }
   }
 }
-
-const SERVER_CONFIGS_SCHEMA = {
-  limitChar: "INTEGER DEFAULT 4000",
-  speakMessage: "INTEGER DEFAULT 0",
-  charLimitEnabled: "INTEGER DEFAULT 1",
-  generateMessage: "INTEGER DEFAULT 1",
-  maxSavedAudios: "INTEGER DEFAULT 50",
-  prefix: "TEXT DEFAULT '$'",
-  guildSilenceUntil: "TEXT DEFAULT '0'",
-  randomEventsEnabled: "INTEGER DEFAULT 1",
-  dailyRobberyLimit: "INTEGER DEFAULT 3",
-  shopEnabled: "INTEGER DEFAULT 1",
-  classesEnabled: "INTEGER DEFAULT 1"
-};
 
 function updateServerConfigsDb() {
   const requiredColumns = SERVER_CONFIGS_SCHEMA;
@@ -295,6 +296,7 @@ export const initializeDbBot = async () => {
 
   updateUserDb();
   updateServerConfigsDb();
+  initPassiveCache();
 
   // bot channels
   db.prepare(`

@@ -33,7 +33,7 @@ const RARITY_LABEL = {
 
 const MAX_INVENTORY = 3;
 
-function buildItemEmbed(shopItem, itemDef, index, total) {
+function buildItemEmbed(shopItem, itemDef, index, total, itemPrice = 0) {
   if (!shopItem || !itemDef) {
     return new EmbedBuilder()
       .setTitle('❌ Erro')
@@ -46,7 +46,7 @@ function buildItemEmbed(shopItem, itemDef, index, total) {
     : 'Instantâneo';
 
   const priceEmoji = customEmojis.lapislazuli || '💰';
-  const priceLabel = `${priceEmoji} **${shopItem.price || 0}** chars`;
+  const priceLabel = `${priceEmoji} **${itemPrice || 0}** chars`;
   const durationLabel = `${dur}`;
 
   return new EmbedBuilder()
@@ -113,6 +113,7 @@ async function handleBuy(user, guildId, itemId) {
   
   const userId = user.id;
   const shopItem = getShopItem(guildId, itemId);
+  const itemPrice = shopItem.price || 0;
   const itemDef = SHOP_ITEMS[itemId];
 
   if (!shopItem || !itemDef) return '❌ Item não encontrado na loja de hoje.';
@@ -124,15 +125,15 @@ async function handleBuy(user, guildId, itemId) {
   const userChars = userData.charLeft ?? 0;
   const spendableChars = await getSpendableChars(userId, guildId);
   
-  if (spendableChars < shopItem.price)
-    return `❌ Você tem **${userChars} chars** mas precisa de **${shopItem.price}**.`;
+  if (spendableChars < itemPrice)
+    return `❌ Você tem **${userChars} chars** mas precisa de **${itemPrice}**.`;
 
   const inv = getInventory(userId, guildId);
   if (inv.length >= MAX_INVENTORY)
     return `❌ Seu inventário está cheio! (${MAX_INVENTORY}/${MAX_INVENTORY})\nUse \`/usar\` para usar um item antes.`;
 
   // Deduz chars
-  await reduceChars(userId, guildId, shopItem.price, true);
+  await reduceChars(userId, guildId, itemPrice, true);
   decrementStock(guildId, itemId);
   
   // Adiciona ao inventário
@@ -142,6 +143,19 @@ async function handleBuy(user, guildId, itemId) {
   });
   
   return `✅ **${itemDef.name}** comprado! 📦 Adicionado ao seu inventário.\nUse \`/usar\` para ativá-lo.`;
+}
+
+function applyInflation(basePrice, buyerUserId, guildId) {
+  const inflator = db.prepare(`
+    SELECT user_id FROM active_effects
+    WHERE guild_id = ? AND effect = 'inflacao' AND (expires_at IS NULL OR expires_at > ?)
+    LIMIT 1
+  `).get(guildId, Date.now());
+ 
+  if (!inflator) return basePrice;
+  if (inflator.user_id === buyerUserId) return basePrice;
+ 
+  return Math.ceil(basePrice * 1.5);
 }
 
 export const data = new SlashCommandBuilder()
@@ -171,11 +185,13 @@ export async function execute(client, data) {
     return data.reply({ content: 'A loja está vazia hoje ou houve um erro ao carregar!', flags: ChannelFlags.Ephemeral });
   }
 
-  // === NOVA PARTE: pegar chars do usuário que abriu a loja ===
+  shop.items.forEach(item => {
+    item.price = applyInflation(item.price, data.userId, guildId);
+  });
+
   const userId = data.userId;  
   const userData = getUser(userId, guildId);
   const userChars = userData?.charLeft ?? 0;
-  // ========================================================
 
   let index = 0;
 
@@ -190,7 +206,7 @@ export async function execute(client, data) {
   }
 
   const reply = await data.reply({
-    embeds:     [buildItemEmbed(getCurrentItem(), getCurrentDef(), index, shop.items.length)],
+    embeds:     [buildItemEmbed(getCurrentItem(), getCurrentDef(), index, shop.items.length, getCurrentItem()?.price || 0)],
     components: [buildNavRow(getCurrentItem(), index, shop.items.length, userChars)],
     withResponse: true,
   });
@@ -216,7 +232,7 @@ export async function execute(client, data) {
       }
 
       return btn.update({
-        embeds:     [buildItemEmbed(currItem, currDef, index, shop.items.length)],
+        embeds:     [buildItemEmbed(currItem, currDef, index, shop.items.length, currItem.price)],
         components: [buildNavRow(currItem, index, shop.items.length, userChars)],
       });
     }
@@ -236,7 +252,7 @@ export async function execute(client, data) {
       }
 
       await btn.update({
-        embeds:     [buildItemEmbed(getCurrentItem(), getCurrentDef(), index, shop.items.length)],
+        embeds:     [buildItemEmbed(getCurrentItem(), getCurrentDef(), index, shop.items.length, getCurrentItem()?.price || 0)],
         components: [buildNavRow(getCurrentItem(), index, shop.items.length, userChars)],
       });
 

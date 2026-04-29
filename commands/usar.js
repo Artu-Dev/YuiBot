@@ -91,10 +91,16 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId, disp
     return `❌ **${itemDef.name}** não é stackável! Você já tem esse efeito ativo.`;
   }
 
-  const negativeEffects = ['char_double_cost'];
+  const VAULT_BLOCKED_EFFECTS = ['char_double_cost', 'swap_chars', 'char_bomb', 'halve_wealth', 'parasita', 'sombra'];
 
-  if (itemDef.requiresTarget && targetId !== userId && negativeEffects.includes(itemDef.effect)) {
+
+  if (itemDef.requiresTarget && targetId !== userId && VAULT_BLOCKED_EFFECTS.includes(itemDef.effect)) {
     const hasBlockEffect = hasEffect(targetId, guildId, 'immunity');
+    const hasVault = hasEffect(targetId, guildId, 'vault');
+    if (hasVault) {
+      return `${players.get(targetId) ?? `<@${targetId}>`} tem o Cofre Blindado ativo — esse item não funciona neles agora.`;
+    }
+
     if (hasBlockEffect) {
       return `🛡️ <@${targetId}> está protegido com "Fora da Lei"! não da pra pegar um fora da lei! ele nao respeita leis!`;
     }
@@ -399,6 +405,150 @@ async function applyInventoryItem(userId, guildId, item, itemDef, targetId, disp
       const daysLeft = duration ? Math.ceil(duration / (24 * 60 * 60 * 1000)) : 0;
       return `💳 **${itemDef.name}** ativado!\n\nVocê pode gastar até **${currentBalance}** chars negativos.\nConforme você ganhar chars, a dívida será paga automaticamente.\nA fatura fecha daqui a **${daysLeft} dia(s)**!`;
     }
+
+    case 'oraculo': {
+      const { getOrCreateDailyWord, ANSWER_WORDS } = await import('../functions/database/wordle.js');
+      const word = getOrCreateDailyWord(guildId);
+      if (!word) return '❌ Não tem palavra do dia ainda. Tenta depois.';
+ 
+      // Revela uma letra numa posição aleatória (sem repetir sempre a mesma)
+      const pos   = Math.floor(Math.random() * 5);
+      const letra = word[pos].toUpperCase();
+      const hint  = Array.from({ length: 5 }, (_, i) => i === pos ? `**${word[i].toUpperCase()}**` : `\\_`).join(' ');
+ 
+      return `O Oráculo fala: a palavra de hoje tem **${letra}** na posição **${pos + 1}**.\n\n${hint}`;
+    }
+ 
+    case 'sabotador': {
+      // Grava o efeito no próprio usuário — termoversus vai checar no início do jogo
+      addEffect(userId, guildId, 'sabotador', null); // sem expiração, consumido no jogo
+      return `Sabotagem preparada. No próximo Versus em que você participar, o time adversário começa com **-2 tentativas**.`;
+    }
+ 
+    case 'amnesia_coletiva': {
+      const { db } = await import('../database.js');
+      const today = new Date();
+      const dateStr = `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, '0')}-${String(today.getUTCDate()).padStart(2, '0')}`;
+ 
+      db.prepare(`DELETE FROM wordle_daily  WHERE guild_id = ? AND date = ?`).run(guildId, dateStr);
+      db.prepare(`DELETE FROM wordle_history WHERE guild_id = ? AND date = ?`).run(guildId, dateStr);
+ 
+      return `Amnésia Coletiva ativada. O servidor esqueceu o Termoo de hoje — uma nova palavra foi sorteada para a próxima jogada.`;
+    }
+ 
+    // ── Proteção ──────────────────────────────────────────────────────────────
+ 
+    case 'vault': {
+      addEffect(userId, guildId, 'vault', expiresAt);
+      return `Cofre Blindado ativado. Seus chars estão protegidos contra qualquer item externo por 24 horas (expira ${durStr}).`;
+    }
+ 
+    case 'safety_net': {
+      // O efeito fica salvo; a ativação real acontece em reduceChars quando chega a 0
+      addEffect(userId, guildId, 'safety_net', null);
+      return `Seguro Desemprego contratado. Se seus chars chegarem a 0, você recebe **+300** automaticamente. Uso único.`;
+    }
+ 
+    // ── Passivos sociais ──────────────────────────────────────────────────────
+ 
+    case 'sombra': {
+      // item_id é usado para armazenar o userId do alvo — a query em users.js depende disso
+      const { db } = await import('../database.js');
+      db.prepare(`
+        INSERT OR REPLACE INTO active_effects (user_id, guild_id, effect, item_id, added_at, expires_at)
+        VALUES (?, ?, 'sombra', ?, ?, ?)
+      `).run(userId, guildId, targetId, Date.now(), expiresAt);
+ 
+      return `Sombra ativada em <@${targetId}>. Nas próximas 6 horas, toda vez que essa pessoa ganhar chars você ganha **5%** junto (expira ${durStr}).`;
+    }
+ 
+    case 'parasita': {
+      const { db } = await import('../database.js');
+      db.prepare(`
+        INSERT OR REPLACE INTO active_effects (user_id, guild_id, effect, item_id, added_at, expires_at)
+        VALUES (?, ?, 'parasita', ?, ?, ?)
+      `).run(userId, guildId, targetId, Date.now(), expiresAt);
+ 
+      return `Parasita grudado em <@${targetId}>. Nas próximas 6 horas, toda vez que essa pessoa perder chars você ganha **metade** (expira ${durStr}).`;
+    }
+ 
+    // ── Caos ─────────────────────────────────────────────────────────────────
+ 
+    case 'roleta_russa': {
+      const { getGuildUsers } = await import('../database.js');
+      const users = getGuildUsers(guildId);
+      if (users.length === 0) return 'Não tem ninguém no servidor pra sortear.';
+ 
+      const { randomInt } = await import('es-toolkit');
+      const victim = users[randomInt(0, users.length - 1)];
+      const chars  = victim.charLeft ?? 0;
+ 
+      await setUserProperty('charLeft', victim.id, guildId, 0);
+ 
+      if (victim.id === userId) {
+        return `A roleta apontou pra **você mesmo**. Você perdeu todos os seus **${chars} chars**. Devia ter pensado melhor.`;
+      }
+      return `A roleta girou e apontou pra <@${victim.id}>. Essa pessoa perdeu todos os **${chars} chars**. Sem dó.`;
+    }
+ 
+    case 'fundo_do_poco': {
+      const { getGuildUsers } = await import('../database.js');
+      const users = getGuildUsers(guildId);
+      if (users.length < 2) return 'Usuários insuficientes.';
+ 
+      const sorted = [...users].sort((a, b) => (b.charLeft ?? 0) - (a.charLeft ?? 0));
+      const rich   = sorted[0];
+      const poor   = sorted.slice(-3).filter(u => u.id !== rich.id);
+ 
+      if (poor.length === 0) return 'Não tem ninguém suficientemente pobre pra receber.';
+ 
+      const taken = Math.floor((rich.charLeft ?? 0) / 2);
+      const share = Math.floor(taken / poor.length);
+ 
+      await setUserProperty('charLeft', rich.id, guildId, (rich.charLeft ?? 0) - taken);
+      for (const p of poor) await setUserProperty('charLeft', p.id, guildId, (p.charLeft ?? 0) + share);
+ 
+      const poorMentions = poor.map(p => `<@${p.id}>`).join(', ');
+      return `<@${rich.id}> perdeu **${taken} chars** (metade do que tinha).\n${poorMentions} receberam **+${share} chars** cada.`;
+    }
+ 
+    case 'imposto_progressivo': {
+      const { getGuildUsers } = await import('../database.js');
+      const users = getGuildUsers(guildId);
+ 
+      const THRESHOLD_RICH = 2000;
+      const THRESHOLD_POOR = 500;
+ 
+      const ricos   = users.filter(u => (u.charLeft ?? 0) > THRESHOLD_RICH);
+      const pobres  = users.filter(u => (u.charLeft ?? 0) < THRESHOLD_POOR);
+ 
+      if (ricos.length === 0)  return 'Ninguém rico o suficiente pra taxar.';
+      if (pobres.length === 0) return 'Ninguém pobre o suficiente pra receber.';
+ 
+      let arrecadado = 0;
+      for (const u of ricos) {
+        const taxa = Math.floor((u.charLeft ?? 0) * 0.10);
+        await setUserProperty('charLeft', u.id, guildId, (u.charLeft ?? 0) - taxa);
+        arrecadado += taxa;
+      }
+ 
+      const share = Math.floor(arrecadado / pobres.length);
+      for (const u of pobres) await setUserProperty('charLeft', u.id, guildId, (u.charLeft ?? 0) + share);
+ 
+      return [
+        `Imposto Progressivo aplicado.`,
+        `${ricos.length} rico(s) pagaram 10% — **${arrecadado} chars** arrecadados.`,
+        `${pobres.length} pobre(s) receberam **+${share} chars** cada.`,
+      ].join('\n');
+    }
+ 
+    case 'inflacao': {
+      // Marca o efeito no usuário que ativou; a loja checa quem tem inflacao ativo no guild
+      // e aplica +50% pra todos exceto o dono do efeito
+      addEffect(userId, guildId, 'inflacao', expiresAt);
+      return `Inflação declarada. Por 24 horas, os itens da loja custam **50% a mais** pra todo mundo — menos pra você (expira ${durStr}).`;
+    }
+
 
     default: 
       return `✅ Item **${itemDef.name}** usado com sucesso! ${durStr}`;

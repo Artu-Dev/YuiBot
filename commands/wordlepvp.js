@@ -17,6 +17,7 @@ import {
 } from "../database.js";
 import { renderDuetoImage } from "../functions/wordleCanva.js";
 import { DICTIONARY, versusPlayedToday, saveVersusResult } from "../functions/database/wordle.js";
+import { hasEffect, removeEffect } from '../functions/effects.js';
 
 export const name = "termoversus";
 export const aliases = ["versus", "termovs", "wordlevs", "vs"];
@@ -42,7 +43,23 @@ const TEAM_NAMES = [
 
 const activeVersusGames = new Map();
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+let penaltyA = 0;
+let penaltyB = 0;
+ 
+for (const pid of teamAIds) {
+  if (hasEffect(pid, guildId, 'sabotador')) {
+    penaltyB += 2;
+    removeEffect(pid, guildId, 'sabotador');
+    break; 
+  }
+}
+for (const pid of teamBIds) {
+  if (hasEffect(pid, guildId, 'sabotador')) {
+    penaltyA += 2;
+    removeEffect(pid, guildId, 'sabotador');
+    break;
+  }
+}
 
 function normalizeWord(w) {
   return w.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -127,17 +144,22 @@ async function startVersusGame(client, channel, initialMsg, answerA, answerB, te
 
   const teamAIds = new Set(teamA.keys());
   const teamBIds = new Set(teamB.keys());
+  const maxAttA = MAX_ATT - penaltyA;
+  const maxAttB = MAX_ATT - penaltyB;
 
   const formatTeam = (team, label) =>
     `**${label}**\n${[...team.values()].map(n => `• ${n}`).join("\n")}`;
 
   const statusLine = () => {
-    const a = solvedA ? `${nameA}: resolvida` : `${nameA}: ${attemptsA.length}/${MAX_ATT}`;
-    const b = solvedB ? `${nameB}: resolvida` : `${nameB}: ${attemptsB.length}/${MAX_ATT}`;
+    const a = solvedA ? `${nameA}: resolvida` : `${nameA}: ${attemptsA.length}/${maxAttA}`;
+    const b = solvedB ? `${nameB}: resolvida` : `${nameB}: ${attemptsB.length}/${maxAttB}`;
     return `${a}  |  ${b}`;
   };
 
   const buildPayload = (footerText, desc, color = "#E74C3C") => {
+
+
+
     const buffer     = renderDuetoImage(attemptsA, attemptsB, usedLettersA, usedLettersB, solvedA, solvedB);
     const attachment = new AttachmentBuilder(buffer, { name: "versus.png" });
     const embed      = new EmbedBuilder()
@@ -161,7 +183,7 @@ async function startVersusGame(client, channel, initialMsg, answerA, answerB, te
 
   let currentMsg = await replaceMessage(
     initialMsg,
-    buildPayload(`${nameA}: 0/${MAX_ATT}  |  ${nameB}: 0/${MAX_ATT}`, mainDesc())
+    buildPayload(`${nameA}: 0/${maxAttA}  |  ${nameB}: 0/${maxAttB}`, mainDesc())
   );
 
   const collector = channel.createMessageCollector({
@@ -285,8 +307,8 @@ async function startVersusGame(client, channel, initialMsg, answerA, answerB, te
 
     await willDelete;
 
-    const aExhausted = !solvedA && attemptsA.length >= MAX_ATT;
-    const bExhausted = !solvedB && attemptsB.length >= MAX_ATT;
+    const aExhausted = !solvedA && attemptsA.length >= maxAttA;
+    const bExhausted = !solvedB && attemptsB.length >= maxAttB;
 
     if (solvedA && !solvedB && !bExhausted)
       return finish({ winner: teamA, loser: teamB, winnerLabel: nameA, loserLabel: nameB, triggerMsg: msg });
@@ -304,7 +326,7 @@ async function startVersusGame(client, channel, initialMsg, answerA, answerB, te
     currentMsg = await replaceMessage(
       currentMsg,
       buildPayload(
-        `${nameA}: ${attemptsA.length}/${MAX_ATT}  |  ${nameB}: ${attemptsB.length}/${MAX_ATT}  |  ${guesserName}`,
+        `${nameA}: ${attemptsA.length}/${maxAttA}  |  ${nameB}: ${attemptsB.length}/${maxAttB}  |  ${guesserName}`,
         mainDesc()
       )
     );
