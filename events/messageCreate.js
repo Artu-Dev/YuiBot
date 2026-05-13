@@ -49,27 +49,38 @@ export function cleanupMessageCreateListeners() {
 
 export const execute = async (message, client) => {
   const { author } = message;
-  if (!author || (author.bot && author.id !== ALLOWED_MESSAGE_BOT_ID)) return;
+
+  if (!author) return;
+
+  if (author.bot && author.id !== client.user.id && author.id !== ALLOWED_MESSAGE_BOT_ID) {
+    return;
+  }
 
   const { guildId, userId, channelId, displayName } = parseMessage(message, client);
   if (!guildId || !userId || !channelId) return;
 
   const messageText = message.content?.trim() || "";
-  if (await handleCommand(message, client, messageText)) return;
-
+  if (author.id !== client.user.id) {
+    if (await handleCommand(message, client, messageText)) return;
+  }
+  
   const imageUrl = extractImageUrl(message);
 
   await announceEventIfNeeded(message, guildId);
 
   const isValidMessage = await processMessageContext(message, userId, displayName, guildId, channelId, imageUrl);
   if (!isValidMessage) return;
+  
+  if (!author.bot) {
+    const mentions = parseMessage(message, client).mentions;
 
-  const mentions = parseMessage(message, client).mentions;
-  await handleRandomActions(message, userId, mentions);
+    await handleRandomActions(message, userId, mentions);
 
-  handleAchievementsCheck(message);
+    handleAchievementsCheck(message);
 
-  if (getServerConfig(guildId, 'randomEventsEnabled')) {
-    await tryRandomNews(message, guildId, channelId);
+    if (getServerConfig(guildId, 'randomEventsEnabled')) {
+      await tryRandomNews(message, guildId, channelId);
+    }
   }
+
 };

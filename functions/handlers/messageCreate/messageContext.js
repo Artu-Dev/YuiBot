@@ -17,6 +17,7 @@ export async function processMessageContext(message, userId, displayName, guildI
   const userData = getOrCreateUser(userId, displayName, guildId);
   if (!userData) return false;
 
+  const content =  message.content || message.embeds?.[0]?.description || "[embed]";
 
   const validCharsMessage = await limitChar(message, userData);
   if (!validCharsMessage) return false;
@@ -26,7 +27,7 @@ export async function processMessageContext(message, userId, displayName, guildI
       channelId,
       guildId,
       displayName,
-      await replaceMentions(message, message.content),
+      await replaceMentions(message, content),
       userId,
       message.id,
       imageUrl

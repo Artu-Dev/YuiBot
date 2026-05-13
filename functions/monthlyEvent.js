@@ -10,6 +10,7 @@ import {
   dbBot,
 } from "../database.js";
 import { log } from "../bot.js";
+import { giveAchievement } from "./achievements.js";
 
 // =============== CONSTANTES ===============
 const MONTHLY_RANKINGS = [
@@ -40,6 +41,8 @@ const MONTHLY_EVENT_CACHE = new Map();
 export function executeMonthlyReset(client) {
   const now = dayjs();
   const currentMonth = `${now.month() + 1}/${now.year()}`;
+  
+  console.log({now, currentMonth, dbLast: dbBot?.data?.lastReset})
 
   if (dbBot?.data?.lastReset === currentMonth) {
     return false;
@@ -114,7 +117,7 @@ export function getMonthlyTopPlayers(guildId) {
   }
 }
 
-export function awardMonthlyAchievements(topPlayers, guildId) {
+export async function awardMonthlyAchievements(topPlayers, guildId, guild) { // adiciona guild
   const winners = [];
 
   for (let i = 0; i < Math.min(topPlayers.length, 3); i++) {
@@ -122,28 +125,38 @@ export function awardMonthlyAchievements(topPlayers, guildId) {
     const ranking = MONTHLY_RANKINGS[i];
 
     try {
-      unlockAchievement(user.id, guildId, ranking.achievement);
+      // Busca o membro do guild para ter o objeto completo
+      const member = guild.members.cache.get(user.id);
+      if (!member) continue;
 
+      // Usa o canal principal do guild para enviar a conquista
+      const channel = guild.channels.cache.find(
+        (ch) => ch.isTextBased() && ch.permissionsFor(guild.members.me).has("SendMessages")
+      );
+      if (!channel) continue;
+
+      // Cria um fake message para o giveAchievement
+      const fakeMessage = { guild, channel, author: member.user };
+      await giveAchievement(fakeMessage, user.id, ranking.achievement, member);
+
+      // Milestone (milionario_reincidente)
       if (ranking.milestone) {
-        const achievedData = db
-          .prepare(
-            `
-          SELECT achievements_unlocked 
-          FROM users 
-          WHERE id = ? AND guild_id = ?
-        `
-          )
-          .get(user.id, guildId);
+        const achievedData = db.prepare(
+          `SELECT achievements_unlocked FROM users WHERE id = ? AND guild_id = ?`
+        ).get(user.id, guildId);
 
         if (achievedData) {
           const achieved = JSON.parse(achievedData.achievements_unlocked || "{}");
-
           const countKey = `${ranking.achievement}_count`;
           const currentCount = (achieved[countKey] || 0) + 1;
           achieved[countKey] = currentCount;
 
+          db.prepare(
+            `UPDATE users SET achievements_unlocked = ? WHERE id = ? AND guild_id = ?`
+          ).run(JSON.stringify(achieved), user.id, guildId);
+
           if (currentCount >= ranking.milestoneThreshold) {
-            unlockAchievement(user.id, guildId, ranking.milestone);
+            await giveAchievement(fakeMessage, user.id, ranking.milestone, member);
           }
         }
       }
@@ -155,11 +168,7 @@ export function awardMonthlyAchievements(topPlayers, guildId) {
         ...ranking,
       });
     } catch (error) {
-      log(
-        `Erro ao dar conquista para ${user.id}: ${error.message}`,
-        "MonthlyEvent",
-        31
-      );
+      log(`Erro ao dar conquista para ${user.id}: ${error.message}`, "MonthlyEvent", 31);
     }
   }
 
@@ -223,12 +232,7 @@ async function announceInGuild(guild, winners) {
 
 export function shouldRunMonthlyEvent() {
   const now = dayjs();
-  const tomorrow = now.add(1, "day");
-  const isLastDay = now.month() !== tomorrow.month();
-  const hour = now.hour();
-  const minute = now.minute();
-
-  return isLastDay && hour === 23 && minute >= 55;
+  return now.date() === 1;
 }
 
 export async function runMonthlyEventForGuild(client, guildId) {
@@ -259,7 +263,7 @@ export async function runMonthlyEventForGuild(client, guildId) {
       return;
     }
 
-    const winners = awardMonthlyAchievements(topPlayers, guildId);
+    const winners = await awardMonthlyAchievements(topPlayers, guildId, guild);
 
     await announceInGuild(guild, winners);
 
