@@ -26,7 +26,6 @@ export const requiresCharLimit = true;
 const JOIN_TIME      = 60_000;
 const GAME_TIME      = 600_000;
 const MAX_ATT        = 6;
-const LOSS_PER_LOSER = 500;
 
 const TEAM_NAMES = [
   "Time Gays Unidos",
@@ -101,24 +100,21 @@ async function replaceMessage(oldMsg, payload) {
   return oldMsg.channel.send(payload);
 }
 
-async function deductWithBankFallback(userId, guildId, amount) {
+async function deductAll(userId, guildId) {
   const available = await getSpendableChars(userId, guildId);
 
-  if (available >= amount) {
-    await reduceChars(userId, guildId, amount);
-    return { chars: amount, bank: 0 };
+  if (available < 500) {
+    if (available > 0) await reduceChars(userId, guildId, available);
+    const bankBal = await getBankBalance(userId, guildId);
+    const fromBank = Math.floor(bankBal * 0.5);
+    if (fromBank > 0) await withdrawFromBank(userId, guildId, fromBank);
+    return { chars: available, bank: fromBank };
   }
 
-  if (available > 0) await reduceChars(userId, guildId, available);
-
-  const remainder = amount - available;
-  const bankBal   = await getBankBalance(userId, guildId);
-  const fromBank  = Math.min(remainder, bankBal);
-
-  if (fromBank > 0) await withdrawFromBank(userId, guildId, fromBank);
-
-  return { chars: available, bank: fromBank };
+  await reduceChars(userId, guildId, available);
+  return { chars: available, bank: 0 };
 }
+
 
 async function startVersusGame(client, channel, initialMsg, answerA, answerB, teamA, teamB, nameA, nameB, guildId) {
   const attemptsA    = [];
@@ -229,7 +225,7 @@ async function startVersusGame(client, channel, initialMsg, answerA, answerB, te
       let   totalCollected = 0;
 
       for (const pid of loserIds) {
-        const { chars, bank } = await deductWithBankFallback(pid, guildId, LOSS_PER_LOSER);
+        const { chars, bank } = await deductAll(pid, guildId);
         totalCollected += chars + bank;
         deductions.push({ pid, chars, bank });
       }
@@ -254,7 +250,7 @@ async function startVersusGame(client, channel, initialMsg, answerA, answerB, te
         `Palavra do ${nameA}: **${answerA}**`,
         `Palavra do ${nameB}: **${answerB}**`,
         "",
-        `**${loserLabel}** perdeu ${LOSS_PER_LOSER} chars cada:`,
+        `**${loserLabel}** perdeu tudo:`,
         ...lossLines,
         "",
         `**${winnerLabel}** recebeu **${totalCollected} chars** — **+${rewardPerWin}** cada.`,
@@ -370,8 +366,8 @@ export async function execute(client, data) {
         "Os jogadores serão divididos aleatoriamente em dois times.",
         "Cada time recebe uma palavra diferente e tenta resolver antes do adversário.",
         "",
-        `O time perdedor perde **${LOSS_PER_LOSER} chars** cada — que vão direto pro time vencedor.`,
-        "Se não tiver chars suficientes, o restante é descontado do banco.",
+        "O time perdedor **perde todos os chars** — que vão direto pro time vencedor.",
+        "Quem tiver menos de 500 chars perde também **50% do banco**.",
         "",
         `**Inscritos (${players.size}):**`,
         ...[...players.values()].map(n => `• ${n}`),
@@ -448,7 +444,7 @@ export async function execute(client, data) {
         "",
         "O jogo começa em instantes.",
       ].join("\n"))
-      .setFooter({ text: `${LOSS_PER_LOSER} chars cada do time perdedor vão pro time vencedor.` });
+      .setFooter({ text: `Todos os chars do time perdedor vão pro time vencedor.` });
 
     await lobbyMsg.edit({ embeds: [revealEmbed], components: [] });
 
