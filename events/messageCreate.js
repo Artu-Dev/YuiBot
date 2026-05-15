@@ -56,6 +56,8 @@ export const execute = async (message, client) => {
     return;
   }
 
+  if(author.bot) return
+
   const { guildId, userId, channelId, displayName } = parseMessage(message, client);
   if (!guildId || !userId || !channelId) return;
 
@@ -69,7 +71,7 @@ export const execute = async (message, client) => {
   await announceEventIfNeeded(message, guildId);
 
   const isValidMessage = await processMessageContext(message, userId, displayName, guildId, channelId, imageUrl);
-  if (!isValidMessage || author.id === client.user.id) return;
+  if (!isValidMessage) return;
 
   if (!author.bot) {
     const mentions = parseMessage(message, client).mentions;
